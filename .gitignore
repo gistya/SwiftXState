@@ -1,0 +1,18 @@
+.DS_Store
+.build/
+.swiftpm/
+xcuserdata/
+
+# Build artifacts (hide from Xcode package navigator via gitignore)
+*DerivedData/
+Sources/DerivedData/
+
+# Node install artifacts only. The relay's package.json + package-lock.json ARE tracked
+# so `npm install && npm run relay` works from a clean clone; only node_modules is hidden.
+node_modules/
+
+# Generated opening-dataset download cache — regenerate via Scripts/generate-opening-dataset.py
+Scripts/.opening-tsv-cache/
+
+# Planning docs (local only)
+plan.md
