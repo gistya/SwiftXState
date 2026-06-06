@@ -1,0 +1,17 @@
+{
+  "name": "swift-xstate-inspector-relay",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "relay": "node stately-sky-relay.mjs",
+    "relay:debug": "node stately-sky-relay-debug.mjs",
+    "relay:legacy": "node stately-relay.mjs"
+  },
+  "dependencies": {
+    "@statelyai/inspect": "^0.7.1",
+    "partysocket": "^0.0.25",
+    "superjson": "^1.13.3",
+    "uuid": "^9.0.1",
+    "ws": "^8.20.0"
+  }
+}

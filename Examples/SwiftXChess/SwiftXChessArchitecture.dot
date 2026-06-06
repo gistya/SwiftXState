@@ -1,0 +1,154 @@
+// SwiftXChess — runtime ownership / call-flow graph (scaffold for the OmniGraffle diagram).
+//
+// Import into OmniGraffle (File ▸ Open / Insert — it reads Graphviz .dot) as a parts bin: the
+// shapes, chips (record ports), and labeled edges are accurate; restyle by hand to taste.
+//
+// Notation map (your conventions → Graphviz stand-ins):
+//   • service adapter / instance with chips ........ rounded record; border chips = ports marked ▪
+//   • SwiftXState runtime primitive (Actor/Machine) . hexagon
+//   • data store ................................... cylinder
+//   • Stately.ai service ........................... blue box
+//   • external client .............................. box3d
+//   • Swift `actor` isolation domain ............... dashed magenta cluster
+//   • SwiftUI scene/view containment ............... nested clusters
+//   • border chip (instance var / static, wired out) = record PORT (▪)
+//   • interior chip (scalar / not-yet-wired) ....... listed in the node's last field
+//   • edge label = the action in the call flow (create / @State / set / callback / spawn / remote)
+
+digraph SwiftXChess {
+    rankdir=TB;
+    graph [fontname="Helvetica", labelloc="t", label="SwiftXChess runtime ownership & call flow",
+           splines=true, nodesep=0.45, ranksep=0.7, newrank=true];
+    node  [fontname="Helvetica", fontsize=11];
+    edge  [fontname="Helvetica", fontsize=9];
+
+    // ---------------------------------------------------------------- App + SwiftUI scene tree
+    subgraph cluster_app {
+        label="SwiftXChess App (SwiftUI)"; style=rounded; color="#888888";
+
+        app   [shape=record style=rounded label="SwiftXChessApp\n@main App | { <store>store ▪ | <session>session ▪ } | interior: (init wiring)"];
+
+        subgraph cluster_scene {
+            label="Scene (body)"; style=dashed; color="#aaaaaa";
+            subgraph cluster_wg {
+                label="WindowGroup"; style=solid; color="#bbbbbb";
+                contentView [shape=box label="ContentView"];
+                gameView    [shape=record style=rounded label="DistributedChessGameView | { <session>session ▪ }"];
+            }
+            subgraph cluster_win {
+                label="Window: \"Inspector\" (macOS)"; style=solid; color="#bbbbbb";
+                inspectorView [shape=box label="MachineInspectorView"];
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- Data store
+    store [shape=cylinder color="#3a7d44" label="InspectorStore\n(@Observable data store)\nobserve()"];
+
+    // ---------------------------------------------------------------- The session (central adapter)
+    session [shape=record style=rounded color="#d9531e" label="DistributedChessSession\n@MainActor @Observable · adapter | { <actor>actor ▪ | <machine>machine ▪ | <treeSession>treeSession ▪ | <bridge>bridge ▪ | <recorder>recorder ▪ | <gate>recordingGate ▪ } | interior: snapshot · treeSnapshot · reports · connectionStatus · inspectorEndpoint · openingActive · recordedStepCount"];
+
+    // ---------------------------------------------------------------- Live interpreter primitives
+    actor       [shape=hexagon color="#d9531e" label="actor\nActor<GameWatcherContext>"];
+    gameMachine [shape=hexagon color="#d9531e" label="Game Watcher Machine\nStateMachine<GameWatcherContext>"];
+    chessRules  [shape=note color="#777777" label="ChessRules\n(pure logic;\ncalled by assign/guards)"];
+
+    actorOptions [shape=record style=rounded label="ActorOptions | { <clock>clock | <systemId>systemId | <input>input | <inspectable>inspectable | <inspect>inspect ▪ (closure) }"];
+
+    // inspect fan-in: three sinks all CALL INTO the actor's inspect closure
+    recorder [shape=box label="InspectionRecorder\n(replay tape)"];
+    gate     [shape=box label="ReplayRecordingGate"];
+
+    // ---------------------------------------------------------------- Inspect bridge spine
+    bridge [shape=record style=rounded color="#d9531e" label="InspectBridge\n(adapter → Stately) | { <transport>transport ▪ | <configuration>configuration ▪ | <state>state ▪ }"];
+
+    config [shape=note color="#777777" label="InspectClientConfiguration\nmachineDefinitions:\n• game-watcher\n• opening-move-tree\n• board-occupancy\n• board-pieces\nwireFormat: .stately"];
+
+    subgraph cluster_isolation {
+        label="Swift actor — concurrency-isolated context"; style=dashed; color="#e0218a"; fontcolor="#e0218a";
+        bridgeState [shape=record style=rounded color="#e0218a" label="InspectBridgeState | { <transport>transport ▪ | <wireFormat>wireFormat | <session>session ▪ | <converter>statelyConverter ▪ | <connectTask>connectTask | <publishTail>publishTail (Task) }"];
+    }
+
+    browser [shape=box3d color="#555555" label="Secure Browser\n(relay bridge page)"];
+    stately [shape=box style=filled fillcolor="#d6e4ff" color="#2b6cb0" label="stately.ai\nregistry/inspect"];
+
+    // ---------------------------------------------------------------- Opening-tree subsystem
+    subgraph cluster_opening {
+        label="Opening tree subsystem"; style=rounded; color="#888888";
+        treeSession  [shape=record style=rounded color="#d9531e" label="OpeningTreeSession\n(adapter) | { <actor>actor ▪ | <machine>machine ▪ }"];
+        openingActor   [shape=hexagon color="#d9531e" label="actor\nActor<OpeningTreeContext>"];
+        openingMachine [shape=hexagon color="#d9531e" label="Opening Move Tree Machine"];
+    }
+
+    // ---------------------------------------------------------------- Board-actor spawn fan-out (the ~96)
+    subgraph cluster_board {
+        label="Board actors — spawned by game-watcher on .start()  (~96; the inspector stress test)";
+        style=rounded; color="#888888";
+        squareActors   [shape=hexagon color="#b25a18" label="SquareActor ×64\n(SquareActorMachine)"];
+        pieceActors    [shape=hexagon color="#b25a18" label="PieceActor ×N\n(PieceActorMachine)"];
+        boardOccupancy [shape=hexagon color="#b25a18" label="BoardInspector\n(.occupancy)"];
+        boardPieces    [shape=hexagon color="#b25a18" label="BoardInspector\n(.pieces)"];
+    }
+
+    // ================================================================ EDGES (call / ownership flow)
+
+    // App init
+    app:store    -> store        [label="create (@State)"];
+    app:session  -> session      [label="create (@State)"];
+    store        -> actorOptions:inspect [label="observe() — calls IN", style=dashed, color="#3a7d44"];
+
+    // App → SwiftUI tree
+    app          -> contentView   [label="body / WindowGroup", style=dotted];
+    app          -> inspectorView [label="body / Window", style=dotted];
+    contentView  -> gameView      [label="body"];
+    gameView:session -> session   [label="@State ref"];
+    inspectorView -> store        [label="observes", style=dashed, color="#3a7d44"];
+
+    // Session init — what it constructs / owns
+    session:machine     -> gameMachine    [label="make()"];
+    session:treeSession -> treeSession    [label="create"];
+    session:bridge      -> bridge         [label="create + start()"];
+    session:recorder    -> recorder       [label="owns"];
+    session:gate        -> gate           [label="owns"];
+    session:actor       -> actor          [label="createActor().start()"];
+
+    // Actor wiring
+    actor -> actorOptions [label="options"];
+    actor -> gameMachine  [label="machine"];
+
+    // inspect fan-in (all three CALL INTO actor's inspect chip)
+    gate   -> actorOptions:inspect [label="observe(recorder) — calls IN", style=dashed];
+    bridge -> actorOptions:inspect [label="observe() — calls IN", style=dashed];
+    gate   -> recorder             [label="gates → records"];
+
+    // Bridge → isolated state → remote
+    bridge:configuration -> config       [label="set"];
+    bridge:state         -> bridgeState  [label="owns (isolated)"];
+    bridgeState:transport -> browser     [label="transport (remote ws)", color="#2b6cb0"];
+    browser               -> stately     [label="relays to Sky", color="#2b6cb0"];
+
+    // Game machine → spawns + rules
+    gameMachine -> squareActors   [label="spawn", style=bold];
+    gameMachine -> pieceActors    [label="spawn", style=bold];
+    gameMachine -> boardOccupancy [label="spawn", style=bold];
+    gameMachine -> boardPieces    [label="spawn", style=bold];
+    gameMachine -> chessRules     [label="calls (assign/guards)", style=dotted];
+
+    // Opening tree subsystem
+    treeSession:actor   -> openingActor   [label="createActor().start()"];
+    treeSession:machine -> openingMachine [label="make()"];
+    openingActor -> openingMachine [label="machine"];
+    openingActor -> bridge [label="attachInspect → calls IN", style=dashed];
+    openingActor -> store  [label="attachInspect (extraInspect)", style=dashed, color="#3a7d44"];
+
+    // ================================================================ LEGEND
+    subgraph cluster_legend {
+        label="Legend"; style=rounded; color="#cccccc"; fontsize=10;
+        l_adapter [shape=record style=rounded label="service adapter | { <p>border chip ▪ = instance var } | interior chip = scalar / unwired"];
+        l_prim    [shape=hexagon label="SwiftXState\nActor / Machine"];
+        l_store   [shape=cylinder label="data store"];
+        l_stately [shape=box style=filled fillcolor="#d6e4ff" color="#2b6cb0" label="Stately.ai service"];
+        l_ext     [shape=box3d label="external client"];
+        l_adapter -> l_prim [label="edge label = action (create / set / callback / spawn / remote)", style=invis];
+    }
+}
