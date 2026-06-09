@@ -2,8 +2,8 @@ name: Deploy DocC Documentation
 
 on:
   push:
-    branches: [ main ]          # Change to "master" if you use that
-  workflow_dispatch:            # Allows manual trigger from GitHub UI
+    branches: [ main ]        
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,18 +12,35 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: macos-latest          # macOS is required for Swift + DocC
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build and Deploy Documentation
-        uses: fwcd/swift-docc-action@v1
+      - name: Build Combined Documentation
+        run: |
+          swift package --allow-writing-to-directory ./docs \
+            generate-documentation \
+            --target SwiftXState \
+            --target SwiftXStateGraph \
+            --target SwiftXStateInspect \
+            --target SwiftXStateInspectorUI \
+            --target SwiftXStateInspectURLSession \
+            --target SwiftXStateInspectSwiftData \
+            --target SwiftXStateInspectSwiftUI \
+            --output-path ./docs \
+            --transform-for-static-hosting \
+            --hosting-base-path ${{ github.event.repository.name }} \
+            --enable-experimental-combined-documentation \
+            --disable-indexing
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          target: SwiftXState          # ← Change to your main library target
-          output: ./docs
-          hosting-base-path: SwiftXState  # ← Just the repo name (no /user/)
-          transform-for-static-hosting: 'true'
-          disable-indexing: 'true'         # Optional but recommended for speed
+          path: './docs'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
