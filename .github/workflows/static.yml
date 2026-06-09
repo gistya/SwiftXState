@@ -1,0 +1,29 @@
+name: Deploy DocC Documentation
+
+on:
+  push:
+    branches: [ main ]          # Change to "master" if you use that
+  workflow_dispatch:            # Allows manual trigger from GitHub UI
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: macos-latest          # macOS is required for Swift + DocC
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build and Deploy Documentation
+        uses: fwcd/swift-docc-action@v1
+        with:
+          target: SwiftXState          # ← Change to your main library target
+          output: ./docs
+          hosting-base-path: SwiftXState  # ← Just the repo name (no /user/)
+          transform-for-static-hosting: 'true'
+          disable-indexing: 'true'         # Optional but recommended for speed
