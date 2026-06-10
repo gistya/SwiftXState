@@ -10,6 +10,13 @@ permissions:
   pages: write
   id-token: write
 
+# Run all JavaScript-based actions on Node.js 24. The bundled actions below still
+# declare Node 20 in their action.yml; this opt-in (recommended by GitHub's own
+# deprecation notice) moves them to Node 24 without waiting for new action majors,
+# silencing the "Node.js 20 actions are deprecated" warnings.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 # Allow one docs deploy at a time; don't cancel an in-progress publish.
 concurrency:
   group: pages
@@ -23,10 +30,22 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+
+      # Use the newest Xcode the runner has installed. Older toolchains' symbol-graph
+      # extractor `fatalError`s on the SceneKit/CoreImage code in SwiftXStateGraph;
+      # newer ones extract it cleanly. Dependency-free — just picks the latest Xcode_*.app.
+      - name: Select newest Xcode
+        run: |
+          LATEST=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$LATEST" ]; then
+            echo "Selecting $LATEST"
+            sudo xcode-select -s "$LATEST"
+          fi
+          swift --version
 
       # Cache the SwiftPM build so swift-syntax (the macro plugin) isn't recompiled every run.
       - name: Cache SwiftPM build
@@ -36,12 +55,15 @@ jobs:
           key: ${{ runner.os }}-spm-docs-${{ hashFiles('Package.resolved', 'Package.swift') }}
           restore-keys: ${{ runner.os }}-spm-docs-
 
-      # Build each target's docs separately. This avoids the experimental "combined documentation"
-      # merge, which compiles + merges all targets at once and OOMs the runner ("cleaned up orphan
-      # process"). One target at a time keeps peak memory bounded and the failure point obvious.
+      # Build each target's docs separately. This keeps peak memory bounded and the failure
+      # point obvious. The loop is *resilient*: if a target's symbol-graph extraction crashes
+      # on the runner's toolchain (older symbolgraph tools `fatalError` on SceneKit/CoreImage
+      # code), we log a warning, skip just that module, and keep going. Only the core
+      # SwiftXState library is mandatory — anything else is best-effort, and the landing page
+      # links only the modules that actually built.
       - name: Build DocC (per target)
         run: |
-          set -euo pipefail
+          set -o pipefail
           REPO="${{ github.event.repository.name }}"
           TARGETS=(
             SwiftXState
@@ -53,25 +75,41 @@ jobs:
             SwiftXStateSwiftUI
           )
           rm -rf docs && mkdir -p docs
+          BUILT=""
+          FAILED=""
           for T in "${TARGETS[@]}"; do
             echo "::group::DocC — $T"
-            swift package --allow-writing-to-directory "docs/$T" \
-              generate-documentation \
-              --target "$T" \
-              --output-path "docs/$T" \
-              --transform-for-static-hosting \
-              --hosting-base-path "$REPO/$T" \
-              --disable-indexing
+            if swift package --allow-writing-to-directory "docs/$T" \
+                generate-documentation \
+                --target "$T" \
+                --output-path "docs/$T" \
+                --transform-for-static-hosting \
+                --hosting-base-path "$REPO/$T" \
+                --disable-indexing; then
+              BUILT="$BUILT $T"
+            else
+              echo "::warning title=DocC::Symbol extraction failed for $T on this toolchain — skipping its docs."
+              rm -rf "docs/$T"
+              FAILED="$FAILED $T"
+            fi
             echo "::endgroup::"
           done
-          # Simple landing page linking to each module's docs.
+
+          # The core library must always publish; treat its failure as a hard error.
+          case " $BUILT " in
+            *" SwiftXState "*) : ;;
+            *) echo "::error title=DocC::Core SwiftXState docs failed to build — failing the job."; exit 1 ;;
+          esac
+          [ -n "$FAILED" ] && echo "Built:$BUILT" && echo "Skipped:$FAILED"
+
+          # Landing page links only the modules that actually built.
           {
             echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
             echo '<meta name="viewport" content="width=device-width, initial-scale=1">'
             echo '<title>SwiftXState — Documentation</title>'
             echo '<style>body{font:16px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;max-width:42rem;margin:4rem auto;padding:0 1.5rem}a{color:#7c5cff}h1{margin-bottom:.25rem}</style>'
             echo '</head><body><h1>SwiftXState</h1><p>XState v5, natively in Swift. Module reference:</p><ul>'
-            for T in "${TARGETS[@]}"; do
+            for T in $BUILT; do
               lc=$(echo "$T" | tr '[:upper:]' '[:lower:]')
               echo "<li><a href=\"./$T/documentation/$lc/\">$T</a></li>"
             done
