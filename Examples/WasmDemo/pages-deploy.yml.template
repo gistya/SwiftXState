@@ -1,0 +1,70 @@
+# GitHub Pages deploy for the SwiftXState Wasm demo.
+#
+# This is a TEMPLATE — it is intentionally not under .github/workflows/ in this monorepo, because
+# the repo's Pages environment is already used by the DocC docs workflow (only one Pages site per
+# repo). To use it, copy the Examples/WasmDemo folder into its own repository and drop this file in
+# as .github/workflows/deploy.yml.
+#
+# Before it works you must point it at a current WebAssembly SDK from https://www.swift.org/install
+# (set repo variables WASM_SDK_URL, WASM_SDK_CHECKSUM, and WASM_SDK_NAME).
+name: Deploy Wasm Demo
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # Install the Swift toolchain matching your Wasm SDK (e.g. via swiftly or swift-actions).
+      #   https://www.swift.org/install/   |   https://github.com/swift-actions/setup-swift
+      - name: Install Swift 6.3
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.3.2"
+
+      - name: Install WebAssembly SDK
+        run: |
+          swift sdk install "${WASM_SDK_URL}" --checksum "${WASM_SDK_CHECKSUM}"
+          swift sdk list
+        env:
+          WASM_SDK_URL: ${{ vars.WASM_SDK_URL }}
+          WASM_SDK_CHECKSUM: ${{ vars.WASM_SDK_CHECKSUM }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install binaryen (wasm-opt) to shrink the binary
+        run: sudo apt-get update && sudo apt-get install -y binaryen
+
+      - name: Build the static site
+        run: ./build.sh
+        env:
+          WASM_SDK: ${{ vars.WASM_SDK_NAME }}   # e.g. swift-6.3.2-RELEASE_wasm
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -67,12 +67,39 @@ Thank you to David Khourshid and everyone who has contributed to XState and the 
 | iOS / tvOS / watchOS | Supported | Supported | Supported | Supported | Supported |
 | Linux | Supported | Supported | Stub only — inject custom transport | N/A | N/A |
 | Windows 10+ | Supported | Supported | Stub only — inject custom transport | N/A | N/A |
+| WebAssembly (WASI) | Experimental | Untested | N/A | N/A | N/A |
 
 The **core** (`SwiftXState`, `SwiftXStateInspect`) uses Foundation and structured concurrency only — no AppKit/UIKit/SwiftUI in those modules — so Linux and Windows builds are expected to work for server/CLI use. Apple-only modules (`SwiftXStateSwiftUI`, `SwiftXStateSwiftData`, URLSession WebSocket inspect) compile as stubs elsewhere. Linux/x86_64 CI verification is planned; if you hit a platform issue, please file it. Community contributions for alternative bindings (e.g. GTK, Qt, file/SQLite persistence) are welcome.
 
 **Custom inspect networking on Linux/Windows:** implement `InspectTransport` yourself, or use `ClosureInspectTransport` / `TextPublishInspectSession` from `SwiftXStateInspect` with your WebSocket client. See `CustomInspectTransport.swift` for a full example.
 
 **3D graph view & visionOS:** the 3D graph renderer (`SwiftXStateGraph`) is built on SceneKit and runs on macOS/iOS/tvOS. In this initial release it does **not** support visionOS / spatial (augmented-reality) features — there is no Vision Pro spatial scene or AR anchoring yet. A RealityKit-based backend for visionOS is something we're investigating; the renderer is isolated behind `StateGraphView`, so a spatial backend can be added without affecting the model, layout, or 2D paths.
+
+### Experimental: WebAssembly 🧪
+
+The **core `SwiftXState`** engine compiles to and **runs in the browser** via WebAssembly. This is
+a verified proof of concept — see [`Examples/WasmDemo`](Examples/WasmDemo/), a small gallery of
+machines (toggle, traffic light, vending machine with a guard, checkout flow, fetch) driving the
+DOM through [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit), built with the
+[swift.org WebAssembly SDK](https://www.swift.org/install/) and hostable on any static host
+(including GitHub Pages).
+
+What makes it work, and what to know:
+
+- **No-Dispatch path.** The WASI SDK has Foundation but not `Dispatch`. The two places core used it
+  — the actor's serial queue and `DefaultClock` — are now behind `#if canImport(Dispatch)`.
+  Apple/Linux/Windows keep the exact Dispatch path (verified: full test suite unchanged); on
+  WebAssembly the actor runs inline (single-threaded — no lock needed) and `DefaultClock` is a stub.
+- **Delays need a host clock.** Because the default clock is a stub on Wasm, **`after:` / delayed
+  transitions don't fire** unless you inject a host-backed `Clock` (e.g. one driven by JavaScript's
+  `setTimeout` via JavaScriptKit) through `ActorOptions.clock`. Likewise, prefer **event-driven**
+  machines — Swift-concurrency async (`invoke` of `fromTask`, etc.) behaves differently under
+  single-threaded Wasm and isn't part of this POC.
+- **Binary size.** A full-stdlib + Foundation Wasm binary is **large (tens of MB)** — the cost of
+  not using Embedded Swift. Run `wasm-opt` (binaryen) and serve gzipped (Pages does this) to keep
+  it tolerable; it's fine for a POC, heavy for production.
+- **Status: experimental, not yet CI-verified.** Only the core library is exercised on Wasm today;
+  the inspect/UI/SwiftData modules are untested there. Issues and contributions welcome.
 
 ### Quick start
 

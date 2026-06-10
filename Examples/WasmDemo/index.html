@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SwiftXState · WebAssembly demo</title>
+  <style>
+    body { margin: 0; background: #fafafa; }
+    #loading { font: 16px -apple-system, system-ui, sans-serif; color: #888; text-align: center; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading SwiftXState (WebAssembly)…</div>
+  <script type="module">
+    import { init } from "./bundle.js";
+    try {
+      await init();
+      document.getElementById("loading")?.remove();
+    } catch (e) {
+      document.getElementById("loading").textContent = "Failed to load: " + e;
+      console.error(e);
+    }
+  </script>
+</body>
+</html>

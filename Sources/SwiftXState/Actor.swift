@@ -1,4 +1,22 @@
 import Foundation
+#if canImport(Dispatch)
+import Dispatch
+#endif
+
+/// Serializes access to an actor's mutable state. On platforms with Dispatch this is a serial
+/// `DispatchQueue`; on single-threaded platforms without Dispatch (e.g. WebAssembly / WASI) there
+/// is no concurrency to guard against, so the work runs inline. The call sites are identical either
+/// way (`queue.sync { … }` / `queue.async { … }`).
+struct ActorQueue: Sendable {
+    #if canImport(Dispatch)
+    private let queue = DispatchQueue(label: "SwiftXState.Actor")
+    func sync<T>(_ body: () throws -> T) rethrows -> T { try queue.sync(execute: body) }
+    func async(_ body: @escaping @Sendable () -> Void) { queue.async(execute: body) }
+    #else
+    func sync<T>(_ body: () throws -> T) rethrows -> T { try body() }
+    func async(_ body: @escaping @Sendable () -> Void) { body() }
+    #endif
+}
 
 /// Options for creating an actor — clock, system id, input, and inspection wiring.
 public struct ActorOptions: Sendable {
@@ -46,7 +64,7 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
     private var pendingChildSnapshots: [String: PersistedChildSnapshot] = [:]
     private var mailbox: [any Eventable] = []
     private weak var parent: (any ActorParentRef)?
-    private let queue = DispatchQueue(label: "SwiftXState.Actor")
+    private let queue = ActorQueue()
     private let clock: any Clock
     private let system: ActorSystem
     private let options: ActorOptions

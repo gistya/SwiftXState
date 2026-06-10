@@ -15,6 +15,9 @@ public protocol Clock: Sendable {
     func clearTimeout(_ handle: TimeoutHandle)
 }
 
+#if canImport(Dispatch)
+import Dispatch
+
 private final class DispatchTimeout: @unchecked Sendable {
     let workItem: DispatchWorkItem
 
@@ -23,7 +26,7 @@ private final class DispatchTimeout: @unchecked Sendable {
     }
 }
 
-/// Default clock using `DispatchQueue`.
+/// Default clock using `DispatchQueue` (Apple platforms, Linux, Windows).
 public struct DefaultClock: Clock {
     public init() {}
 
@@ -40,6 +43,22 @@ public struct DefaultClock: Clock {
         (handle.box as? DispatchTimeout)?.workItem.cancel()
     }
 }
+#else
+/// Default clock on platforms without Dispatch (e.g. WebAssembly / WASI).
+///
+/// These platforms provide no built-in timer source, so delayed (`after:`) transitions do **not**
+/// fire under this clock. Apps that need delays should inject a host-backed `Clock` — for example
+/// one driven by JavaScript's `setTimeout` via JavaScriptKit — through `ActorOptions.clock`.
+public struct DefaultClock: Clock {
+    public init() {}
+
+    public func setTimeout(_ fn: @escaping @Sendable () -> Void, delay: Int) -> TimeoutHandle {
+        TimeoutHandle(0 as Int)
+    }
+
+    public func clearTimeout(_ handle: TimeoutHandle) {}
+}
+#endif
 
 /// A manually controlled clock for deterministic tests.
 public final class SimulatedClock: Clock, @unchecked Sendable {
