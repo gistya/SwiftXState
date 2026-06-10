@@ -55,66 +55,35 @@ jobs:
           key: ${{ runner.os }}-spm-docs-${{ hashFiles('Package.resolved', 'Package.swift') }}
           restore-keys: ${{ runner.os }}-spm-docs-
 
-      # Build each target's docs separately. This keeps peak memory bounded and the failure
-      # point obvious. The loop is *resilient*: if a target's symbol-graph extraction crashes
-      # on the runner's toolchain (older symbolgraph tools `fatalError` on SceneKit/CoreImage
-      # code), we log a warning, skip just that module, and keep going. Only the core
-      # SwiftXState library is mandatory — anything else is best-effort, and the landing page
-      # links only the modules that actually built.
-      - name: Build DocC (per target)
+      # Build all targets into a single combined documentation archive. This merges every
+      # module under one hosting base path with cross-module navigation and unified search,
+      # and emits its own landing page at /documentation/. Verified locally at ~0.8 GB peak
+      # RSS — well within the runner's memory — so the original "cleaned up orphan process"
+      # failure was never about this flag; it was an older toolchain's symbol-graph extractor
+      # crashing on SwiftXStateGraph, which the "Select newest Xcode" step above avoids.
+      #
+      # Note: combined docs is all-or-nothing (one merge invocation), so unlike the previous
+      # per-target loop there is no graceful per-module degradation — if any target's symbol
+      # extraction fails, the whole build fails. The newest-Xcode selection is the safeguard.
+      - name: Build DocC (combined)
         run: |
-          set -o pipefail
+          set -euo pipefail
           REPO="${{ github.event.repository.name }}"
-          TARGETS=(
-            SwiftXState
-            SwiftXStateGraph
-            SwiftXStateInspect
-            SwiftXStateInspectorUI
-            SwiftXStateInspectURLSession
-            SwiftXStateSwiftData
-            SwiftXStateSwiftUI
-          )
           rm -rf docs && mkdir -p docs
-          BUILT=""
-          FAILED=""
-          for T in "${TARGETS[@]}"; do
-            echo "::group::DocC — $T"
-            if swift package --allow-writing-to-directory "docs/$T" \
-                generate-documentation \
-                --target "$T" \
-                --output-path "docs/$T" \
-                --transform-for-static-hosting \
-                --hosting-base-path "$REPO/$T" \
-                --disable-indexing; then
-              BUILT="$BUILT $T"
-            else
-              echo "::warning title=DocC::Symbol extraction failed for $T on this toolchain — skipping its docs."
-              rm -rf "docs/$T"
-              FAILED="$FAILED $T"
-            fi
-            echo "::endgroup::"
-          done
-
-          # The core library must always publish; treat its failure as a hard error.
-          case " $BUILT " in
-            *" SwiftXState "*) : ;;
-            *) echo "::error title=DocC::Core SwiftXState docs failed to build — failing the job."; exit 1 ;;
-          esac
-          [ -n "$FAILED" ] && echo "Built:$BUILT" && echo "Skipped:$FAILED"
-
-          # Landing page links only the modules that actually built.
-          {
-            echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-            echo '<meta name="viewport" content="width=device-width, initial-scale=1">'
-            echo '<title>SwiftXState — Documentation</title>'
-            echo '<style>body{font:16px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;max-width:42rem;margin:4rem auto;padding:0 1.5rem}a{color:#7c5cff}h1{margin-bottom:.25rem}</style>'
-            echo '</head><body><h1>SwiftXState</h1><p>XState v5, natively in Swift. Module reference:</p><ul>'
-            for T in $BUILT; do
-              lc=$(echo "$T" | tr '[:upper:]' '[:lower:]')
-              echo "<li><a href=\"./$T/documentation/$lc/\">$T</a></li>"
-            done
-            echo '</ul></body></html>'
-          } > docs/index.html
+          swift package --allow-writing-to-directory docs \
+            generate-documentation \
+            --enable-experimental-combined-documentation \
+            --target SwiftXState \
+            --target SwiftXStateGraph \
+            --target SwiftXStateInspect \
+            --target SwiftXStateInspectorUI \
+            --target SwiftXStateInspectURLSession \
+            --target SwiftXStateSwiftData \
+            --target SwiftXStateSwiftUI \
+            --output-path docs \
+            --transform-for-static-hosting \
+            --hosting-base-path "$REPO" \
+            --disable-indexing
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

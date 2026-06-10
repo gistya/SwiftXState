@@ -3,7 +3,7 @@
 # SwiftXState
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-DocC-7c5cff.svg)](https://gistya.github.io/SwiftXState/)
+[![Documentation](https://img.shields.io/badge/docs-DocC-7c5cff.svg)](https://gistya.github.io/SwiftXState/documentation/swiftxstate/)
 
 **XState-compatible state machines and actors for Swift — built from the ground up to run wherever Swift runs: Apple platforms, Linux, and Windows.**
 
@@ -15,19 +15,19 @@ That is separate from how **your app** uses Swift. Swift has excellent C and C++
 
 ## Documentation
 
-📖 **API reference (DocC):** **<https://gistya.github.io/SwiftXState/>**
+📖 **API reference (DocC):** **<https://gistya.github.io/SwiftXState/documentation/swiftxstate/>**
 
-Per-module reference:
+The modules are published as a single combined DocC site with cross-module navigation. Per-module entry points:
 
 | Module | API reference |
 |--------|---------------|
-| **SwiftXState** (core) | <https://gistya.github.io/SwiftXState/SwiftXState/documentation/swiftxstate/> |
-| **SwiftXStateSwiftUI** | <https://gistya.github.io/SwiftXState/SwiftXStateSwiftUI/documentation/swiftxstateswiftui/> |
-| **SwiftXStateGraph** | <https://gistya.github.io/SwiftXState/SwiftXStateGraph/documentation/swiftxstategraph/> |
-| **SwiftXStateInspectorUI** | <https://gistya.github.io/SwiftXState/SwiftXStateInspectorUI/documentation/swiftxstateinspectorui/> |
-| **SwiftXStateInspect** | <https://gistya.github.io/SwiftXState/SwiftXStateInspect/documentation/swiftxstateinspect/> |
-| **SwiftXStateInspectURLSession** | <https://gistya.github.io/SwiftXState/SwiftXStateInspectURLSession/documentation/swiftxstateinspecturlsession/> |
-| **SwiftXStateSwiftData** | <https://gistya.github.io/SwiftXState/SwiftXStateSwiftData/documentation/swiftxstateswiftdata/> |
+| **SwiftXState** (core) | <https://gistya.github.io/SwiftXState/documentation/swiftxstate/> |
+| **SwiftXStateSwiftUI** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateswiftui/> |
+| **SwiftXStateGraph** | <https://gistya.github.io/SwiftXState/documentation/swiftxstategraph/> |
+| **SwiftXStateInspectorUI** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateinspectorui/> |
+| **SwiftXStateInspect** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateinspect/> |
+| **SwiftXStateInspectURLSession** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateinspecturlsession/> |
+| **SwiftXStateSwiftData** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateswiftdata/> |
 
 Docs are generated with DocC and published to GitHub Pages from `main` by
 [`.github/workflows/static.yml`](.github/workflows/static.yml) on every merge. (The site goes live
