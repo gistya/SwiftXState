@@ -441,6 +441,7 @@ Near-term priorities to close the remaining XState semantic gaps:
 3. **`@xstate/graph` algorithms** — ✅ shipped in core: adjacency map, shortest/simple paths, `TestModel` (model-based testing), and `validate` (dead-end / unreachable-state checks)
 4. **Machine JSON import** — structural import + click-through simulation shipped (see `InspectorPasteApp`); full round-trip back to `definitionJSON()` still planned
 5. **On-device live run of imported machines** *(investigating)* — execute an imported XState machine's real behavior (guards/actions/actors) on iOS/macOS via in-process `JavaScriptCore`, bridging XState's `inspect` callback into `InspectionEvent`, so any JS machine runs live in the native inspector without a Node relay
+6. **Load machine configs / full machines from external sources** *(under research)* — decode an XState-JSON definition into a *runnable* native `MachineConfig` whose guards/actions/actors bind **by name** to a Swift `setup(...)` registry (config is data; behavior stays compiled), and/or merge externally-supplied states and rules into a machine defined in code. Gated on a thorough review of the **security model for untrusted definitions** — trust boundaries, validation, resource limits, and what a hostile config could trigger via named-implementation wiring — before any API is committed.
 
 See the [parity table](#parity-with-xstate) for the full picture.
 

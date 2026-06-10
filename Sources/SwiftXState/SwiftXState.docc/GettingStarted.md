@@ -1,11 +1,15 @@
 # Getting Started
 
-Install SwiftXState, build your first machine, and run it.
+Install SwiftXState, build your first machine, and run it — using the string-based API.
 
 ## Overview
 
 This guide takes you from zero to a running state machine. By the end you'll understand the
 three things every SwiftXState program uses: a **config**, a **machine**, and an **actor**.
+
+> Tip: This is the **🟢 Basic (string-based)** path — the quickest way to get going. When you want
+> compile-time guarantees (typed events, checked state targets, narrowed guards/actions), switch to
+> the **🔵 Advanced** path: <doc:TypeSafeGettingStarted>. Both build the same machine.
 
 ## Add the package
 
@@ -116,9 +120,28 @@ The handler fires immediately with the current snapshot, then again after every 
 | Actor | ``Actor`` | A running instance you `send` events to |
 | Snapshot | ``MachineSnapshot`` | The state + data, read after each event |
 
+## Beta notes & limitations
+
+A couple of things to know while SwiftXState is in beta, since the string API can *look* like it
+should be loadable straight from data:
+
+- **Machines are authored in Swift.** A config's guards, actions, and actors are Swift closures —
+  *behavior is code, not data.* Even with string state/event names, you build the machine in
+  Swift, not by deserializing one wholesale.
+- **You can export, and load *structure* for tooling.** `definitionJSON()` exports a machine to
+  XState-compatible JSON, and `SwiftXStateInspectorUI` can load such JSON to **visualize and
+  step through** a machine's structure. That path renders the graph and walks control flow — it
+  does **not** execute real guards/actions/actors.
+- **Loading a *runnable* machine from an external source is not supported yet.** Decoding a
+  definition from the network, disk, or user input into a live machine (binding behavior by name
+  to a Swift registry) is an **under-research roadmap item** — it depends on a security model for
+  untrusted definitions that we want to get right before committing to an API. See the project
+  README's roadmap.
+
 ## Next steps
 
 - <doc:CoreConcepts> — add data (context), conditional transitions (guards), and side effects
   (actions).
+- <doc:TypeSafeGettingStarted> — the same journey with compile-time guarantees.
 - <doc:RunningActors> — the full actor lifecycle, subscriptions, `waitFor`, and child actors.
 - <doc:AsyncWork> — call an API and transition on the result.

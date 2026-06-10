@@ -2,6 +2,9 @@
 
 States, transitions, context, guards, and actions — the five ideas every machine is built from.
 
+> Tip: This page uses the **🟢 Basic (string-based)** API. For the same concepts with typed events,
+> checked state targets, and narrowed guards/actions, see <doc:TypeSafeCoreConcepts>.
+
 ## Overview
 
 The <doc:GettingStarted> toggle had states and transitions but no data and no side effects.

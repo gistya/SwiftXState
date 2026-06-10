@@ -9,6 +9,10 @@ SwiftXState that work is modeled as **actor logic** you `invoke` from a state. W
 entered the work starts; when it's exited the work is cancelled. You react to the outcome with
 `onDone` / `onError` transitions.
 
+> Note: This page applies to **both** authoring paths (<doc:GettingStarted> /
+> <doc:TypeSafeGettingStarted>). The actor-logic API is identical; only how you write the
+> surrounding transitions differs.
+
 There are three building blocks, each mirroring an XState `fromX`:
 
 | Helper | XState equivalent | Use for |
@@ -46,6 +50,11 @@ output, and a thrown error routes to `onError`:
 
 The result arrives as a ``DoneActorEvent``; pull the typed value out with
 `event.output?.get(Type.self)`. The output type must be `Sendable & Equatable`.
+
+> Note: **On the type-safe path**, framework events like ``DoneActorEvent`` are ``Eventable`` but
+> *not* ``StateEvent``, so the narrowed `assign`/`guarded` helpers from <doc:TypeSafeCoreConcepts>
+> don't apply to them — handle `onDone`/`onError` with the standard form shown above
+> (`args.event as? DoneActorEvent`). The typed helpers are for *your* `StateEvent` types.
 
 Pass data *into* the task with `input:` (resolved from context/event at invoke time) and read it
 from the task scope. Cancellation is automatic on state exit; supply an `onCancel:` closure for

@@ -8,8 +8,13 @@ Inline closures are great for getting started, but as a machine grows you'll wan
 
 - **reuse** the same guard or action in several places,
 - keep the config **declarative** (structure in one place, behavior in another),
-- give your actors **stable names** so the inspector and Stately tooling can label them,
-- and (eventually) load a machine's **structure from JSON** while supplying behavior in Swift.
+- give your actors **stable names** so the inspector and Stately tooling can label them.
+
+> Note: Applies to **both** authoring paths (<doc:GettingStarted> / <doc:TypeSafeGettingStarted>).
+> Named implementations are also the seam that *could* one day let a machine's structure come from
+> an external definition while behavior stays compiled in Swift — but loading runnable machines
+> from external sources is an under-research roadmap item, not a beta capability. See
+> <doc:GettingStarted> (Beta notes) and the project README's roadmap.
 
 ``setup(actions:guards:delays:actors:)`` is how. It mirrors XState's `setup({...}).createMachine({...})`:
 you register named implementations once, then refer to them by string in the config.
@@ -93,9 +98,10 @@ let testMachine = machine.provide(MachineImplementations(
 ## Why this matters for tooling
 
 Named actors are what let the **inspector** and Stately's registry display meaningful labels
-(`"loader"`, `"game-watcher"`) instead of anonymous closures, and they're the seam that lets a
-machine's *structure* come from exported/imported JSON while its *behavior* stays in type-checked
-Swift. If you plan to visualize or share your machines, prefer named implementations.
+(`"loader"`, `"game-watcher"`) instead of anonymous closures — so if you plan to visualize or share
+your machines, prefer named implementations. They also keep *structure* (data) cleanly separated
+from *behavior* (compiled Swift), which is the architecture any future external-definition loading
+would build on (see the README roadmap).
 
 ## Next steps
 

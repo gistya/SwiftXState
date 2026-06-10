@@ -8,6 +8,10 @@ A ``StateMachine`` is just the rules. An ``Actor`` is a *running instance* of th
 thing you actually interact with. This guide covers the actor's lifecycle and the ways you read
 from and react to it.
 
+> Note: This page applies to **both** the Basic (<doc:GettingStarted>) and Type-Safe
+> (<doc:TypeSafeGettingStarted>) paths. Examples use string events/state names; the inline
+> *"Type-safe equivalent"* notes show the typed form where the two differ.
+
 ## Creating and starting
 
 `createActor` builds an actor from a machine; `start()` boots it into its initial state. Until
@@ -53,6 +57,9 @@ snap.output                    // set when a final state is reached (status == .
 ``MachineSnapshot/matches(_:)-(String)`` accepts dotted paths for nested states, e.g.
 `snap.matches("checkout.payment")`.
 
+> Note: **Type-safe equivalent.** With `@MachineStates`, read state from the generated enum so the
+> check can't drift from your declarations: `snap.matches(State.loading.rawValue)`.
+
 ## Sending events
 
 ``Actor/send(_:)`` is **synchronous** and **run-to-completion**: when it returns, the transition
@@ -63,6 +70,10 @@ snap.output                    // set when a final state is reached (status == .
 actor.send(Event("FETCH"))
 actor.send(FailureEvent(message: "timeout"))
 ```
+
+> Note: **Type-safe equivalent.** On the typed path, events are ``StateEvent`` types you send as
+> values — `actor.send(Fetch())` — so a misspelled event is a compile error, not a silent no-op.
+> See <doc:TypeSafeCoreConcepts>.
 
 ## Observing changes
 
