@@ -272,7 +272,7 @@ struct GraphScene3DView {
     }
 
     /// Refresh only the per-node materials + edge colors (cheap) when the active set / selection changes.
-    private func refreshMaterials(in scnView: SCNView) {
+    @MainActor private func refreshMaterials(in scnView: SCNView) {
         guard let root = scnView.scene?.rootNode else { return }
         for node in model.nodes where !node.type.isContainer {
             guard let snode = root.childNode(withName: node.id, recursively: false),

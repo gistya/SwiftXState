@@ -270,7 +270,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				73F791062FD7EB91008E710F /* XCRemoteSwiftPackageReference "chesskit-swift" */,
-				73F792502FD88DD7008E710F /* XCLocalSwiftPackageReference "../../../swift-xstate" */,
 				73F793042FD8AAF3008E710F /* XCLocalSwiftPackageReference "SwiftXChessOpenings" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -679,10 +678,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		73F792502FD88DD7008E710F /* XCLocalSwiftPackageReference "../../../swift-xstate" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../swift-xstate";
-		};
 		73F793042FD8AAF3008E710F /* XCLocalSwiftPackageReference "SwiftXChessOpenings" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = SwiftXChessOpenings;

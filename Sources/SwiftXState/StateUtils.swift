@@ -184,7 +184,7 @@ func resolveInitialStateNodes<Context: Sendable>(
     historyValue: HistoryValue<Context>
 ) -> StateNodeSet<Context> {
     if isHistoryNode(initialNode) {
-        var nodes = StateNodeSet(getEffectiveTargetStates([initialNode], historyValue: historyValue))
+        let nodes = StateNodeSet(getEffectiveTargetStates([initialNode], historyValue: historyValue))
         return getAllStateNodes(nodes)
     }
 

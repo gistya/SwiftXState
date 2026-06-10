@@ -253,7 +253,7 @@ public struct SendableValue: @unchecked Sendable, Equatable {
     }
 
     public static func == (lhs: SendableValue, rhs: SendableValue) -> Bool {
-        guard let l = lhs.box as? any Equatable, let r = rhs.box as? any Equatable else {
+        guard let l = lhs.box as (any Equatable)?, let r = rhs.box as (any Equatable)? else {
             return false
         }
         return String(describing: l) == String(describing: r)

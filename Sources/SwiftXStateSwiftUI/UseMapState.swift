@@ -18,7 +18,7 @@ import SwiftXState
 public final class MapStateDriver<Context: Sendable, T: Sendable & Equatable> {
     public private(set) var value: T?
     private let mapper: StateMap<Context, T>
-    private nonisolated(unsafe) var subscription: Subscription?
+    @ObservationIgnored private var subscription: Subscription?
 
     public init(
         actor: Actor<Context>,
@@ -37,7 +37,7 @@ public final class MapStateDriver<Context: Sendable, T: Sendable & Equatable> {
         }
     }
 
-    deinit {
+    isolated deinit {
         subscription?.cancel()
     }
 }

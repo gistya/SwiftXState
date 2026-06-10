@@ -100,7 +100,7 @@ actor InspectBridgeState {
 
         let task = Task {
             let connected = try await transport.validatedConnect(to: endpoint)
-            await self.attach(session: connected)
+            attach(session: connected)
         }
         connectTask = task
         _ = try? await task.value
