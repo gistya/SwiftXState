@@ -28,8 +28,8 @@ jobs:
             --target SwiftXStateInspect \
             --target SwiftXStateInspectorUI \
             --target SwiftXStateInspectURLSession \
-            --target SwiftXStateInspectSwiftData \
-            --target SwiftXStateInspectSwiftUI \
+            --target SwiftXStateSwiftData \
+            --target SwiftXStateSwiftUI \
             --output-path ./docs \
             --transform-for-static-hosting \
             --hosting-base-path ${{ github.event.repository.name }} \
