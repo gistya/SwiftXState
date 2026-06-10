@@ -3,12 +3,35 @@
 # SwiftXState
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-DocC-7c5cff.svg)](https://gistya.github.io/SwiftXState/)
 
 **XState-compatible state machines and actors for Swift — built from the ground up to run wherever Swift runs: Apple platforms, Linux, and Windows.**
 
 SwiftXState is a Swift implementation of the [XState](https://github.com/statelyai/xstate) actor and state-machine model. It follows the same mental model, event protocol, and inspector wire format as XState v5, but it is not a transpiler and it does not wrap the JavaScript XState library (for example via JavaScriptCore or a Node FFI bridge). The **interpreter itself** is written in idiomatic Swift with `Sendable` types and structured concurrency — no UI framework dependencies in the core runtime.
 
 That is separate from how **your app** uses Swift. Swift has excellent C and C++ interop (`import`ing C modules, Swift 5.9+ C++ interop, Objective-C bridges, `fromCallback` / `fromTask` invoke children). SwiftXState is meant to sit *on top of* that stack: the state machine orchestrates behavior in Swift, while invoked actors and actions call into native libraries at the edges. The goal is not just parity with JavaScript — it is extending the architecture into compiled mobile and desktop apps, offline-first persistence, deterministic replay, and structured `async`/`await` workflows alongside existing C/C++ codebases.
+
+---
+
+## Documentation
+
+📖 **API reference (DocC):** **<https://gistya.github.io/SwiftXState/>**
+
+Per-module reference:
+
+| Module | API reference |
+|--------|---------------|
+| **SwiftXState** (core) | <https://gistya.github.io/SwiftXState/SwiftXState/documentation/swiftxstate/> |
+| **SwiftXStateSwiftUI** | <https://gistya.github.io/SwiftXState/SwiftXStateSwiftUI/documentation/swiftxstateswiftui/> |
+| **SwiftXStateGraph** | <https://gistya.github.io/SwiftXState/SwiftXStateGraph/documentation/swiftxstategraph/> |
+| **SwiftXStateInspectorUI** | <https://gistya.github.io/SwiftXState/SwiftXStateInspectorUI/documentation/swiftxstateinspectorui/> |
+| **SwiftXStateInspect** | <https://gistya.github.io/SwiftXState/SwiftXStateInspect/documentation/swiftxstateinspect/> |
+| **SwiftXStateInspectURLSession** | <https://gistya.github.io/SwiftXState/SwiftXStateInspectURLSession/documentation/swiftxstateinspecturlsession/> |
+| **SwiftXStateSwiftData** | <https://gistya.github.io/SwiftXState/SwiftXStateSwiftData/documentation/swiftxstateswiftdata/> |
+
+Docs are generated with DocC and published to GitHub Pages from `main` by
+[`.github/workflows/static.yml`](.github/workflows/static.yml) on every merge. (The site goes live
+after the first successful run.)
 
 ---
 

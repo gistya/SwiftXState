@@ -2,7 +2,7 @@ name: Deploy DocC Documentation
 
 on:
   push:
-    branches: [ main ]        
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -10,36 +10,78 @@ permissions:
   pages: write
   id-token: write
 
+# Allow one docs deploy at a time; don't cancel an in-progress publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: macos-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Build Combined Documentation
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      # Cache the SwiftPM build so swift-syntax (the macro plugin) isn't recompiled every run.
+      - name: Cache SwiftPM build
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-docs-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: ${{ runner.os }}-spm-docs-
+
+      # Build each target's docs separately. This avoids the experimental "combined documentation"
+      # merge, which compiles + merges all targets at once and OOMs the runner ("cleaned up orphan
+      # process"). One target at a time keeps peak memory bounded and the failure point obvious.
+      - name: Build DocC (per target)
         run: |
-          swift package --allow-writing-to-directory ./docs \
-            generate-documentation \
-            --target SwiftXState \
-            --target SwiftXStateGraph \
-            --target SwiftXStateInspect \
-            --target SwiftXStateInspectorUI \
-            --target SwiftXStateInspectURLSession \
-            --target SwiftXStateSwiftData \
-            --target SwiftXStateSwiftUI \
-            --output-path ./docs \
-            --transform-for-static-hosting \
-            --hosting-base-path ${{ github.event.repository.name }} \
-            --enable-experimental-combined-documentation \
-            --disable-indexing
+          set -euo pipefail
+          REPO="${{ github.event.repository.name }}"
+          TARGETS=(
+            SwiftXState
+            SwiftXStateGraph
+            SwiftXStateInspect
+            SwiftXStateInspectorUI
+            SwiftXStateInspectURLSession
+            SwiftXStateSwiftData
+            SwiftXStateSwiftUI
+          )
+          rm -rf docs && mkdir -p docs
+          for T in "${TARGETS[@]}"; do
+            echo "::group::DocC — $T"
+            swift package --allow-writing-to-directory "docs/$T" \
+              generate-documentation \
+              --target "$T" \
+              --output-path "docs/$T" \
+              --transform-for-static-hosting \
+              --hosting-base-path "$REPO/$T" \
+              --disable-indexing
+            echo "::endgroup::"
+          done
+          # Simple landing page linking to each module's docs.
+          {
+            echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            echo '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            echo '<title>SwiftXState — Documentation</title>'
+            echo '<style>body{font:16px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;max-width:42rem;margin:4rem auto;padding:0 1.5rem}a{color:#7c5cff}h1{margin-bottom:.25rem}</style>'
+            echo '</head><body><h1>SwiftXState</h1><p>XState v5, natively in Swift. Module reference:</p><ul>'
+            for T in "${TARGETS[@]}"; do
+              lc=$(echo "$T" | tr '[:upper:]' '[:lower:]')
+              echo "<li><a href=\"./$T/documentation/$lc/\">$T</a></li>"
+            done
+            echo '</ul></body></html>'
+          } > docs/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './docs'
+          path: ./docs
 
       - name: Deploy to GitHub Pages
         id: deployment

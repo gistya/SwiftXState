@@ -14,5 +14,8 @@ node_modules/
 # Generated opening-dataset download cache — regenerate via Scripts/generate-opening-dataset.py
 Scripts/.opening-tsv-cache/
 
+# Generated DocC site — built and deployed by CI (.github/workflows/static.yml), not committed
+docs/
+
 # Planning docs (local only)
 plan.md
