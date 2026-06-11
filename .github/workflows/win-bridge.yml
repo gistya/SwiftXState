@@ -52,7 +52,8 @@ jobs:
       - name: Build bridge with C exports + verify symbols
         run: |
           SWIFTXWIN=1 swift build --product SwiftXStateWinBridge
-          DYLIB=$(find .build -name 'libSwiftXStateWinBridge.dylib' | head -1)
+          # Exclude the identically-named file inside the .dSYM debug bundle (it's not loadable).
+          DYLIB=$(find .build -name 'libSwiftXStateWinBridge.dylib' -not -path '*.dSYM/*' | head -1)
           echo "bridge: $DYLIB"
           for sym in AddNumbers ActorCreate ActorSend ActorState ActorContextJSON ActorSetSnapshotCallback MachineList; do
             nm -gU "$DYLIB" | grep -q " _$sym$" || { echo "::error::missing C export _$sym"; exit 1; }

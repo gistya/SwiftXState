@@ -48,7 +48,7 @@ jobs:
         run: |
           OUT="$NATIVE_DIR/${{ matrix.rid }}/native"
           mkdir -p "$OUT"
-          SRC=$(find .build -path '*release*' -name '${{ matrix.file }}' | head -1)
+          SRC=$(find .build -path '*release*' -name '${{ matrix.file }}' -not -path '*.dSYM/*' | head -1)
           test -n "$SRC" || { echo "::error::built native not found"; exit 1; }
           cp "$SRC" "$OUT/${{ matrix.file }}"
 
