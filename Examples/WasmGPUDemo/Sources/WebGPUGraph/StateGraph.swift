@@ -72,6 +72,14 @@ final class GraphState {
     private var selected: Int?
     private var onSelect: ((String) -> Void)?
 
+    // Camera + pointer interaction.
+    private var angle = 0.0
+    private var dragging = false
+    private var dragStartX = 0.0
+    private var dragStartAngle = 0.0
+    private var dragMoved = 0.0
+    private var labelEls: [JSValue] = []
+
     // GPU
     private var device: GPUDevice?
     private var context: GPUCanvasContext?
@@ -84,10 +92,13 @@ final class GraphState {
     private var nodeInst: GPUBuffer?
     private var edgeInst: GPUBuffer?
     private var arrowInst: GPUBuffer?
+    private var msaaView: GPUTextureView?
+    private let sampleCount: UInt32 = 4
     private var aspect = 1.0
 
     private var frameLoop: JSClosure?
-    private var clickClosure: JSClosure?
+    private var canvasEl: JSObject?
+    private var pointerClosures: [JSClosure] = []
 
     private let ringR = 0.72
     private let nodeR = 0.12
@@ -178,6 +189,13 @@ final class GraphState {
         ctx.configure(GPUCanvasConfiguration(device: dev, format: format))
         let module = dev.createShaderModule(descriptor: GPUShaderModuleDescriptor(code: Self.wgsl))
 
+        // 4× MSAA target — antialiases the edge/arrow geometry. Resolved into the canvas each frame.
+        let msaa = dev.createTexture(descriptor: GPUTextureDescriptor(
+            size: GPUExtent3D(width: UInt32(cw), height: UInt32(ch)),
+            sampleCount: sampleCount, format: format, usage: [.renderAttachment]))
+        msaaView = msaa.createView()
+        let ms = GPUMultisampleState(count: sampleCount)
+
         func target0(_ format: GPUTextureFormat) -> GPUFragmentState {
             GPUFragmentState(module: module, entryPoint: "fs_solid", targets: [GPUColorTargetState(format: format)])
         }
@@ -209,13 +227,15 @@ final class GraphState {
 
         edgePipe = dev.createRenderPipeline(descriptor: GPURenderPipelineDescriptor(
             vertex: GPUVertexState(module: module, entryPoint: "vs_edge", buffers: [quadL, edgeL]),
-            fragment: target0(format), layout: .layout(pipeLayout)))
+            multisample: ms, fragment: target0(format), layout: .layout(pipeLayout)))
         arrowPipe = dev.createRenderPipeline(descriptor: GPURenderPipelineDescriptor(
             vertex: GPUVertexState(module: module, entryPoint: "vs_arrow", buffers: [arrowL]),
-            fragment: target0(format), layout: .layout(pipeLayout)))
+            multisample: ms, fragment: target0(format), layout: .layout(pipeLayout)))
         nodePipe = dev.createRenderPipeline(descriptor: GPURenderPipelineDescriptor(
             vertex: GPUVertexState(module: module, entryPoint: "vs_node", buffers: [quadL, nodeL]),
-            fragment: GPUFragmentState(module: module, entryPoint: "fs_node", targets: [GPUColorTargetState(format: format)]),
+            multisample: ms,
+            fragment: GPUFragmentState(module: module, entryPoint: "fs_node",
+                targets: [GPUColorTargetState(format: format, blend: .alphaBlending)]),
             layout: .layout(pipeLayout)))
 
         quad = dev.createBuffer(descriptor: GPUBufferDescriptor(size: 48, usage: [.vertex, .copyDst]))
@@ -246,9 +266,9 @@ final class GraphState {
             dev.queue.writeBuffer(arrowInst!, bufferOffset: 0, data: f32(aData))
         }
 
-        device = dev; context = ctx
+        device = dev; context = ctx; canvasEl = canvas
         placeLabels()
-        installClick(canvas)
+        installPointer(canvas)
 
         frameLoop = JSClosure { args in
             let ms = args.first?.number ?? 0
@@ -261,45 +281,87 @@ final class GraphState {
     private func placeLabels() {
         let document = JSObject.global.document
         let stage = document.getElementById("stage").object!
-        for (i, name) in names.enumerated() {
-            let leftPct = (centers[i].x * aspect * 0.5 + 0.5) * 100.0
-            let topPct = (1.0 - (centers[i].y * 0.5 + 0.5)) * 100.0
+        for name in names {
             let label = document.createElement("div")
             label.innerText = .string(name)
+            _ = stage.appendChild!(label)
+            labelEls.append(label)
+        }
+        updateLabels()
+    }
+
+    /// Reposition the HTML labels to follow the (rotated) node positions.
+    private func updateLabels() {
+        let c = cos(angle), s = sin(angle)
+        for (i, label) in labelEls.enumerated() {
+            let p = centers[i]
+            let rx = p.x * c - p.y * s
+            let ry = p.x * s + p.y * c
+            let leftPct = (rx * aspect * 0.5 + 0.5) * 100.0
+            let topPct = (1.0 - (ry * 0.5 + 0.5)) * 100.0
             label.style = .string(
                 "position:absolute;left:\(leftPct)%;top:\(topPct)%;transform:translate(-50%,-50%);"
                 + "color:#fff;font:600 13px system-ui;pointer-events:none;text-shadow:0 1px 4px rgba(0,0,0,.85)")
-            _ = stage.appendChild!(label)
         }
     }
 
-    private func installClick(_ canvas: JSObject) {
-        let closure = JSClosure { args in
-            MainActor.assumeIsolated {
-                guard let event = args.first else { return }
-                GraphState.shared.handleClick(event)
-            }
-            return .undefined
-        }
-        clickClosure = closure
-        canvas.onclick = .object(closure)
+    private func installPointer(_ canvas: JSObject) {
+        let down = JSClosure { a in MainActor.assumeIsolated { GraphState.shared.onDown(a.first) }; return .undefined }
+        let move = JSClosure { a in MainActor.assumeIsolated { GraphState.shared.onMove(a.first) }; return .undefined }
+        let up = JSClosure { a in MainActor.assumeIsolated { GraphState.shared.onUp(a.first) }; return .undefined }
+        pointerClosures = [down, move, up]
+        canvas.onpointerdown = .object(down)
+        canvas.onpointermove = .object(move)
+        canvas.onpointerup = .object(up)
     }
 
-    private func handleClick(_ event: JSValue) {
-        let ox = event.offsetX.number ?? 0
-        let oy = event.offsetY.number ?? 0
-        let el = JSObject.global.document.getElementById("gpu")
-        let cw = el.clientWidth.number ?? 1
-        let chh = el.clientHeight.number ?? 1
-        // To world space (undo the aspect compression on x).
-        let ndcX = (ox / cw) * 2 - 1
-        let ndcY = 1 - (oy / chh) * 2
-        let wx = ndcX / aspect
-        let wy = ndcY
+    // Pointer X relative to the canvas, in screen space (robust to page transforms / devicePixelRatio,
+    // unlike `offsetX`). Uses clientX − the canvas's bounding rect.
+    private func pointerX(_ e: JSValue) -> Double {
+        guard let canvasEl else { return 0 }
+        let left = canvasEl.getBoundingClientRect!().left.number ?? 0
+        return (e.clientX.number ?? 0) - left
+    }
+
+    private func onDown(_ event: JSValue?) {
+        guard let e = event else { return }
+        dragging = true
+        dragStartX = pointerX(e)
+        dragStartAngle = angle
+        dragMoved = 0
+    }
+
+    private func onMove(_ event: JSValue?) {
+        guard dragging, let e = event else { return }
+        let dx = pointerX(e) - dragStartX
+        dragMoved = max(dragMoved, abs(dx))
+        angle = dragStartAngle + dx * 0.012   // drag horizontally to spin the graph
+    }
+
+    private func onUp(_ event: JSValue?) {
+        dragging = false
+        if dragMoved < 6, let e = event { handleTap(e) }   // a tap, not a drag → select
+    }
+
+    private func handleTap(_ event: JSValue) {
+        guard let canvasEl else { return }
+        let rect = canvasEl.getBoundingClientRect!()
+        let left = rect.left.number ?? 0
+        let top = rect.top.number ?? 0
+        let width = rect.width.number ?? 1
+        let height = rect.height.number ?? 1
+        let px = (event.clientX.number ?? 0) - left
+        let py = (event.clientY.number ?? 0) - top
+        let wx = ((px / width) * 2 - 1) / aspect
+        let wy = 1 - (py / height) * 2
+        // Inverse-rotate the click into unrotated world space, then box-test the nodes.
+        let c = cos(-angle), s = sin(-angle)
+        let lx = wx * c - wy * s
+        let ly = wx * s + wy * c
+        let halfW = 0.66 * nodeR * 1.8, halfH = 0.46 * nodeR * 1.8
         var hit: Int?
-        for i in centers.indices {
-            let dx = wx - centers[i].x, dy = wy - centers[i].y
-            if (dx * dx + dy * dy).squareRoot() <= nodeR * 1.2 { hit = i; break }
+        for i in centers.indices where abs(lx - centers[i].x) <= halfW * 1.2 && abs(ly - centers[i].y) <= halfH * 1.35 {
+            hit = i; break
         }
         selected = hit
         if let h = hit { onSelect?(names[h]) }
@@ -309,23 +371,25 @@ final class GraphState {
 
     private func frame(_ time: Double) {
         guard let dev = device, let ctx = context, let nodePipe, let edgePipe, let arrowPipe,
-              let bindGroup, let uniform, let quad, let nodeInst, let edgeInst, let arrowInst else { return }
+              let bindGroup, let uniform, let quad, let nodeInst, let edgeInst, let arrowInst,
+              let msaaView else { return }
 
         // Ease activation toward target.
         for i in activation.indices { activation[i] += (target[i] - activation[i]) * 0.16 }
+        updateLabels()   // labels follow the (possibly rotating) graph
 
         // Rebuild node instances (cheap).
         var nData: [Double] = []
         for i in names.indices {
             let (r, g, b) = color(i)
-            nData += [centers[i].x, centers[i].y, nodeR, nodeR, r, g, b, activation[i], selected == i ? 1.0 : 0.0]
+            nData += [centers[i].x, centers[i].y, nodeR * 1.8, nodeR * 1.8, r, g, b, activation[i], selected == i ? 1.0 : 0.0]
         }
         dev.queue.writeBuffer(nodeInst, bufferOffset: 0, data: f32(nData))
-        dev.queue.writeBuffer(uniform, bufferOffset: 0, data: f32([time, aspect, 0, 0]))
+        dev.queue.writeBuffer(uniform, bufferOffset: 0, data: f32([time, aspect, angle, 0]))
 
         let enc = dev.createCommandEncoder()
         let pass = enc.beginRenderPass(descriptor: GPURenderPassDescriptor(colorAttachments: [
-            GPURenderPassColorAttachment(view: ctx.getCurrentTexture().createView(),
+            GPURenderPassColorAttachment(view: msaaView, resolveTarget: ctx.getCurrentTexture().createView(),
                 clearValue: GPUColor(r: 0.05, g: 0.05, b: 0.08, a: 1), loadOp: .clear, storeOp: .store)]))
         if !edges.isEmpty {
             pass.setPipeline(edgePipe); pass.setBindGroup(0, bindGroup: bindGroup)
@@ -347,9 +411,19 @@ final class GraphState {
     // MARK: WGSL
 
     static let wgsl = """
-    @group(0) @binding(0) var<uniform> u: vec4f;  // x = time, y = aspect (H/W)
+    @group(0) @binding(0) var<uniform> u: vec4f;  // x = time, y = aspect (H/W), z = rotation
 
-    fn clip(p: vec2f) -> vec4f { return vec4f(p.x * u.y, p.y, 0.0, 1.0); }
+    fn clip(p: vec2f) -> vec4f {
+        let c = cos(u.z);
+        let s = sin(u.z);
+        let r = vec2f(p.x * c - p.y * s, p.x * s + p.y * c);  // rotate in square world space
+        return vec4f(r.x * u.y, r.y, 0.0, 1.0);               // then aspect-fit to the canvas
+    }
+
+    fn sdRoundBox(p: vec2f, b: vec2f, r: f32) -> f32 {
+        let q = abs(p) - b + vec2f(r);
+        return min(max(q.x, q.y), 0.0) + length(max(q, vec2f(0.0))) - r;
+    }
 
     struct Solid { @builtin(position) pos: vec4f, @location(0) color: vec3f };
 
@@ -381,27 +455,54 @@ final class GraphState {
         @location(0) color: vec3f,
         @location(1) uv: vec2f,
         @location(2) sel: f32,
+        @location(3) act: f32,
     };
 
     @vertex
     fn vs_node(@location(0) corner: vec2f, @location(1) center: vec2f, @location(2) halfSize: vec2f,
                @location(3) color: vec3f, @location(4) activation: f32, @location(5) selected: f32) -> NodeOut {
-        let pulse = 1.0 + 0.10 * sin(u.x * 4.0) * activation;
+        let pulse = 1.0 + 0.06 * sin(u.x * 4.0) * activation;
         var o: NodeOut;
         o.pos = clip(center + corner * halfSize * pulse);
-        let dim = mix(0.45, 1.0, activation);
-        let glow = 1.0 + 0.5 * (0.5 + 0.5 * sin(u.x * 4.0)) * activation;
+        let dim = mix(0.5, 1.0, activation);
+        let glow = 1.0 + 0.45 * (0.5 + 0.5 * sin(u.x * 4.0)) * activation;
         o.color = color * dim * glow;
-        o.uv = corner; o.sel = selected;
+        o.uv = corner; o.sel = selected; o.act = activation;
         return o;
     }
 
+    // Straight-alpha "over" compositing (top over bottom).
+    fn over(ct: vec3f, at: f32, cb: vec3f, ab: f32) -> vec4f {
+        let a = at + ab * (1.0 - at);
+        if (a <= 0.0001) { return vec4f(0.0); }
+        return vec4f((ct * at + cb * ab * (1.0 - at)) / a, a);
+    }
+
     @fragment
-    fn fs_node(@location(0) color: vec3f, @location(1) uv: vec2f, @location(2) sel: f32) -> @location(0) vec4f {
-        let d = length(uv);
-        if (d > 1.0) { discard; }
-        if (sel > 0.5 && d > 0.78) { return vec4f(1.0, 1.0, 1.0, 1.0); }
-        return vec4f(color, 1.0);
+    fn fs_node(@location(0) color: vec3f, @location(1) uv: vec2f, @location(2) sel: f32, @location(3) act: f32) -> @location(0) vec4f {
+        let bExt = vec2f(0.66, 0.46);                 // rounded-rectangle half-extents (uv space)
+        let rad = 0.26;                               // corner radius
+        let d = sdRoundBox(uv, bExt, rad);            // signed distance to the rounded rect
+        let aa = max(fwidth(d), 0.0008) * 1.3;        // screen-space anti-alias width
+
+        // Soft drop shadow, offset downward.
+        let sd = sdRoundBox(uv - vec2f(0.0, 0.16), bExt, rad);
+        let shadowA = (1.0 - smoothstep(0.0, 0.22, sd)) * 0.5;
+
+        // Outer coloured glow on the active node (cheap fake bloom).
+        let glowA = (1.0 - smoothstep(0.0, 0.40, d)) * act * 0.6;
+
+        // Filled disc with a subtle vertical gradient.
+        let fill = 1.0 - smoothstep(0.0, aa, d);
+        let base = color * (1.0 + 0.18 * uv.y);
+
+        // White selection ring just inside the rim.
+        let ring = (1.0 - smoothstep(0.0, aa + 0.015, abs(d + 0.05))) * sel;
+        let surface = mix(base, vec3f(1.0), ring);
+
+        // Composite back-to-front: shadow, then glow, then the disc.
+        let g = over(color, glowA, vec3f(0.0), shadowA);
+        return over(surface, fill, g.rgb, g.a);
     }
     """
 }

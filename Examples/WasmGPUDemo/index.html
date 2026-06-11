@@ -9,30 +9,21 @@
     h1 { font-size: 1.2rem; margin: 1.5rem 0 .25rem; }
     p.sub { color: #888; margin: .25rem 0 1.25rem; }
     #stage { position: relative; display: inline-block; }
-    canvas { border-radius: 10px; box-shadow: 0 8px 40px rgba(124,92,255,.35); max-width: 92vw; height: auto; display: block; }
-    #next { margin-top: 1.25rem; padding: .55rem 1.5rem; font-size: 1rem; border: 0; border-radius: 8px; background: #7c5cff; color: #fff; cursor: pointer; }
+    canvas { border-radius: 10px; box-shadow: 0 8px 40px rgba(124,92,255,.35); max-width: 92vw; height: auto; display: block; touch-action: none; cursor: grab; }
     #status { color: #9a8cff; margin-top: 1rem; min-height: 1.2em; font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
   <h1>A state-machine graph, rendered on the GPU — from Swift</h1>
-  <p class="sub">SwiftXState → WebAssembly → WebGPU. Nodes &amp; edges come from the machine's <code>definitionJSON()</code>.</p>
+  <p class="sub">SwiftXState → WebAssembly → WebGPU. Drag to rotate · tap a node to select.</p>
   <div id="stage">
     <canvas id="gpu" width="720" height="480"></canvas>
   </div>
   <div id="events"></div>
   <div id="status">Loading…</div>
-  <script>
-    window.addEventListener('error', (e) => {
-      document.getElementById('status').textContent = 'JS error: ' + (e.message || e.error);
-    });
-    window.addEventListener('unhandledrejection', (e) => {
-      document.getElementById('status').textContent = 'rejection: ' + e.reason;
-    });
-  </script>
-  <script type="module">
-    import { init } from "./bundle.js";
-    init().catch((e) => { document.getElementById("status").textContent = "Failed to load: " + e; console.error(e); });
-  </script>
+
+  <!-- The only hand-written JavaScript: one line to start the WebAssembly module.
+       Everything else — DOM, WebGPU, the render loop, input — is Swift via JavaScriptKit. -->
+  <script type="module">import { init } from "./bundle.js"; init();</script>
 </body>
 </html>

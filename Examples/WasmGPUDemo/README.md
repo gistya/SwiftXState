@@ -40,7 +40,21 @@ element. The app owns the machine and the event buttons; the toolkit owns the re
   nodes + edges. Swap in any machine and the graph follows.
 - **Three instanced pipelines** sharing one uniform/bind-group layout: **edges** (quads stretched
   between node boundaries), **arrowheads** (procedural triangles via `@builtin(vertex_index)`, no
-  vertex buffer), and **nodes** (circles via fragment `discard` outside the radius).
+  vertex buffer), and **nodes**.
+- **SDF rounded-rect nodes + 4× MSAA** for a polished look: nodes are drawn from a signed-distance
+  field (`sdRoundBox`) with a `smoothstep`/`fwidth` anti-aliased edge, a soft **drop shadow** (the
+  same SDF offset down), a **selection ring**, and a coloured **glow** on the active node (a cheap
+  fake-bloom — the SDF sampled *outside* the shape). MSAA antialiases the edge/arrow geometry. All
+  technique, no engine.
+- **Camera rotation + tap-to-select** — the view applies a rotation in the shader (`clip()` rotates
+  square world space, then aspect-fits); **drag** to spin the graph (the HTML labels follow each
+  frame), and **tap** a node to select it. The tap is hit-tested by inverse-rotating the pointer
+  into world space — using `clientX` + `getBoundingClientRect()` (robust to page transforms/DPR,
+  unlike `offsetX`).
+- **Almost no JavaScript.** A browser wasm app can't reach Web APIs (WebGPU, DOM, events) without a
+  JS bridge — that's the platform, and JavaScriptKit is that bridge. But the *only hand-written*
+  JavaScript here is a single bootstrap line (`import { init } from "./bundle.js"; init();`).
+  Everything else — graph parsing, layout, WebGPU, the render loop, drag/tap input — is Swift.
 - **Aspect handled in the shader** — geometry lives in a square world space; a `clip()` helper
   applies the canvas aspect, so all CPU-side math (layout, edge offsets, hit-testing) stays isotropic.
 - **Eased active-state animation** — each node has an `activation` value that eases toward its target
