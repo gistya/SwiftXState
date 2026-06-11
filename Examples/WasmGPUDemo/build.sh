@@ -19,4 +19,7 @@ npx --yes esbuild "$OUT/index.js" --bundle --format=esm --outfile=site/bundle.js
 
 cp "$OUT/WasmGPUDemo.wasm" site/
 cp index.html site/
+# Embedded true-MSDF atlas (generated offline by tools/make-msdf.mjs) — the default text mode.
+# If it's missing, the app falls back to the self-contained runtime SDF at load.
+[ -f assets/msdf.png ] && cp assets/msdf.png assets/msdf.json site/ || echo "  (no MSDF atlas — run tools/make-msdf.mjs; the app will fall back to runtime SDF)"
 echo "✓ Done. Serve with:  npx --yes serve site"

@@ -1,0 +1,6 @@
+# One-time MSDF-atlas generation deps + the source font are not committed.
+# The generated atlas (../assets/msdf.{png,json}) is what ships.
+node_modules/
+package-lock.json
+*.ttf
+*.otf

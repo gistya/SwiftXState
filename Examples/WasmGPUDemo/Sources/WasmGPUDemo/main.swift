@@ -68,10 +68,15 @@ var lastSelected: String?
     }
 }
 
+// Text mode: defaults to the embedded true-MSDF atlas; `?text=sdf` uses the self-contained runtime SDF.
+let search = (JSObject.global.location.search.string ?? "")
+let textMode: StateGraph.TextMode = search.contains("sdf") ? .sdf : .msdf
+
 Task {
     await StateGraph.start(
         canvasElementId: "gpu",
-        definitionJSON: (try? machine.definitionJSON()) ?? ""
+        definitionJSON: (try? machine.definitionJSON()) ?? "",
+        textMode: textMode
     ) { tappedName in
         lastSelected = tappedName
         refresh()
