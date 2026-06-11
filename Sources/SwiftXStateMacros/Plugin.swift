@@ -5,5 +5,6 @@ import SwiftSyntaxMacros
 struct SwiftXStatePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         MachineStatesMacro.self,
+        WinCMacro.self,
     ]
 }

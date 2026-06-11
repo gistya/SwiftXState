@@ -37,6 +37,13 @@
 - Feature-complete beta phase (see roadmap items below). 
 - Now with documentation (thanks to the awesome [swift-docc](https://github.com/swiftlang/swift-docc))
 
+## Why are your "`Actor`s" not "Swift `actor`s"?
+
+- Swift's `actor` is about asynchronous isolation and data-race safety.
+- XState.js's `Actor` is about synchronous deterministic transitions and replayability.
+- SwiftXState implements compatibility with XState.js, where `Actor`s deterministically orchestrate run-to-completion events, so we kept their terminology.
+- We do use `Swift actor` for suitable roles, such as `InspectBridgeState`, which handles serialized asynchronous communication.
+
 ## Documentation & Articles - [here.](https://gistya.github.io/SwiftXState/documentation/swiftxstate/)
 
 

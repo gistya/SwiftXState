@@ -1,0 +1,67 @@
+name: Windows Bridge
+
+# Verifies the SwiftXState C# / Windows bridge:
+#   - the generated C# stays in sync with the @WinC functions (no drift),
+#   - the macro gating + handle exports pass their tests,
+#   - the C exports actually appear when built with SWIFTXWIN, and
+#   - a C# program can drive an actor through the bridge end to end.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: win-bridge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bridge:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select newest Xcode
+        run: |
+          LATEST=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$LATEST" ]; then sudo xcode-select -s "$LATEST"; fi
+          swift --version
+
+      - name: Cache SwiftPM build
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-winbridge-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: ${{ runner.os }}-spm-winbridge-
+
+      # The generated bridge must match the @WinC functions. Regenerate and fail on any diff.
+      - name: Check generated C# is up to date
+        run: |
+          swift package --allow-writing-to-package-directory generate-csharp-bridge
+          if ! git diff --quiet -- Interop/csharp/SwiftXStateWinBridge.cs; then
+            echo "::error::Interop/csharp/SwiftXStateWinBridge.cs is out of date."
+            echo "Run: swift package generate-csharp-bridge --allow-writing-to-package-directory"
+            git --no-pager diff -- Interop/csharp/SwiftXStateWinBridge.cs
+            exit 1
+          fi
+
+      - name: Macro gating + handle export tests
+        run: swift test --filter 'WinCMacroTests|WinBridgeActorTests'
+
+      # With SWIFTXWIN set, the manifest adds -D SWIFTXWIN and the @_cdecl exports appear.
+      - name: Build bridge with C exports + verify symbols
+        run: |
+          SWIFTXWIN=1 swift build --product SwiftXStateWinBridge
+          DYLIB=$(find .build -name 'libSwiftXStateWinBridge.dylib' | head -1)
+          echo "bridge: $DYLIB"
+          for sym in AddNumbers ActorCreate ActorSend ActorState ActorContextJSON ActorSetSnapshotCallback MachineList; do
+            nm -gU "$DYLIB" | grep -q " _$sym$" || { echo "::error::missing C export _$sym"; exit 1; }
+          done
+          echo "DYLIB=$DYLIB" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: C# round trip
+        run: SWIFTXSTATE_BRIDGE="$DYLIB" dotnet run --project Interop/csharp/Sample

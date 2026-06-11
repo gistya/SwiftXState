@@ -1,0 +1,134 @@
+name: NuGet
+
+# Builds the native bridge for each platform, packs the managed wrapper + natives into a single
+# NuGet package, and (on a version tag) publishes it via NuGet.org Trusted Publishing (OIDC) — no
+# long-lived API key. PRs build + pack only. PackageId must be one you own (SwiftXState.csproj).
+on:
+  push:
+    # Match the repo's bare semver tags (e.g. 0.9.4), and tolerate an optional `v` prefix.
+    tags: [ '[0-9]+.[0-9]+.[0-9]+*', 'v[0-9]+.[0-9]+.[0-9]+*' ]
+  pull_request:
+    paths: [ 'Interop/csharp/**', 'Sources/SwiftXStateWinBridge/**', '.github/workflows/nuget.yml' ]
+  workflow_dispatch:
+
+env:
+  NATIVE_DIR: Interop/csharp/SwiftXState/runtimes
+
+jobs:
+  # One native library per runtime identifier. Each uploads its file as an artifact named for the RID.
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest,   rid: osx-arm64,  file: libSwiftXStateWinBridge.dylib }
+          - { os: ubuntu-latest,  rid: linux-x64,  file: libSwiftXStateWinBridge.so }
+          - { os: windows-latest, rid: win-x64,    file: SwiftXStateWinBridge.dll }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # macOS ships Swift with Xcode; Linux/Windows need the toolchain installed.
+      - name: Set up Swift (Linux)
+        if: runner.os == 'Linux'
+        uses: swift-actions/setup-swift@v2
+      - name: Set up Swift (Windows)
+        if: runner.os == 'Windows'
+        uses: compnerd/gha-setup-swift@main
+        with:
+          branch: swift-6.1-release
+          tag: 6.1-RELEASE
+
+      - name: Build native bridge (with C exports)
+        shell: bash
+        run: SWIFTXWIN=1 swift build -c release --product SwiftXStateWinBridge
+
+      - name: Stage native for packing
+        shell: bash
+        run: |
+          OUT="$NATIVE_DIR/${{ matrix.rid }}/native"
+          mkdir -p "$OUT"
+          SRC=$(find .build -path '*release*' -name '${{ matrix.file }}' | head -1)
+          test -n "$SRC" || { echo "::error::built native not found"; exit 1; }
+          cp "$SRC" "$OUT/${{ matrix.file }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.rid }}
+          path: ${{ env.NATIVE_DIR }}/${{ matrix.rid }}/native/${{ matrix.file }}
+
+  pack:
+    needs: native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Reassemble runtimes/<rid>/native from the per-platform artifacts.
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Lay out natives
+        run: |
+          for rid in osx-arm64 linux-x64 win-x64; do
+            f=$(find "artifacts/native-$rid" -type f 2>/dev/null | head -1) || true
+            if [ -n "$f" ]; then
+              mkdir -p "$NATIVE_DIR/$rid/native"
+              cp "$f" "$NATIVE_DIR/$rid/native/"
+            fi
+          done
+          find "$NATIVE_DIR" -type f
+
+      # On a tag, the package version is the tag (an optional leading `v` is stripped), so the NuGet
+      # version tracks the repo release. On PRs there's no tag, so the csproj's fallback version is
+      # used just to validate that packing works.
+      - name: Pack
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            echo "Packing version $VERSION (from tag $GITHUB_REF_NAME)"
+            dotnet pack Interop/csharp/SwiftXState/SwiftXState.csproj -c Release -o nupkg -p:Version="$VERSION"
+          else
+            dotnet pack Interop/csharp/SwiftXState/SwiftXState.csproj -c Release -o nupkg
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: nupkg/*.nupkg
+
+  # Publish via NuGet.org Trusted Publishing (OIDC) — no stored API key. Tag-only, and routed through
+  # the `production` environment so you can require a reviewer there for a manual approval gate.
+  # Set the NUGET_USER repository variable to the nuget.org account that owns the trusted-publishing
+  # policy (owner: gistya, repo: SwiftXState, workflow: nuget.yml, environment: production).
+  publish:
+    needs: pack
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write    # OIDC token NuGet exchanges for a short-lived publishing key
+      contents: read
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nupkg
+          path: nupkg
+
+      - name: NuGet trusted-publishing login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Push
+        run: |
+          dotnet nuget push nupkg/*.nupkg \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate

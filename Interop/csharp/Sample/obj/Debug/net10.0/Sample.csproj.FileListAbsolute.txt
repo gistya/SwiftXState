@@ -1,0 +1,15 @@
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/bin/Debug/net10.0/SwiftXStateSample
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/bin/Debug/net10.0/SwiftXStateSample.deps.json
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/bin/Debug/net10.0/SwiftXStateSample.runtimeconfig.json
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/bin/Debug/net10.0/SwiftXStateSample.dll
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/bin/Debug/net10.0/SwiftXStateSample.pdb
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/Sample.GeneratedMSBuildEditorConfig.editorconfig
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/Sample.AssemblyInfoInputs.cache
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/Sample.AssemblyInfo.cs
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/Sample.csproj.CoreCompileInputs.cache
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/Sample.sourcelink.json
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/SwiftXStateSample.dll
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/refint/SwiftXStateSample.dll
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/SwiftXStateSample.pdb
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/Sample.genruntimeconfig.cache
+/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/Debug/net10.0/ref/SwiftXStateSample.dll

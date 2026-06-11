@@ -1,0 +1,4 @@
+# .NET build + pack output
+bin/
+obj/
+nupkg/

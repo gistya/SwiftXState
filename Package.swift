@@ -1,6 +1,13 @@
 // swift-tools-version: 6.1
 import PackageDescription
 import CompilerPluginSupport
+import Foundation
+
+// The Windows/C# bridge emits `@_cdecl` C exports only when SWIFTXWIN is set at build time. The
+// manifest (unlike macro plugins) does see the environment, so it turns the env var into a `-D
+// SWIFTXWIN` define; the @WinC macro's generated peers are wrapped in `#if SWIFTXWIN`.
+let winBridgeSwiftSettings: [SwiftSetting] =
+    ProcessInfo.processInfo.environment["SWIFTXWIN"] != nil ? [.define("SWIFTXWIN")] : []
 
 let appleUIPlatforms: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .visionOS, .macCatalyst]
 let appleWebSocketPlatforms: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .visionOS, .macCatalyst]
@@ -44,6 +51,11 @@ let package = Package(
         .library(
             name: "SwiftXStateSwiftData",
             targets: ["SwiftXStateSwiftData"]
+        ),
+        .library(
+            name: "SwiftXStateWinBridge",
+            type: .dynamic,
+            targets: ["SwiftXStateWinBridge"]
         ),
     ],
     dependencies: [
@@ -119,6 +131,36 @@ let package = Package(
                 .define("SWIFTXSTATE_URL_SESSION_WEBSOCKET", .when(platforms: appleWebSocketPlatforms)),
             ]
         ),
+        .target(
+            name: "SwiftXStateWinBridge",
+            dependencies: ["SwiftXState", "SwiftXStateInspect"],
+            path: "Sources/SwiftXStateWinBridge",
+            swiftSettings: winBridgeSwiftSettings
+        ),
+        // Tool that scans @WinC functions and generates the C# P/Invoke bridge. Run via the
+        // `generate-csharp-bridge` command plugin (or directly).
+        .executableTarget(
+            name: "WinCBridgeGen",
+            dependencies: [
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax"),
+            ],
+            path: "Sources/WinCBridgeGen"
+        ),
+        .plugin(
+            name: "GenerateCSharpBridge",
+            capability: .command(
+                intent: .custom(
+                    verb: "generate-csharp-bridge",
+                    description: "Regenerate the C# P/Invoke bridge from the @WinC functions"
+                ),
+                permissions: [
+                    .writeToPackageDirectory(reason: "Writes Interop/csharp/SwiftXStateWinBridge.cs"),
+                ]
+            ),
+            dependencies: [.target(name: "WinCBridgeGen")],
+            path: "Plugins/GenerateCSharpBridge"
+        ),
         .testTarget(
             name: "SwiftXStateTests",
             dependencies: ["SwiftXState"],
@@ -131,6 +173,11 @@ let package = Package(
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ],
             path: "Tests/SwiftXStateMacrosTests"
+        ),
+        .testTarget(
+            name: "SwiftXStateWinBridgeTests",
+            dependencies: ["SwiftXStateWinBridge"],
+            path: "Tests/SwiftXStateWinBridgeTests"
         ),
         .testTarget(
             name: "SwiftXStateGraphTests",

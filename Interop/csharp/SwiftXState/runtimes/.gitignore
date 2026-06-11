@@ -1,0 +1,4 @@
+# Native bridge binaries are build artifacts, populated by CI before pack.
+*.dll
+*.dylib
+*.so

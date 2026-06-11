@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>SwiftXState</AssemblyName>
+    <RootNamespace>SwiftXStateWinBridgeInterop</RootNamespace>
+
+    <!-- NuGet package metadata. PackageId must be one you own on the target feed; change it. -->
+    <PackageId>SwiftXState</PackageId>
+    <!-- Fallback for local `dotnet pack`; CI overrides it from the release tag (-p:Version=…) so the
+         published version tracks the repo (e.g. tag 0.9.4 → package 0.9.4). -->
+    <Version>0.9.3-dev</Version>
+    <Authors>Jonathan Gilbert</Authors>
+    <Description>C# bindings for SwiftXState — drive native Swift statecharts (actors, events, live inspection) from .NET.</Description>
+    <PackageTags>statechart;state-machine;xstate;swift;interop;native</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/gistya/SwiftXState</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/gistya/SwiftXState</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- NU5100: native libs live under runtimes/, not lib/. CA2255: the module initializer that
+         registers the native-library resolver is intentional. -->
+    <NoWarn>$(NoWarn);NU5100;CA2255</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The generated P/Invoke surface (kept in sync by `swift package generate-csharp-bridge`). -->
+    <Compile Include="../SwiftXStateWinBridge.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" Condition="Exists('README.md')" />
+  </ItemGroup>
+
+  <!-- Native libraries, one per runtime identifier, laid out as NuGet expects so the SDK deploys the
+       right one automatically. CI (or a local build) populates runtimes/<rid>/native/ before pack. -->
+  <ItemGroup>
+    <None Include="runtimes/**/native/*.dll;runtimes/**/native/*.dylib;runtimes/**/native/*.so"
+          Pack="true"
+          PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
