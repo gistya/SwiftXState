@@ -46,17 +46,16 @@ after the first successful run.)
 
 ## Acknowledgments
 
-SwiftXState would not exist without the work of **[Stately](https://stately.ai)** and the **[XState](https://github.com/statelyai/xstate)** team.
-
-XState's open-source design, documentation, inspector protocol, and machine-definition shape are the foundation this project builds on. Stately's decision to publish `@statelyai/inspect`, document the wire format, and keep the core model approachable is exactly what makes a native Swift reimplementation possible — and legitimate.
-
-Thank you to David Khourshid and everyone who has contributed to XState and the Stately ecosystem. This project is a complement, not a replacement: we want Swift developers to speak the same state-machine language as the web, while leaning into what Swift does best.
+- SwiftXState would not exist without the work of **[Stately](https://stately.ai)** and the **[XState](https://github.com/statelyai/xstate)** team.
+- Thank you to David Khourshid in particular for blessing this project.
+- Thank you to everyone who contributed to XState.js and the Stately ecosystem. 
+- Thank you to Stately for their inspiring commitment to open source.
 
 ## Dependencies
 
-- SwiftXState/Inspect/URLSession: Foundation and stdlib structured concurrency only
-— Apple-specific modules: SwiftUI, SwiftData
-- wasm: [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit) 
+- SwiftXState/Inspect/URLSession: Foundation
+- SwiftUI and/or SwiftData modules require Apple platforms
+- WebAssembly requires [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit) 
 
 ## Quick start
 
@@ -332,6 +331,7 @@ This builds `SwiftXState`, `SwiftXStateInspect`, and the URLSession inspect stub
 4. Machine JSON import: structural import + click-through simulation shipped (see `InspectorPasteApp`); full round-trip back to `definitionJSON()` still planned
 5. On-device live run of imported machines: execute an imported XState machine's real behavior (guards/actions/actors) on iOS/macOS via in-process `JavaScriptCore`, bridging XState's `inspect` callback into `InspectionEvent`, so any JS machine runs live in the native inspector without a Node relay
 6. Load machine configs / full machines from external sources: awaiting security review.
+7. First-class wasm WebGPU adapter.
 
 ## Related links
 
