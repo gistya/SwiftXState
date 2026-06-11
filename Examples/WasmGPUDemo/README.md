@@ -1,5 +1,14 @@
 # SwiftXState on the GPU (WebAssembly + WebGPU)
 
+## Getting started
+
+- You must install Swift and swift-wasm SDK. 
+- See Swift.org's instructions [here](https://www.swift.org/documentation/articles/wasm-getting-started.html).
+- If you want to play with experimental multithreading, you can get that version of the SDK from
+  https://github.com/rarestype/swift-sdk-wasm/releases (not official, pending approval of [this proposal](https://github.com/WebAssembly/wasi-threads?tab=readme-ov-file#introduction))
+
+## Intro
+
 Experimental. A state-machine graph view drawn on the GPU in the browser, all from Swift compiled to
 WebAssembly.
 
@@ -83,13 +92,22 @@ Same pipeline either way; a `mode` uniform picks which.
 - A WebGPU browser: Chrome/Edge 113+, Safari 18+, or Firefox 141+. Without WebGPU the status line
   says so and nothing draws.
 - A swift.org WebAssembly SDK (`swift sdk list`); the build defaults to `swift-6.3.2-RELEASE_wasm`.
-  Node and npm for bundling.
+  Node and npm for bundling. You can also build with `6.3.2-RELEASE-wasm32-unknown-wasip1-threads`
+  if you want to experience multithreading (does not benefit this demo but you may leverage it in
+  your own code. Consider it untested by us.).
 
 ## How do I build it?
 
 ```sh
 ./build.sh                 # → self-contained ./site
 npx --yes serve site       # open the printed URL in a WebGPU browser
+```
+
+For experimental multithreading mode (not currently beneficial in present demo):
+
+```sh
+./build.sh --multithreading  # → self-contained ./site
+npx --yes serve site         # open the printed URL in a WebGPU browser
 ```
 
 Use `build.sh` (the PackageToJS `js` plugin), not a bare `swift build --swift-sdk …wasm` — that one

@@ -5,10 +5,23 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 WASM_SDK="${WASM_SDK:-swift-6.3.2-RELEASE_wasm}"
+WASM_THREADS_SDK="${WASM_THREADS_SDK:-6.3.2-RELEASE-wasm32-unknown-wasip1-threads}"
+
 OUT=".build/plugins/PackageToJS/outputs/Package"
 
-echo "▸ Building wasm + JS bundle (SDK: $WASM_SDK)…"
-swift package --swift-sdk "$WASM_SDK" -c release js
+printf "Debug: \$1 content is [%q]\n" "$1"
+
+if [[ "$1" == "--multithreading" ]]; then
+    echo "▸ Building wasm + JS bundle (SDK: $WASM_THREADS_SDK)…"
+else
+    echo "▸ Building wasm + JS bundle (SDK: $WASM_SDK)…"
+fi
+
+if [[ "$1" == "--multithreading" ]]; then
+    swift package --swift-sdk "$WASM_THREADS_SDK" -c release js
+else
+    swift package --swift-sdk "$WASM_SDK" -c release js
+fi
 
 echo "▸ Installing the browser WASI shim…"
 ( cd "$OUT" && npm install --silent --no-audit --no-fund )
