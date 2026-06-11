@@ -5,35 +5,44 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-DocC-7c5cff.svg)](https://gistya.github.io/SwiftXState/documentation/swiftxstate/)
 
-**XState-compatible state machines and actors for Swift — built from the ground up to run wherever Swift runs: Apple platforms, Linux, and Windows.**
+## What is this useful for?
 
-SwiftXState is a Swift implementation of the [XState](https://github.com/statelyai/xstate) actor and state-machine model. It follows the same mental model, event protocol, and inspector wire format as XState v5, but it is not a transpiler and it does not wrap the JavaScript XState library (for example via JavaScriptCore or a Node FFI bridge). The **interpreter itself** is written in idiomatic Swift with `Sendable` types and structured concurrency — no UI framework dependencies in the core runtime.
+1. Own your logic and events with (state)-flow-(state) graphs. 
+2. Track it live with built-in JSON streams & 2D/3D visualizer. 
+3. Rewind/replay your whole program with snapshots. 
+4. Load statecharts from JSON at runtime to tweak behavior.
 
-That is separate from how **your app** uses Swift. Swift has excellent C and C++ interop (`import`ing C modules, Swift 5.9+ C++ interop, Objective-C bridges, `fromCallback` / `fromTask` invoke children). SwiftXState is meant to sit *on top of* that stack: the state machine orchestrates behavior in Swift, while invoked actors and actions call into native libraries at the edges. The goal is not just parity with JavaScript — it is extending the architecture into compiled mobile and desktop apps, offline-first persistence, deterministic replay, and structured `async`/`await` workflows alongside existing C/C++ codebases.
+## Where can I run it?
 
----
+1. Server or client.
+2. Web: use [Stately.a's XState.js](https://github.com/statelyai/xstate) 
+3. WebAssembly: *experimental* SwiftXState for [wasm](https://github.com/gistya/swiftxstate/Examples/WasmDemo)/[WebGPU](https://github.com/gistya/swiftxstate/Examples/WasmGPUDemo)
+4. Linux ([how-to](https://github.com/gistya/swiftxstate/LINUX_SETUP.md))
+5. Windows (compiles but not tested yet)
+6. macOS/iPadOS ([sample Chess app](https://github.com/gistya/swiftxstate/Examples/SwiftXChess), [sample visualizer app](https://github.com/gistya/swiftxstate/Examples/SwiftXInspector))
+7. iOS/visionOS/watchOS/tvOS 
 
-## Documentation
+## What libraries comes in the package?
 
-📖 **API reference (DocC):** **<https://gistya.github.io/SwiftXState/documentation/swiftxstate/>**
+1. SwiftXState - all platforms - static library, core features
+2. SwiftXStateInspect - all platforms - localhost JSON streaming in [XState.js](https://stately.ai)-format 
+3. SwiftXStateGraph - all Apple platforms - SwiftUI state graph renderer in 2D and 3D (note: does not render in 3D on visionOS yet)
+4. SwiftXStateInspectorUI - all Apple platforms - SwiftUI info displays for displaying Inspect streams
+5. SwiftXStateSwiftUI - all Apple platforms - wire your SwiftUI view states up to SwiftXState state stores
+6. SwiftXStateSwiftData - all Apple platforms - persistent data storage adapter
+7. ... plus some fun bonus items ;D
 
-The modules are published as a single combined DocC site with cross-module navigation. Per-module entry points:
+## How far along is this project?
 
-| Module | API reference |
-|--------|---------------|
-| **SwiftXState** (core) | <https://gistya.github.io/SwiftXState/documentation/swiftxstate/> |
-| **SwiftXStateSwiftUI** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateswiftui/> |
-| **SwiftXStateGraph** | <https://gistya.github.io/SwiftXState/documentation/swiftxstategraph/> |
-| **SwiftXStateInspectorUI** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateinspectorui/> |
-| **SwiftXStateInspect** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateinspect/> |
-| **SwiftXStateInspectURLSession** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateinspecturlsession/> |
-| **SwiftXStateSwiftData** | <https://gistya.github.io/SwiftXState/documentation/swiftxstateswiftdata/> |
+- Feature-complete beta phase (see roadmap items below). 
+- Now with documentation (thanks to the awesome [swift-docc](https://github.com/swiftlang/swift-docc))
 
-Docs are generated with DocC and published to GitHub Pages from `main` by
+## Documentation & Articles - [here.](https://gistya.github.io/SwiftXState/documentation/swiftxstate/)
+
+
+- Docs are generated with DocC automatically from doc comments in the codebase, and published to GitHub Pages from `main` pushes by
 [`.github/workflows/static.yml`](.github/workflows/static.yml) on every merge. (The site goes live
 after the first successful run.)
-
----
 
 ## Acknowledgments
 
@@ -43,65 +52,23 @@ XState's open-source design, documentation, inspector protocol, and machine-defi
 
 Thank you to David Khourshid and everyone who has contributed to XState and the Stately ecosystem. This project is a complement, not a replacement: we want Swift developers to speak the same state-machine language as the web, while leaning into what Swift does best.
 
----
+## Dependencies
 
-## Packages
+- SwiftXState/Inspect/URLSession: Foundation and stdlib structured concurrency only
+— Apple-specific modules: SwiftUI, SwiftData
+- wasm: [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit) 
 
-| Module | Purpose |
-|--------|---------|
-| **SwiftXState** | Core runtime — machines, actors, transitions, guards, actions, invoke/spawn, persistence, replay |
-| **SwiftXStateSwiftUI** | `useMachine`, `useSelector`, `useMapState`, `@MachineState` — mirrors `@xstate/react` patterns |
-| **SwiftXStateInspect** | Inspection events + Stately wire converter + file/mock transports |
-| **SwiftXStateInspectURLSession** | WebSocket transport for live Stately Inspector sessions |
-| **SwiftXStateSwiftData** | SwiftData-backed actor snapshot and replay session storage (Apple only) |
-| **SwiftXStateGraph** | Live statechart visualizer: GPU-backed SwiftUI `Canvas` (2D) + SceneKit (3D layers), with nested regions, real-time active-state highlighting, zoom/pan/drag, and full theming via `GraphStyle` |
-| **SwiftXStateInspectorUI** | Native Stately-Inspector-parity panel over the in-process `InspectionEvent` stream: selectable actor list, live graph per actor, expandable JSON state/context trees, event feed, and sequence diagram. Handles many actors (96-actor stress test) where the web inspector stalls. Also **imports XState machine-definition JSON** (`MachineDefinitionImporter`) and **structurally simulates** pasted machines (`MachineSimulator`) for click-through stepping. Themeable via `InspectorStyle` |
+## Quick start
 
-**Swift:** 6.2+ with strict concurrency enabled on core targets
+We offer two main API paths:
 
-### Platform support
+- Text mode, for compatibility with [XState.js](https://github.com/statelyai/xstate) and prototyping, ease of juming in, etc.
+- Typesafe mode, the true Swift way, using generics for compile-time guarantees and fewer bugs
+- Documentation linked above has guides for both
 
-| Platform | SwiftXState | SwiftXStateInspect | SwiftXStateInspectURLSession | SwiftXStateSwiftUI | SwiftXStateSwiftData |
-|----------|-------------|--------------------|------------------------------|--------------------|-----------------------|
-| macOS 14+ | Supported | Supported | Supported (URLSession WebSocket) | Supported | Supported |
-| iOS / tvOS / watchOS | Supported | Supported | Supported | Supported | Supported |
-| Linux | Supported | Supported | Stub only — inject custom transport | N/A | N/A |
-| Windows 10+ | Supported | Supported | Stub only — inject custom transport | N/A | N/A |
-| WebAssembly (WASI) | Experimental | Untested | N/A | N/A | N/A |
+### Text API example:
 
-The **core** (`SwiftXState`, `SwiftXStateInspect`) uses Foundation and structured concurrency only — no AppKit/UIKit/SwiftUI in those modules — so Linux and Windows builds are expected to work for server/CLI use. Apple-only modules (`SwiftXStateSwiftUI`, `SwiftXStateSwiftData`, URLSession WebSocket inspect) compile as stubs elsewhere. Linux/x86_64 CI verification is planned; if you hit a platform issue, please file it. Community contributions for alternative bindings (e.g. GTK, Qt, file/SQLite persistence) are welcome.
-
-**Custom inspect networking on Linux/Windows:** implement `InspectTransport` yourself, or use `ClosureInspectTransport` / `TextPublishInspectSession` from `SwiftXStateInspect` with your WebSocket client. See `CustomInspectTransport.swift` for a full example.
-
-**3D graph view & visionOS:** the 3D graph renderer (`SwiftXStateGraph`) is built on SceneKit and runs on macOS/iOS/tvOS. In this initial release it does **not** support visionOS / spatial (augmented-reality) features — there is no Vision Pro spatial scene or AR anchoring yet. A RealityKit-based backend for visionOS is something we're investigating; the renderer is isolated behind `StateGraphView`, so a spatial backend can be added without affecting the model, layout, or 2D paths.
-
-### Experimental: WebAssembly 🧪
-
-The **core `SwiftXState`** engine compiles to and **runs in the browser** via WebAssembly. This is
-a verified proof of concept — see [`Examples/WasmDemo`](Examples/WasmDemo/), a small gallery of
-machines (toggle, traffic light, vending machine with a guard, checkout flow, fetch) driving the
-DOM through [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit), built with the
-[swift.org WebAssembly SDK](https://www.swift.org/install/) and hostable on any static host
-(including GitHub Pages).
-
-What makes it work, and what to know:
-
-- **No-Dispatch path.** The WASI SDK has Foundation but not `Dispatch`. The two places core used it
-  — the actor's serial queue and `DefaultClock` — are now behind `#if canImport(Dispatch)`.
-  Apple/Linux/Windows keep the exact Dispatch path (verified: full test suite unchanged); on
-  WebAssembly the actor runs inline (single-threaded — no lock needed) and `DefaultClock` is a stub.
-- **Delays need a host clock.** Because the default clock is a stub on Wasm, **`after:` / delayed
-  transitions don't fire** unless you inject a host-backed `Clock` (e.g. one driven by JavaScript's
-  `setTimeout` via JavaScriptKit) through `ActorOptions.clock`. Likewise, prefer **event-driven**
-  machines — Swift-concurrency async (`invoke` of `fromTask`, etc.) behaves differently under
-  single-threaded Wasm and isn't part of this POC.
-- **Binary size.** A full-stdlib + Foundation Wasm binary is **large (tens of MB)** — the cost of
-  not using Embedded Swift. Run `wasm-opt` (binaryen) and serve gzipped (Pages does this) to keep
-  it tolerable; it's fine for a POC, heavy for production.
-- **Status: experimental, not yet CI-verified.** Only the core library is exercised on Wasm today;
-  the inspect/UI/SwiftData modules are untested there. Issues and contributions welcome.
-
-### Quick start
+- Create a new state machine and "actor" to manage it:
 
 ```swift
 import SwiftXState
@@ -121,9 +88,46 @@ actor.send(Event("toggle"))
 print(actor.snapshot.matches("active")) // true
 ```
 
-For SwiftUI, see `SwiftXStateSwiftUI` (`useMachine`, `useSelector`, `useMapState`). For a full app-shaped example, see [Examples/SwiftXChess](Examples/SwiftXChess/README.md).
+- Use `@MachineStates` macro to generate `StateName` enums from the strings in the machine declarations.
+- That way, you still get autocomplete and protection against typos and name drift:
 
-**Paths & model-based testing** (`@xstate/graph` parity, core / cross-platform):
+```swift
+@MachineStates("AppState")
+let config = MachineConfig(id: "app", initial: "idle", context: Ctx(), states: [
+    "idle":    StateNodeConfig(on: transitions(on(Focus.self, to: AppState.active))),
+    "active":  StateNodeConfig(states: ["fast": StateNodeConfig(), "slow": StateNodeConfig()]),
+])
+// generates: enum AppState: String, StateName { case idle; case active; case activeFast = "active.fast"; … }
+// AppState.activeFast → "#active.fast"  (absolute target, resolves regardless of nesting)
+```
+
+- Set the legal transition rules for a each node in your state graph: 
+
+```swift
+StateNodeConfig(on: [
+    "input.focus":  .to("active"),
+    "input.change": .single(TransitionConfig(target: "debouncing")),
+])
+```
+
+### Type-safe API example:
+```swift
+struct InputChange: StateEvent { static let eventType = "input.change"; let searchInput: String }
+
+StateNodeConfig(on: transitions(
+    on(Focus.self, target: "active"),
+    on(InputChange.self, target: "debouncing",
+       actions: [assign { (ctx: inout Ctx, e: InputChange) in ctx.searchInput = e.searchInput }])
+))
+
+actor.send(InputChange(searchInput: "be"))   // typed at the call site
+```
+
+- Also note, this app uses the type-safe APIs [Examples/SwiftXChess](Examples/SwiftXChess/README.md).
+
+## State Graph Analysis
+
+- Like the original `@xstate/graph`, our Swift version provides APIs to analyze your state graphs during testing to ensure that your assumptions are correct:
 
 ```swift
 let model = TestModel(toggle)
@@ -143,48 +147,10 @@ for issue in model.validate() {
 }
 ```
 
-Also available as free functions: `getAdjacencyMap`, `getShortestPaths`, `getSimplePaths`, `validate`. Tune traversal with `TraversalOptions` (custom event resolver, state serialization, `maxStates`).
+- (Similar features: `getAdjacencyMap`, `getShortestPaths`, `getSimplePaths`, `validate`.) 
+- You can also tune traversal with `TraversalOptions` (custom event resolver, state serialization, `maxStates`).
 
-### Two authoring tiers
-
-SwiftXState offers the same machine two ways — pick per file, mix freely. Both compile to the **same** machine, the **same** `definitionJSON()`, and the **same** inspector stream, so interop with Stately/XState tooling is identical either way.
-
-**Tier 1 — XState-familiar** (string keys; reads almost line-for-line like XState):
-
-```swift
-StateNodeConfig(on: [
-    "input.focus":  .to("active"),
-    "input.change": .single(TransitionConfig(target: "debouncing")),
-])
-```
-
-**Tier 2 — Swift-native, opt-in** (each event is its own type; guard/action closures receive the **concrete, narrowed event** — no cast, no `assertEvent`):
-
-```swift
-struct InputChange: StateEvent { static let eventType = "input.change"; let searchInput: String }
-
-StateNodeConfig(on: transitions(
-    on(Focus.self, target: "active"),
-    on(InputChange.self, target: "debouncing",
-       actions: [assign { (ctx: inout Ctx, e: InputChange) in ctx.searchInput = e.searchInput }])
-))
-
-actor.send(InputChange(searchInput: "be"))   // typed at the call site
-```
-
-**Compile-checked targets** — `@MachineStates` generates a `StateName` enum *from the machine's own declarations*, so targets are autocompleted, rename-safe, and can never drift:
-
-```swift
-@MachineStates("AppState")
-let config = MachineConfig(id: "app", initial: "idle", context: Ctx(), states: [
-    "idle":    StateNodeConfig(on: transitions(on(Focus.self, to: AppState.active))),
-    "active":  StateNodeConfig(states: ["fast": StateNodeConfig(), "slow": StateNodeConfig()]),
-])
-// generates: enum AppState: String, StateName { case idle; case active; case activeFast = "active.fast"; … }
-// AppState.activeFast → "#active.fast"  (absolute target, resolves regardless of nesting)
-```
-
-### XState → SwiftXState (Rosetta)
+## XState → SwiftXState terminology guide:
 
 | XState (TS) | SwiftXState |
 |-------------|-------------|
@@ -200,21 +166,23 @@ let config = MachineConfig(id: "app", initial: "idle", context: Ctx(), states: [
 
 ---
 
-## Included Sample Apps
+## Included Sample Apps for Mac/iPad
 
-### SwiftXInspector App
+### SwiftXInspector App:
 
-Write or paste your XState JSON and run your state machines in high-performance SwiftXStateGraph 2D or 3D views, on-device (Inspector has only been tested so far on macOS).
+- Paste in JSON machine descriptions in XState JSON format to see a realtime visualization. 
+- Note: does not yet support pasting in JavaScript functions.
 
 ![SwiftXInspector Screenshot](Assets/LocalInspector.png)
 
-### SwiftXChess
+### SwiftXChess:
 
-An example chess game implemented in SwiftUI and SwiftXState, showing the power of the GPU-accelerated SwiftXStateGraph rendering engine with one window for the app and one window for the inspector, performant even with 897 nodes and 1,536 transitions. 
+- Demonstrates the live inspection features of SwiftXGraph and SwiftXInspect
+- Shows the power of GPU-accelerated Metal rendering in SwiftUI
 
 ![SwiftXChess Screenshot](Assets/SwiftXChess.png)
 
-This sample app illustrates the advantages of SwiftUI and Metal. Apple Silicon allows SwiftXState to graphically render realtime behavior on large, complex state charts. 
+- Each board square has different inspectable state depending upon which kind of piece might be present:  
 
 ![ChessNode](Assets/ChessNodes.png)
 
@@ -328,108 +296,6 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 
 ---
 
-## Concurrency: SwiftXState `Actor` vs Swift `actor`
-
-This distinction matters everywhere in the docs and samples — including [SwiftXChess](Examples/SwiftXChess/README.md).
-
-### What is a SwiftXState `Actor`?
-
-`SwiftXState.Actor` is a **reference-type interpreter** (`final class`) that runs a `StateMachine` configuration. It:
-
-- Owns a **mailbox** of events processed on an internal serial `DispatchQueue`
-- Maintains a **`MachineSnapshot`** (value, context, tags, children, history)
-- Spawns and supervises **child actors** via `invoke` / `spawnChild`
-- Schedules **delayed** transitions and raises via a pluggable `Clock`
-- Emits **inspection events** compatible with Stately Inspector
-
-```swift
-let actor = createActor(machine).start()
-actor.send(Event("SUBMIT"))
-let snap = actor.snapshot
-```
-
-Naming matches XState v5's `createActor` on purpose. A SwiftXState `Actor` is the unit of **behavior** — the running state machine process.
-
-### What is a Swift `actor`?
-
-A Swift `actor` is a **language-level concurrency primitive**: the compiler enforces isolated mutable state, and callers must `await` cross-actor access. It is unrelated to the XState actor model except in name.
-
-```swift
-actor SessionStore {
-    var sessions: [String: ReplaySession] = [:]
-    func save(_ session: ReplaySession) { sessions[session.id] = session }
-}
-```
-
-### How SwiftXState uses Swift concurrency today
-
-SwiftXState does **not** implement the interpreter as a Swift `actor`. Instead, it uses Swift concurrency **inside** child actor logic:
-
-| XState concept | SwiftXState API | Concurrency |
-|----------------|-----------------|-------------|
-| `fromPromise` | `fromTask` | `async throws` child runs in a `Task` |
-| `fromCallback` | `fromCallback` | `receive`, `sendBack`, `emit`; sync setup + dispose cleanup |
-| — | `fromTaskGroup` | `withThrowingTaskGroup` for parallel child work |
-| Observable | `fromObservable` | `Subscribable` + async delivery |
-
-The parent `Actor` stays on its serial queue. Async children report back via `sendToParent`, `DoneActorEvent`, `ErrorActorEvent`, and optional `onSnapshot` sync. That keeps transition logic deterministic while still embracing `async`/`await` for I/O.
-
-#### Cancellation, cleanup, and restore policy
-
-Task and task-group children are wrapped in `withTaskCancellationHandler`. Pass an `onCancel` closure to `fromTask` / `fromTaskGroup` to flush SwiftData writes, delete partial batches, or checkpoint before the child tears down:
-
-```swift
-fromTask(onCancel: { scope in
-    await store.deletePendingBatch(scope.input?.get(String.self))
-}) { scope in
-    for job in jobs {
-        try scope.checkCancellation()  // or: if scope.isCancelled { return }
-        await store.write(job)
-    }
-    return jobs.count
-}
-```
-
-`TaskActorScope` and `TaskGroupScope` also expose `isCancelled`, `checkCancellation()`, and `withCancellationHandler` for nested cleanup inside long operations.
-
-When hydrating from a persisted snapshot, opaque invokes default to **restart** (fresh child). Set `opaqueRestorePolicy` on `InvokeConfig` or `SpawnRef` to defer auto-spawn until your entry logic reconciles external stores:
-
-| Policy | Behavior on `start(from:)` |
-|--------|----------------------------|
-| `.restart` (default) | Spawn a new task/callback/taskGroup child |
-| `.skipIfActive` | Skip spawn if persisted opaque child was `.active` |
-| `.skipIfPresent` | Skip spawn whenever any opaque child snapshot exists |
-
-Pair `.skipIfActive` with entry actions that read SwiftData, clear or resume partial work, then transition or manually re-invoke.
-
-### Anticipated role of Swift `actor` in SwiftXState apps
-
-Swift `actor` is a **complementary tool**, not a replacement for `SwiftXState.Actor`:
-
-1. **App shell and bridges** — A Swift `actor` can own UI-adjacent or cross-boundary state (network clients, BLE, Core Data facades, C++ game engines bridged through Swift) and send `Eventable` values into a SwiftXState `Actor` from `fromCallback` or `fromTask` children.
-
-2. **Persistence and replay services** — `ReplayPersistenceStore`-style services may be modeled as Swift `actor`s to serialize disk access while the machine interpreter handles domain transitions.
-
-3. **Future interpreter isolation** — We may offer an optional Swift-`actor`-backed mailbox implementation behind the same `Actor` API for apps that want compiler-checked isolation instead of `DispatchQueue`. The public XState-shaped API would remain stable.
-
-4. **Not planned: renaming `Actor`** — Consistency with XState and Stately Inspector outweighs avoiding the keyword collision. Documentation and type context (`SwiftXState.Actor`) make the distinction clear.
-
-**Rule of thumb:** use `SwiftXState.Actor` for **orchestration and statecharts**; use Swift `actor` for **resource ownership and async isolation** at the edges; connect them with `invoke` / `fromTask` / `fromCallback`.
-
----
-
-## Examples
-
-| Example | Location | Demonstrates |
-|---------|----------|--------------|
-| **SwiftXChess** | [Examples/SwiftXChess](Examples/SwiftXChess/) | Parallel regions, typed `Eventable` events, SwiftUI session bridge, Stately inspect, replay scrubber |
-| **InspectorSample** | `Examples/InspectorSample/` | Live Stately Inspector wiring with sample machines (connects via the relay in `Scripts/relay`) |
-| **InspectorPasteApp** | `Examples/InspectorPasteApp/` | Paste XState machine-definition JSON → load it into the native inspector and **structurally step** it (click through `on`/`always`/`after`/`onDone`). Source-only — wire into Xcode per its README |
-| **Visualizer POC** | `Examples/SX_XS_Visualizer_POC/` | Streams a live machine to the **real Stately.ai inspector** via `Scripts/relay` |
-
-The **Stately relay** is shared tooling in [`Scripts/relay`](Scripts/relay/) — `npm install && npm run relay` bridges any SwiftXState app's inspection stream to a live `stately.ai/registry/inspect/…` session.
-
-Open **SwiftXChess** via `Examples/SwiftXChess/SwiftXChess.xcodeproj` for the most complete app-shaped reference.
 
 ---
 
@@ -459,20 +325,13 @@ This builds `SwiftXState`, `SwiftXStateInspect`, and the URLSession inspect stub
 
 ---
 
-## Roadmap (summary)
+## Roadmap (maybe-board)
 
-Near-term priorities to close the remaining XState semantic gaps:
-
-1. **Opaque child checkpoint payloads** — optional persisted job ledger metadata beyond status-only snapshots
-2. **SCXML interchange** — import/export for standards-based workflows
-3. **`@xstate/graph` algorithms** — ✅ shipped in core: adjacency map, shortest/simple paths, `TestModel` (model-based testing), and `validate` (dead-end / unreachable-state checks)
-4. **Machine JSON import** — structural import + click-through simulation shipped (see `InspectorPasteApp`); full round-trip back to `definitionJSON()` still planned
-5. **On-device live run of imported machines** *(investigating)* — execute an imported XState machine's real behavior (guards/actions/actors) on iOS/macOS via in-process `JavaScriptCore`, bridging XState's `inspect` callback into `InspectionEvent`, so any JS machine runs live in the native inspector without a Node relay
-6. **Load machine configs / full machines from external sources** *(under research)* — decode an XState-JSON definition into a *runnable* native `MachineConfig` whose guards/actions/actors bind **by name** to a Swift `setup(...)` registry (config is data; behavior stays compiled), and/or merge externally-supplied states and rules into a machine defined in code. Gated on a thorough review of the **security model for untrusted definitions** — trust boundaries, validation, resource limits, and what a hostile config could trigger via named-implementation wiring — before any API is committed.
-
-See the [parity table](#parity-with-xstate) for the full picture.
-
----
+1. Opaque child checkpoint payloads: optional persisted job ledger metadata beyond status-only snapshots
+2. SCXML interchange: import/export for standards-based workflows (as soon as we finish our XML parser)
+4. Machine JSON import: structural import + click-through simulation shipped (see `InspectorPasteApp`); full round-trip back to `definitionJSON()` still planned
+5. On-device live run of imported machines: execute an imported XState machine's real behavior (guards/actions/actors) on iOS/macOS via in-process `JavaScriptCore`, bridging XState's `inspect` callback into `InspectionEvent`, so any JS machine runs live in the native inspector without a Node relay
+6. Load machine configs / full machines from external sources: awaiting security review.
 
 ## Related links
 
@@ -480,9 +339,6 @@ See the [parity table](#parity-with-xstate) for the full picture.
 - [Stately](https://stately.ai) — visual editor, inspector, and state-machine tooling
 - [@statelyai/inspect](https://github.com/statelyai/inspect) — inspector protocol SwiftXState speaks on the wire
 - [SCXML (W3C)](https://www.w3.org/TR/scxml/) — historical spec that influenced XState's design
-
----
-
 ## License
 
 SwiftXState is released under the [MIT License](LICENSE).
