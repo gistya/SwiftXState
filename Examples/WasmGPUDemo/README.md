@@ -1,28 +1,52 @@
 # SwiftXState on the GPU · WebAssembly · WebGPU
 
-**Experimental.** A SwiftXState machine's **graph** rendered on the **GPU**, in the browser,
-entirely from Swift compiled to WebAssembly. **Nodes and edges are derived from the machine's own
-`definitionJSON()`** — states become instanced circles, transitions become instanced line-quads,
-laid out on a ring. The **active** state (from the live snapshot) is brightened and pulses via a
-time uniform. One button per event drives the actor (disabled when `snapshot.can(_:)` is false), and
-the GPU re-renders the new active state.
+**Experimental.** An interactive state-machine **graph editor view**, rendered on the **GPU** in the
+browser, entirely from Swift compiled to WebAssembly. It ships as two pieces:
 
-The chain is: **SwiftXState → WebAssembly → JavaScriptKit → WebGPU** (Metal / Vulkan / D3D under
-the hood). The WGSL shaders are authored as Swift strings; the render pipelines, buffers, bind
-groups, and `requestAnimationFrame` loop are all driven from Swift.
+- **`WebGPUGraph`** — a *reusable toolkit*. Hand it an XState-style machine-definition JSON and a
+  `<canvas>` id; it parses the states/transitions, lays them on a ring, and renders interactive,
+  animated **nodes + edges + arrowheads** with an active-state highlight and tap-to-select. It
+  depends only on JavaScriptKit + swift-webgpu — **not** on SwiftXState — so it works with any
+  state-machine JSON.
+- **`WasmGPUDemo`** — a thin demo that builds a SwiftXState media-player machine and points the
+  toolkit at its `definitionJSON()`.
+
+The chain is **SwiftXState → WebAssembly → JavaScriptKit → WebGPU** (Metal / Vulkan / D3D under the
+hood). WGSL shaders are authored as Swift strings; the pipelines, buffers, bind groups, and
+`requestAnimationFrame` loop are all driven from Swift.
+
+## Using the toolkit
+
+```swift
+import WebGPUGraph
+
+await StateGraph.start(
+    canvasElementId: "gpu",
+    definitionJSON: try machine.definitionJSON()
+) { tappedNodeName in
+    print("tapped", tappedNodeName)
+}
+
+// after each transition, tell it the active state — the highlight eases smoothly:
+StateGraph.setActiveState(actor.snapshot.value.description)
+```
+
+The page needs `<canvas id="gpu">` inside `<div id="stage">` (for the node labels) and a `#status`
+element. The app owns the machine and the event buttons; the toolkit owns the rendering.
 
 ## What it demonstrates
 
-- **Graph from the machine** — `definitionJSON()` is decoded into `JSONValue`; states and their
-  `on` targets become nodes + edges, laid out on a circle. Swap in any machine and the graph follows.
-- **Instanced rendering, two pipelines** — one shared unit-quad + per-instance buffer
-  (`center/halfSize/color/selected` for nodes, reinterpreted as `a/b/color/thickness` for edges),
-  drawn with `draw(vertexCount: 6, instanceCount: N)`. Nodes are circles (fragment `discard` outside
-  the radius); edges are quads stretched between node centers.
-- **A uniform buffer** carrying elapsed time, updated each frame with `queue.writeBuffer`, so the
-  active node pulses on the GPU.
-- **Wiring to the machine** — the node instance buffer is rewritten from `actor.snapshot` whenever an
-  event fires, so "which node is active" is the state machine's truth, not the renderer's.
+- **Graph from the machine** — the definition JSON is decoded and its states + `on` targets become
+  nodes + edges. Swap in any machine and the graph follows.
+- **Three instanced pipelines** sharing one uniform/bind-group layout: **edges** (quads stretched
+  between node boundaries), **arrowheads** (procedural triangles via `@builtin(vertex_index)`, no
+  vertex buffer), and **nodes** (circles via fragment `discard` outside the radius).
+- **Aspect handled in the shader** — geometry lives in a square world space; a `clip()` helper
+  applies the canvas aspect, so all CPU-side math (layout, edge offsets, hit-testing) stays isotropic.
+- **Eased active-state animation** — each node has an `activation` value that eases toward its target
+  every frame, so the highlight glides between states and the active node pulses.
+- **Tap-to-select** — a canvas click is converted to world space and hit-tested against node circles;
+  the picked node gets a white ring and fires `onSelect`.
 
 ## Requirements
 
@@ -51,6 +75,13 @@ The wasm is large (~62 MB — it bundles SwiftXState + Foundation + the WebGPU b
   canvas* with **no thrown error**. We renamed it `selected`. When a WebGPU canvas is unexpectedly
   black, wrap pipeline/encoder calls in `device.pushErrorScope('validation')` / `popErrorScope()`
   (or replicate the setup in plain JS) to surface the real validation message.
+- **Auto layouts are per-pipeline.** A bind group created from `pipelineA.getBindGroupLayout(0)` is
+  **not** compatible with `pipelineB`, even if the binding is structurally identical — another silent
+  black canvas. With multiple pipelines sharing a uniform, create an **explicit**
+  `GPUBindGroupLayout` + `GPUPipelineLayout` and pass `layout: .layout(...)` to all of them.
+- **Instance buffer stride must match the bytes you write.** A `float32x2,float32x2,float32x3,f32,f32`
+  instance is 36 bytes; setting `arrayStride: 40` (but writing 36) misaligns every instance after the
+  first → giant/garbled geometry. Stride = exact packed size.
 - **Sendable + JS callbacks.** GPU/JS objects aren't `Sendable`, so the `requestAnimationFrame` and
   click closures (which must be `@Sendable`) can't capture them. We keep the GPU objects in
   `@MainActor` globals and touch them inside `MainActor.assumeIsolated { … }` — valid because
