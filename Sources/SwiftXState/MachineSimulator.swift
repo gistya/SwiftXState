@@ -1,6 +1,4 @@
-#if SWIFTXSTATE_INSPECTOR_UI
 import Foundation
-import SwiftXState
 
 /// A *structural* simulator over a static XState machine definition: given the current state
 /// value and an event name, it computes the next state value by following the definition's `on`
@@ -299,4 +297,3 @@ public struct MachineSimulator: Sendable {
         id == ancestor || id.hasPrefix(ancestor + ".")
     }
 }
-#endif

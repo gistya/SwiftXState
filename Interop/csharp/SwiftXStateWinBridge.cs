@@ -75,11 +75,59 @@ namespace SwiftXStateWinBridgeInterop
 
         public static int AddNumbers(int a, int b) => NativeAddNumbers(a, b);
 
+        // --- MachineCreate ---
+        [DllImport(DllName, EntryPoint = "MachineCreate", CallingConvention = CallingConvention.Cdecl)]
+        private static extern long NativeMachineCreate([MarshalAs(UnmanagedType.LPUTF8Str)] string definitionJSON);
+
+        public static long MachineCreate(string definitionJSON) => NativeMachineCreate(definitionJSON);
+
+        // --- MachineEvents ---
+        [DllImport(DllName, EntryPoint = "MachineEvents", CallingConvention = CallingConvention.Cdecl)]
+        private static extern IntPtr NativeMachineEvents(long handle);
+
+        public static string MachineEvents(long handle) => ConsumeCString(NativeMachineEvents(handle));
+
         // --- MachineList ---
         [DllImport(DllName, EntryPoint = "MachineList", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr NativeMachineList();
 
         public static string MachineList() => ConsumeCString(NativeMachineList());
+
+        // --- MachineMatches ---
+        [DllImport(DllName, EntryPoint = "MachineMatches", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int NativeMachineMatches(long handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string statePath);
+
+        public static int MachineMatches(long handle, string statePath) => NativeMachineMatches(handle, statePath);
+
+        // --- MachineRelease ---
+        [DllImport(DllName, EntryPoint = "MachineRelease", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void NativeMachineRelease(long handle);
+
+        public static void MachineRelease(long handle) => NativeMachineRelease(handle);
+
+        // --- MachineReset ---
+        [DllImport(DllName, EntryPoint = "MachineReset", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void NativeMachineReset(long handle);
+
+        public static void MachineReset(long handle) => NativeMachineReset(handle);
+
+        // --- MachineSend ---
+        [DllImport(DllName, EntryPoint = "MachineSend", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int NativeMachineSend(long handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string @event);
+
+        public static int MachineSend(long handle, string @event) => NativeMachineSend(handle, @event);
+
+        // --- MachineSetStateCallback ---
+        [DllImport(DllName, EntryPoint = "MachineSetStateCallback", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void NativeMachineSetStateCallback(long handle, SnapshotCallback callback);
+
+        public static void MachineSetStateCallback(long handle, SnapshotCallback callback) => NativeMachineSetStateCallback(handle, callback);
+
+        // --- MachineState ---
+        [DllImport(DllName, EntryPoint = "MachineState", CallingConvention = CallingConvention.Cdecl)]
+        private static extern IntPtr NativeMachineState(long handle);
+
+        public static string MachineState(long handle) => ConsumeCString(NativeMachineState(handle));
 
         // --- SampleDefinitionJSON ---
         [DllImport(DllName, EntryPoint = "SampleDefinitionJSON", CallingConvention = CallingConvention.Cdecl)]
