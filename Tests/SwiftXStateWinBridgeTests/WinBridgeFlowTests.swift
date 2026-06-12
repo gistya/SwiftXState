@@ -55,4 +55,56 @@ final class WinBridgeFlowTests: XCTestCase {
     func testInvalidDefinitionReturnsZero() {
         XCTAssertEqual(machineCreate("not a machine"), 0)
     }
+
+    // The user's grid-guard machine: 3 modes, 6 events (3 change mode, 3 are in-state self-transitions
+    // the machine still validates as legal-only-here).
+    private let gridGuard = """
+    {
+      "id": "gridGuard",
+      "initial": "ready",
+      "states": {
+        "ready": { "on": {
+          "changeRequestReceived": "ready",
+          "changeRequestDenialSent": "ready",
+          "changeRequestApprovalSent": "makingChangesToFiles"
+        }},
+        "makingChangesToFiles": { "on": {
+          "changeRequestCarriedOut": "makingChangesToFiles",
+          "requestedChangesConfirmedMade": "awaitingRedrawsOfGrids"
+        }},
+        "awaitingRedrawsOfGrids": { "on": {
+          "gridUpdateConfirmedCompleted": "ready"
+        }}
+      }
+    }
+    """
+
+    func testGridGuardFlow() {
+        let h = machineCreate(gridGuard)
+        XCTAssertGreaterThan(h, 0)
+        XCTAssertEqual(take(machineState(h)), "ready")
+
+        // In-state events are accepted (return 1) but stay in ready.
+        XCTAssertEqual(machineSend(h, "changeRequestReceived"), 1)
+        XCTAssertEqual(take(machineState(h)), "ready")
+        XCTAssertEqual(machineSend(h, "changeRequestDenialSent"), 1)
+        XCTAssertEqual(take(machineState(h)), "ready")
+
+        // A mode-changing event the machine forbids here returns 0.
+        XCTAssertEqual(machineSend(h, "gridUpdateConfirmedCompleted"), 0)
+        XCTAssertEqual(take(machineState(h)), "ready")
+
+        // Full happy path.
+        XCTAssertEqual(machineSend(h, "changeRequestApprovalSent"), 1)
+        XCTAssertEqual(take(machineState(h)), "makingChangesToFiles")
+        XCTAssertEqual(machineSend(h, "changeRequestCarriedOut"), 1)          // self, still here
+        XCTAssertEqual(take(machineState(h)), "makingChangesToFiles")
+        XCTAssertEqual(machineSend(h, "requestedChangesConfirmedMade"), 1)
+        XCTAssertEqual(take(machineState(h)), "awaitingRedrawsOfGrids")
+        XCTAssertEqual(machineMatches(h, "awaitingRedrawsOfGrids"), 1)
+        XCTAssertEqual(machineSend(h, "gridUpdateConfirmedCompleted"), 1)
+        XCTAssertEqual(take(machineState(h)), "ready")
+
+        machineRelease(h)
+    }
 }
