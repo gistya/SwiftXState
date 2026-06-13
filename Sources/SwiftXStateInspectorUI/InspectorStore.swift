@@ -2,30 +2,45 @@
 import Foundation
 import Observation
 import SwiftXState
+// Re-export the platform-neutral inspector core so every view file in this module (and consumers)
+// sees ActorEntry, FeedEntry, the JSONValue tree helpers, MachineDefinitionImporter, and
+// InspectorState without an extra import.
+@_exported import SwiftXStateInspectorCore
 
-/// Consumes the in-process `InspectionEvent` stream and maintains everything the inspector
-/// UI shows: the live actor registry, a capped chronological event feed, and the current
-/// selection. Plug `observe()` into any actor's `ActorOptions(inspect:)` (combine with other
-/// sinks as needed). All ingestion hops to the main actor.
+/// SwiftUI-facing inspector store. A thin `@Observable` shell over the platform-neutral
+/// `InspectorState` reducer (in `SwiftXStateInspectorCore`): all ingest/lookup logic lives there, so
+/// this and the browser inspector can't drift apart. Mutating the single tracked `state` property
+/// is what drives SwiftUI invalidation.
+///
+/// Plug `observe()` into any actor's `ActorOptions(inspect:)` (combine with other sinks as needed).
+/// All ingestion hops to the main actor.
 @MainActor
 @Observable
 public final class InspectorStore {
-    /// Actors in registration order.
-    public private(set) var actors: [ActorEntry] = []
-    /// Chronological event feed (oldest first), capped at `feedCap`.
-    public private(set) var feed: [FeedEntry] = []
-    public var selectedSessionID: String?
-    /// Maximum feed length; older entries are dropped.
-    public var feedCap: Int = 2000
-
-    private var actorIndex: [String: Int] = [:]
-    private var seq = 0
-    private var registrationOrder = 0
-    /// Structural simulators for statically-loaded (pasted) machines, keyed by session id.
-    /// Live actors have no simulator (they're driven by their real runtime).
-    @ObservationIgnored private var simulators: [String: MachineSimulator] = [:]
+    /// The reducer holding all inspector state. Reassigned on every mutation, which is what SwiftUI
+    /// observes — read any forwarded property below and the body subscribes to changes.
+    public var state = InspectorState()
 
     public init() {}
+
+    // MARK: Forwarded state (so existing call sites and bindings keep working)
+
+    /// Actors in registration order.
+    public var actors: [ActorEntry] { state.actors }
+    /// Chronological event feed (oldest first), capped at `feedCap`.
+    public var feed: [FeedEntry] { state.feed }
+    /// Currently selected actor (drives the State/Events/Graph tabs).
+    public var selectedSessionID: String? {
+        get { state.selectedSessionID }
+        set { state.selectedSessionID = newValue }
+    }
+    /// Maximum feed length; older entries are dropped.
+    public var feedCap: Int {
+        get { state.feedCap }
+        set { state.feedCap = newValue }
+    }
+
+    // MARK: Ingestion
 
     /// Returns an inspect sink for `ActorOptions(inspect:)`. Safe to combine with others.
     public func observe() -> @Sendable (InspectionEvent) -> Void {
@@ -35,149 +50,44 @@ public final class InspectorStore {
     }
 
     /// Ingest a single inspection event (already on the main actor).
-    public func ingest(_ event: InspectionEvent) {
-        upsertActor(from: event)
+    public func ingest(_ event: InspectionEvent) { state.ingest(event) }
 
-        seq += 1
-        feed.append(FeedEntry(id: seq, event: event))
-        if feed.count > feedCap {
-            feed.removeFirst(feed.count - feedCap)
-        }
-
-        if selectedSessionID == nil {
-            selectedSessionID = actors.first?.sessionID
-        }
-    }
-
-    public func reset() {
-        actors.removeAll()
-        feed.removeAll()
-        actorIndex.removeAll()
-        simulators.removeAll()
-        selectedSessionID = nil
-        seq = 0
-        registrationOrder = 0
-    }
+    public func reset() { state.reset() }
 
     // MARK: Structural simulation (for pasted / static machines)
 
-    /// Attach a structural simulator to an actor so the UI can drive it.
     func registerSimulator(_ simulator: MachineSimulator, for sessionID: String) {
-        simulators[sessionID] = simulator
+        state.registerSimulator(simulator, for: sessionID)
     }
 
-    /// Whether the actor can be driven by structural simulation (i.e. was loaded statically).
-    public func isSimulatable(_ sessionID: String?) -> Bool {
-        guard let sessionID else { return false }
-        return simulators[sessionID] != nil
-    }
+    public func isSimulatable(_ sessionID: String?) -> Bool { state.isSimulatable(sessionID) }
 
-    /// Events sendable from the actor's current state (empty for live, non-simulatable actors).
-    public func availableEvents(for sessionID: String?) -> [String] {
-        guard let sessionID, let simulator = simulators[sessionID],
-              let value = actor(sessionID)?.stateValue else { return [] }
-        return simulator.availableEvents(from: value)
-    }
+    public func availableEvents(for sessionID: String?) -> [String] { state.availableEvents(for: sessionID) }
 
-    /// Send an event to a simulated actor: advances its state and appends synthetic event +
-    /// snapshot rows to the feed (so Events/Sequence light up). No-op for live actors or events
-    /// the current state can't handle.
-    public func send(_ event: String, to sessionID: String) {
-        guard let simulator = simulators[sessionID],
-              let entry = actor(sessionID),
-              let current = entry.stateValue,
-              let next = simulator.step(from: current, event: event) else { return }
+    public func send(_ event: String, to sessionID: String) { state.send(event, to: sessionID) }
 
-        let ref = InspectionActorRef(sessionId: entry.sessionID, systemId: entry.systemID, machineId: entry.machineID)
-        ingest(InspectionEvent(
-            kind: .event, rootId: entry.sessionID, actor: ref,
-            event: InspectionEventDescription(type: event)
-        ))
-        let snapshot = InspectionSnapshot(
-            actor: ref, status: .active, value: next.description,
-            stateValue: next, tags: [], childCount: 0,
-            context: entry.contextJSON ?? .object([:])
-        )
-        ingest(InspectionEvent(kind: .snapshot, rootId: entry.sessionID, actor: ref, snapshot: snapshot))
+    /// Parse a pasted XState machine definition and load it as a fresh actor, selecting it.
+    @discardableResult
+    public func loadDefinition(json: String, fallbackID: String = "pasted-machine") throws -> String {
+        try state.loadDefinition(json: json, fallbackID: fallbackID)
     }
 
     // MARK: Lookups
 
-    public func actor(_ sessionID: String) -> ActorEntry? {
-        actorIndex[sessionID].map { actors[$0] }
-    }
+    public func actor(_ sessionID: String) -> ActorEntry? { state.actor(sessionID) }
 
-    public var selectedActor: ActorEntry? {
-        selectedSessionID.flatMap(actor)
-    }
+    public var selectedActor: ActorEntry? { state.selectedActor }
 
     /// Feed filtered to a single actor (or all if `nil`).
-    public func feed(for sessionID: String?) -> [FeedEntry] {
-        guard let sessionID else { return feed }
-        return feed.filter { $0.sessionID == sessionID || $0.sourceSessionID == sessionID }
-    }
+    public func feed(for sessionID: String?) -> [FeedEntry] { state.feed(for: sessionID) }
 
     /// Direct children of an actor, in registration order.
-    public func children(of sessionID: String) -> [ActorEntry] {
-        actors.filter { $0.parentSessionID == sessionID }
-    }
+    public func children(of sessionID: String) -> [ActorEntry] { state.children(of: sessionID) }
 
     /// Root actors (no known parent in the registry).
-    public var rootActors: [ActorEntry] {
-        actors.filter { entry in
-            guard let parent = entry.parentSessionID else { return true }
-            return actorIndex[parent] == nil
-        }
-    }
+    public var rootActors: [ActorEntry] { state.rootActors }
 
     /// Flattened parent→child ordering with indentation depth, for the sidebar list.
-    public func actorTree() -> [(actor: ActorEntry, depth: Int)] {
-        var out: [(ActorEntry, Int)] = []
-        func visit(_ entry: ActorEntry, depth: Int) {
-            out.append((entry, depth))
-            for child in children(of: entry.sessionID) {
-                visit(child, depth: depth + 1)
-            }
-        }
-        for root in rootActors { visit(root, depth: 0) }
-        return out
-    }
-
-    // MARK: Ingestion
-
-    private func upsertActor(from event: InspectionEvent) {
-        let ref = event.actor
-        var entry: ActorEntry
-        if let idx = actorIndex[ref.sessionID] {
-            entry = actors[idx]
-        } else {
-            registrationOrder += 1
-            entry = ActorEntry(sessionID: ref.sessionID, order: registrationOrder)
-        }
-
-        if let machineID = ref.machineID { entry.machineID = machineID }
-        if let systemID = ref.systemID { entry.systemID = systemID }
-        if let parent = event.parentSessionId { entry.parentSessionID = parent }
-        if let def = event.definitionJSON { entry.definitionJSON = def }
-        if let snapshot = event.snapshot {
-            entry.latestSnapshot = snapshot
-            entry.status = snapshot.status
-        }
-        if event.kind == .event, let type = event.event?.type {
-            entry.lastEventType = type
-        }
-
-        if let idx = actorIndex[ref.sessionID] {
-            actors[idx] = entry
-        } else {
-            actorIndex[ref.sessionID] = actors.count
-            actors.append(entry)
-        }
-    }
-}
-
-extension InspectionActorRef {
-    var machineID: String? { machineId }
-    var systemID: String? { systemId }
+    public func actorTree() -> [(actor: ActorEntry, depth: Int)] { state.actorTree() }
 }
 #endif

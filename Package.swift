@@ -40,6 +40,12 @@ let package = Package(
             name: "SwiftXStateInspectorUI",
             targets: ["SwiftXStateInspectorUI"]
         ),
+        // Platform-neutral inspector logic (models, JSON-tree helpers, definition importer, and the
+        // InspectorState reducer). No SwiftUI/Observation — usable on Linux and in the browser (Wasm).
+        .library(
+            name: "SwiftXStateInspectorCore",
+            targets: ["SwiftXStateInspectorCore"]
+        ),
         .library(
             name: "SwiftXStateInspect",
             targets: ["SwiftXStateInspect"]
@@ -98,8 +104,13 @@ let package = Package(
             ]
         ),
         .target(
+            name: "SwiftXStateInspectorCore",
+            dependencies: ["SwiftXState"],
+            path: "Sources/SwiftXStateInspectorCore"
+        ),
+        .target(
             name: "SwiftXStateInspectorUI",
-            dependencies: ["SwiftXState", "SwiftXStateGraph"],
+            dependencies: ["SwiftXState", "SwiftXStateGraph", "SwiftXStateInspectorCore"],
             path: "Sources/SwiftXStateInspectorUI",
             swiftSettings: [
                 .define("SWIFTXSTATE_INSPECTOR_UI", .when(platforms: appleUIPlatforms)),
