@@ -144,7 +144,7 @@ public nonisolated enum LifeEvent: Eventable, Equatable {
 
 // MARK: - Next generation computation (core of "rules" interpreted from context.rules, used inside assign)
 
-public func nextGeneration(cells: [Bool], width: Int, height: Int, rules: LifeRules) -> [Bool] {
+public nonisolated func nextGeneration(cells: [Bool], width: Int, height: Int, rules: LifeRules) -> [Bool] {
     var next = Array(repeating: false, count: width * height)
     let dirs = [(-1,-1), (0,-1), (1,-1), (-1,0), (1,0), (-1,1), (0,1), (1,1)]
 

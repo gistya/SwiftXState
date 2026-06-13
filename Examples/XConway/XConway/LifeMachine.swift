@@ -19,7 +19,7 @@ public enum LifeTemplate: String, CaseIterable, Identifiable {
     public var id: String { rawValue }
 
     /// Relative cells (offsets from top-left anchor). Drop places the anchor near center.
-    public var cells: [(Int, Int)] {
+    public nonisolated var cells: [(Int, Int)] {
         switch self {
         case .glider: return [(1,0),(2,1),(0,2),(1,2),(2,2)]
         case .blinker: return [(0,1),(1,1),(2,1)]
