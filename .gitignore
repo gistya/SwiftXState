@@ -19,3 +19,5 @@ docs/
 
 # Planning docs (local only)
 plan.md
+/.agents
+/skills-lock.json

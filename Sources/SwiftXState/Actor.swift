@@ -376,6 +376,21 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
         }
     }
 
+    /// Non-blocking delivery from the inter-actor plane (an ``Interactor``). Enqueues `event` on
+    /// this actor's serial queue and returns immediately — unlike ``send(_:)`` which blocks until
+    /// the macrostep completes. Run-to-completion and FIFO ordering are preserved: the enqueued
+    /// work is serialized after any in-flight macrostep on the same queue, so it can never
+    /// re-enter a macrostep mid-flight. This is what lets an `Interactor` (a Swift `actor`) route
+    /// a message to a hosted actor without blocking a cooperative-pool thread on `queue.sync`.
+    public func post(_ event: any Eventable) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.inspectIncomingEvent(event, source: nil)
+            self.mailbox.append(event)
+            self.flushMailbox()
+        }
+    }
+
     private func flushMailbox() {
         while !mailbox.isEmpty {
             let event = mailbox.removeFirst()
