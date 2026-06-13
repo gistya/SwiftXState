@@ -3,7 +3,7 @@ import SwiftXState
 
 // MARK: - Rules (editable via JSON text area, "sent to the nodes")
 
-public struct LifeRules: nonisolated Codable, Sendable, Equatable, Hashable {
+public nonisolated struct LifeRules: Codable, Sendable, Equatable, Hashable {
     public var birth: [Int]
     public var survive: [Int]
 
@@ -36,7 +36,7 @@ public struct LifeRules: nonisolated Codable, Sendable, Equatable, Hashable {
 
 // MARK: - Context (holds the grid + rules + playback state). Codable for SwiftData persistence via SwiftXStateSwiftData.
 
-public struct LifeContext: nonisolated Codable, Sendable, Equatable {
+public nonisolated struct LifeContext: Codable, Sendable, Equatable {
     public let width: Int
     public let height: Int
     public var cells: [Bool]          // row-major: index = y * width + x
@@ -93,7 +93,7 @@ public struct GridSnapshot: Sendable, Equatable {
 
 // MARK: - Events (drive the machine; rules can be sent as JSON to affect guard-like decisions in step assign)
 
-public enum LifeEvent: Eventable, Equatable {
+public nonisolated enum LifeEvent: Eventable, Equatable {
     case toggleCell(x: Int, y: Int)
     case step
     case play
