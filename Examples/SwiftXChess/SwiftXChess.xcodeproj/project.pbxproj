@@ -118,7 +118,7 @@
 		73A8387B2FD52A28009E47EE = {
 			isa = PBXGroup;
 			children = (
-				73F793062FD8ABCB008E710F /* Local Packages */,
+				73F793072FD8ABE1008E710F /* SwiftXChessOpenings */,
 				7369DB0B2FD5A56D00050231 /* README.md */,
 				73A838862FD52A28009E47EE /* SwiftXChess */,
 				73A8389A2FD52A29009E47EE /* SwiftXChessTests */,
@@ -135,14 +135,6 @@
 				73A838A12FD52A29009E47EE /* SwiftXChessUITests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		73F793062FD8ABCB008E710F /* Local Packages */ = {
-			isa = PBXGroup;
-			children = (
-				73F793072FD8ABE1008E710F /* SwiftXChessOpenings */,
-			);
-			path = "Local Packages";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
