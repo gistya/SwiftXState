@@ -2,11 +2,13 @@
 //
 //   1. Build the bridge as a shared library with the C exports enabled:
 //        SWIFTXWIN=1 swift build --product SwiftXStateWinBridge   (-c release for a real run)
-//   2. Point the loader at it and run:
-//        SWIFTXSTATE_BRIDGE=<path to libSwiftXStateWinBridge.dylib/.so/.dll> dotnet run
+//   2. Run it:
+//        dotnet run --project Interop/csharp/Sample
 //
-// On Windows the bridge name resolves to SwiftXStateWinBridge.dll directly; the resolver below also
-// makes it run on macOS/Linux (dylib/so) so the round trip can be tested anywhere.
+// The resolver below finds the just-built library in the package's `.build` output (and maps the
+// name onto the right native file for the current OS), so the round trip runs on macOS/Linux/Windows
+// with no environment variables. This is a test harness; the shipping package resolves the native
+// library only from runtimes/<rid>/native (see SwiftXState/NativeLoader.cs).
 
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -54,13 +56,7 @@ static string Truncate(string s, int max = 160) => s.Length <= max ? s : s[..max
 static IntPtr Resolve(string name, Assembly assembly, DllImportSearchPath? searchPath)
 {
     if (name == "SwiftXStateWinBridge.dll")
-    {
-        var path = Environment.GetEnvironmentVariable("SWIFTXSTATE_BRIDGE");
-        if (string.IsNullOrEmpty(path))
-            throw new InvalidOperationException(
-                "Set SWIFTXSTATE_BRIDGE to the built bridge library (libSwiftXStateWinBridge.dylib/.so or SwiftXStateWinBridge.dll).");
-        return NativeLibrary.Load(path);
-    }
+        return LoadBridge(assembly, searchPath);
     if (name == "ucrtbase.dll")   // where free() lives
     {
         if (OperatingSystem.IsWindows()) return NativeLibrary.Load("ucrtbase.dll");
@@ -68,4 +64,35 @@ static IntPtr Resolve(string name, Assembly assembly, DllImportSearchPath? searc
         return NativeLibrary.Load("libc.so.6");
     }
     return IntPtr.Zero;
+}
+
+// Locate the bridge built by `swift build`. No environment variable: try the test binary's own
+// directory (in case it was copied there), then walk up to the package's `.build/{debug,release}`.
+static IntPtr LoadBridge(Assembly assembly, DllImportSearchPath? searchPath)
+{
+    var file = OperatingSystem.IsWindows() ? "SwiftXStateWinBridge.dll"
+             : OperatingSystem.IsMacOS()   ? "libSwiftXStateWinBridge.dylib"
+             :                               "libSwiftXStateWinBridge.so";
+
+    // 1) Next to the running binary (default search), e.g. if copied into the output directory.
+    if (NativeLibrary.TryLoad(file, assembly, searchPath, out var handle))
+        return handle;
+
+    // 2) The local `swift build` output: walk up to the repo's `.build` and check both configs.
+    for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+    {
+        var build = Path.Combine(dir.FullName, ".build");
+        if (!Directory.Exists(build))
+            continue;
+        foreach (var config in new[] { "debug", "release" })
+        {
+            var candidate = Path.Combine(build, config, file);
+            if (File.Exists(candidate) && NativeLibrary.TryLoad(candidate, out var lib))
+                return lib;
+        }
+        break; // found the package's .build; stop climbing
+    }
+
+    throw new InvalidOperationException(
+        $"Could not find {file}. Build it first:  SWIFTXWIN=1 swift build --product SwiftXStateWinBridge");
 }

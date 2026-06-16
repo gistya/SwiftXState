@@ -20,5 +20,6 @@ SwiftXStateWinBridge.ActorRelease(actor);
 ```
 
 The native bridge is bundled per platform under `runtimes/<rid>/native`; the right one is loaded
-automatically. Set the `SWIFTXSTATE_BRIDGE` environment variable to override the native library path
-for local development.
+automatically from there and nowhere else — the resolver has no environment-variable override, so the
+native load can't be redirected by the process environment. (For local development against a fresh
+`swift build`, the `Interop/csharp/Sample` harness locates the library in `.build` itself.)
