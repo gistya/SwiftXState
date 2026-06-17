@@ -1,11 +1,62 @@
 ![SwiftXState Logo](Assets/swiftxstate_logo.png)
 
-# SwiftXState
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+# <p style="text-align: center;"> SwiftXState
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) 
 [![Documentation](https://img.shields.io/badge/docs-DocC-7c5cff.svg)](https://gistya.github.io/SwiftXState/documentation/swiftxstate/)
 
-## What is this useful for?
+
+---
+
+### *"If you don't have an explicit state machine, you have an implicit one."* <br> <p style="text-indent: 2em;"> - David Khourshid
+
+
+--- 
+<br>
+
+# ~ click(for: [Documentation](https://gistya.github.io/SwiftXState/documentation/swiftxstate/)) ~
+
+--- 
+<br>
+
+# README Contents
+
+- [Cross-Platform Guides](#cross-platform-guides)
+- [FAQ](#faq)
+- [Code Examples](#code-examples)
+    - [Text API example](#text-api-example)
+    - [Type-safe API example](#type-safe-api-example)
+    - [State Graph Analysis](#state-graph-analysis)
+- [Included Sample Apps (iPadOS/macOS)](#sample-apps-ipadosmacos)
+- [XState.js Adoption & Parity](#xstatejs-adoption--parity)
+    - [XState → SwiftXState terminology guide](#xstate--swiftxstate-terminology-guide)
+    - [Parity with XState](#parity-with-xstate)
+- [Roadmap](#roadmap)
+- [Related Links](#related-links)
+- [Security Policy](SECURITY.md)
+- [License](#license)
+
+<br>
+
+---
+<br>
+
+# Cross-Platform Setup Guides
+
+- ### **[Apple macOS Setup Guide](MAC_SETUP_GUIDE.md)**
+- ### **[linux Setup Guide](LINUX_SETUP.md)**
+- ### **[Microsoft Windows Setup Guide](WINDOWS_SETUP.md)**
+
+<br>
+
+---
+<br>
+
+# ~ FAQ ~
+
+
+## What is SwiftXState useful for?
 
 1. Own your logic and events with (state)-flow-(state) graphs. 
 2. Track it live with built-in JSON streams & 2D/3D visualizer. 
@@ -17,10 +68,14 @@
 1. Server or client.
 2. Web: use [Stately.a's XState.js](https://github.com/statelyai/xstate) 
 3. WebAssembly: *experimental* SwiftXState for [wasm](https://github.com/gistya/swiftxstate/Examples/WasmDemo)/[WebGPU](https://github.com/gistya/swiftxstate/Examples/WasmGPUDemo)
-4. Linux ([how-to](https://github.com/gistya/swiftxstate/LINUX_SETUP.md))
-5. Windows (compiles but not tested yet)
+4. Linux ([Linux build README](LINUX_SETUP.md), or get prebuilt NuGet)
+5. Windows ([Windows build README](WINDOWS_SETUP.md), or get prebuilt NuGet)
 6. macOS/iPadOS ([sample Chess app](https://github.com/gistya/swiftxstate/Examples/SwiftXChess), [sample visualizer app](https://github.com/gistya/swiftxstate/Examples/SwiftXInspector))
 7. iOS/visionOS/watchOS/tvOS 
+
+## How secure is SwiftXState?
+
+Every effort has been made to ensure you can trust this library. For details, see: [SECURITY.md](SECURITY.md). 
 
 ## What libraries comes in the package?
 
@@ -44,17 +99,12 @@
 - SwiftXState implements compatibility with XState.js, where `Actor`s deterministically orchestrate run-to-completion events, so we kept their terminology.
 - We do use `Swift actor` for suitable roles, such as `InspectBridgeState`, which handles serialized asynchronous communication.
 
-## Documentation & Articles - [here.](https://gistya.github.io/SwiftXState/documentation/swiftxstate/)
 
-
-- Docs are generated with DocC automatically from doc comments in the codebase, and published to GitHub Pages from `main` pushes by
-[`.github/workflows/static.yml`](.github/workflows/static.yml) on every merge. (The site goes live
-after the first successful run.)
 
 ## Acknowledgments
 
 - SwiftXState would not exist without the work of **[Stately](https://stately.ai)** and the **[XState](https://github.com/statelyai/xstate)** team.
-- Thank you to David Khourshid in particular for blessing this project.
+- Thank you to **David Khourshid**, founder of Stately.ai and XState, in particular for blessing this project.
 - Thank you to everyone who contributed to XState.js and the Stately ecosystem. 
 - Thank you to Stately for their inspiring commitment to open source.
 
@@ -72,89 +122,132 @@ We offer two main API paths:
 - Typesafe mode, the true Swift way, using generics for compile-time guarantees and fewer bugs
 - Documentation linked above has guides for both
 
-### Text API example:
+---
+<br>
+
+
+# Code Examples
+
+## Text API example:
 
 - Create a new state machine and "actor" to manage it:
 
-```swift
-import SwiftXState
+    ```swift
+    import SwiftXState
 
-let toggle = createMachine(MachineConfig(
-    id: "toggle",
-    initial: "inactive",
-    context: EmptyContext(),
-    states: [
-        "inactive": StateNodeConfig(on: ["toggle": .to("active")]),
-        "active": StateNodeConfig(on: ["toggle": .to("inactive")]),
-    ]
-))
+    let toggle = createMachine(MachineConfig(
+        id: "toggle",
+        initial: "inactive",
+        context: EmptyContext(),
+        states: [
+            "inactive": StateNodeConfig(on: ["toggle": .to("active")]),
+            "active": StateNodeConfig(on: ["toggle": .to("inactive")]),
+        ]
+    ))
 
-let actor = createActor(toggle).start()
-actor.send(Event("toggle"))
-print(actor.snapshot.matches("active")) // true
-```
+    let actor = createActor(toggle).start()
+    actor.send(Event("toggle"))
+    print(actor.snapshot.matches("active")) // true
+    ```
 
 - Use `@MachineStates` macro to generate `StateName` enums from the strings in the machine declarations.
 - That way, you still get autocomplete and protection against typos and name drift:
 
-```swift
-@MachineStates("AppState")
-let config = MachineConfig(id: "app", initial: "idle", context: Ctx(), states: [
-    "idle":    StateNodeConfig(on: transitions(on(Focus.self, to: AppState.active))),
-    "active":  StateNodeConfig(states: ["fast": StateNodeConfig(), "slow": StateNodeConfig()]),
-])
-// generates: enum AppState: String, StateName { case idle; case active; case activeFast = "active.fast"; … }
-// AppState.activeFast → "#active.fast"  (absolute target, resolves regardless of nesting)
-```
+    ```swift
+    @MachineStates("AppState")
+    let config = MachineConfig(id: "app", initial: "idle", context: Ctx(), states: [
+        "idle":    StateNodeConfig(on: transitions(on(Focus.self, to: AppState.active))),
+        "active":  StateNodeConfig(states: ["fast": StateNodeConfig(), "slow": StateNodeConfig()]),
+    ])
+    // generates: enum AppState: String, StateName { case idle; case active; case activeFast = "active.fast"; … }
+    // AppState.activeFast → "#active.fast"  (absolute target, resolves regardless of nesting)
+    ```
 
 - Set the legal transition rules for a each node in your state graph: 
 
-```swift
-StateNodeConfig(on: [
-    "input.focus":  .to("active"),
-    "input.change": .single(TransitionConfig(target: "debouncing")),
-])
-```
+    ```swift
+    StateNodeConfig(on: [
+        "input.focus":  .to("active"),
+        "input.change": .single(TransitionConfig(target: "debouncing")),
+    ])
+    ```
 
-### Type-safe API example:
-```swift
-struct InputChange: StateEvent { static let eventType = "input.change"; let searchInput: String }
+## Type-safe API example:
 
-StateNodeConfig(on: transitions(
-    on(Focus.self, target: "active"),
-    on(InputChange.self, target: "debouncing",
-       actions: [assign { (ctx: inout Ctx, e: InputChange) in ctx.searchInput = e.searchInput }])
-))
+- SwiftXState features two tiers of APIs. The "second tier" leans more heavily into Swift generics and type-safety. 
+- In this example we declare a `StateEvent` type, `InputChange`. Then we can send a typesafe `InputChange` event to our `actor` rather than something like `actor.send(Event("toggle"))` (as shown in the text API example above).
 
-actor.send(InputChange(searchInput: "be"))   // typed at the call site
-```
+    ```swift
+    struct InputChange: StateEvent { static let eventType = "input.change"; let searchInput: String }
 
-- Also note, this app uses the type-safe APIs [Examples/SwiftXChess](Examples/SwiftXChess/README.md).
+    StateNodeConfig(on: transitions(
+        on(Focus.self, target: "active"),
+        on(InputChange.self, target: "debouncing",
+        actions: [assign { (ctx: inout Ctx, e: InputChange) in ctx.searchInput = e.searchInput }])
+    ))
+
+    actor.send(InputChange(searchInput: "be"))   // typed at the call site
+    ```
+
+- As the library matures, we plan to increase the type-safe surface area of SwiftXState.
+- Note: for more examples of type-safe uses of SwiftXState, see our example app: [Examples/SwiftXChess](Examples/SwiftXChess/README.md).
 
 ## State Graph Analysis
 
 - Like the original `@xstate/graph`, our Swift version provides APIs to analyze your state graphs during testing to ensure that your assumptions are correct:
 
-```swift
-let model = TestModel(toggle)
+    ```swift
+    let model = TestModel(toggle)
 
-for path in model.shortestPaths() {
-    print(path.description) // e.g. "-toggle-> active"
-    try model.test(
-        path,
-        onState: { snapshot in /* assert your UI matches snapshot.value */ },
-        onEvent: { event in   /* drive your component with event */ }
-    )
-}
+    for path in model.shortestPaths() {
+        print(path.description) // e.g. "-toggle-> active"
+        try model.test(
+            path,
+            onState: { snapshot in /* assert your UI matches snapshot.value */ },
+            onEvent: { event in   /* drive your component with event */ }
+        )
+    }
 
-// Static checks over the reachable graph:
-for issue in model.validate() {
-    print(issue.kind, issue.stateKey) // .deadEnd / .unreachableState
-}
-```
+    // Static checks over the reachable graph:
+    for issue in model.validate() {
+        print(issue.kind, issue.stateKey) // .deadEnd / .unreachableState
+    }
+    ```
 
 - (Similar features: `getAdjacencyMap`, `getShortestPaths`, `getSimplePaths`, `validate`.) 
 - You can also tune traversal with `TraversalOptions` (custom event resolver, state serialization, `maxStates`).
+
+---
+<br>
+
+
+# Included Sample Apps (iPadOS/macOS)
+
+## SwiftXInspector
+
+- Paste in JSON machine descriptions in XState JSON format to see a realtime visualization. 
+- Note: does not yet support pasting in JavaScript functions.
+
+    ![SwiftXInspector Screenshot](Assets/LocalInspector.png)
+
+## SwiftXChess
+
+- Demonstrates the live inspection features of SwiftXGraph and SwiftXInspect
+- Shows the power of GPU-accelerated Metal rendering in SwiftUI
+
+    ![SwiftXChess Screenshot](Assets/SwiftXChess.png)
+
+- Each board square has different inspectable state depending upon which kind of piece might be present:  
+
+    ![ChessNode](Assets/ChessNodes.png)
+
+---
+<br>
+
+
+# XState.js Adoption & Parity 
+
+XState.js users considering SwiftXState as a native-code solution might benefit from the following information about API terminology and feature parity with Stately.ai's wonderful library, XState.js v5.
 
 ## XState → SwiftXState terminology guide:
 
@@ -169,28 +262,6 @@ for issue in model.validate() {
 | `assertEvent(event, "…")` | not needed — the Tier-2 handler is already typed to the event |
 | `guard: 'name'` / `({ context, event }) => …` | `guard: .named("name")` / `guarded { (c, e: EventType) in … }` |
 | `always`, `after`, `invoke`, `spawn`, `raise`, `sendTo`, tags, `meta` | same names, same model |
-
----
-
-## Included Sample Apps for Mac/iPad
-
-### SwiftXInspector App:
-
-- Paste in JSON machine descriptions in XState JSON format to see a realtime visualization. 
-- Note: does not yet support pasting in JavaScript functions.
-
-![SwiftXInspector Screenshot](Assets/LocalInspector.png)
-
-### SwiftXChess:
-
-- Demonstrates the live inspection features of SwiftXGraph and SwiftXInspect
-- Shows the power of GPU-accelerated Metal rendering in SwiftUI
-
-![SwiftXChess Screenshot](Assets/SwiftXChess.png)
-
-- Each board square has different inspectable state depending upon which kind of piece might be present:  
-
-![ChessNode](Assets/ChessNodes.png)
 
 ## Parity with XState
 
@@ -302,36 +373,7 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 
 ---
 
-
----
-
-## Development
-
-```bash
-# Run all package tests (Apple platforms)
-swift test
-
-# Run core tests only
-swift test --filter SwiftXStateTests
-```
-
-The core test suite covers guards, invoke/spawn, parallel transitions, history, replay, persistence, inspection, and SwiftXChess integration scenarios.
-
-### Linux smoke test (Ubuntu)
-
-On a Linux host with Swift 6.2+ installed ([swift.org install guide](https://www.swift.org/install/linux/)):
-
-```bash
-# Clone or sync the repo, then:
-chmod +x Scripts/linux-smoke-test.sh
-./Scripts/linux-smoke-test.sh
-```
-
-This builds `SwiftXState`, `SwiftXStateInspect`, and the URLSession inspect stub, then runs `SwiftXStateTests` and `SwiftXStateInspectTests`. It skips Apple-only SwiftData test targets. Report failures with `swift --version` and the full script output.
-
----
-
-## Roadmap (maybe-board)
+# Roadmap
 
 1. Opaque child checkpoint payloads: optional persisted job ledger metadata beyond status-only snapshots
 2. SCXML interchange: import/export for standards-based workflows (as soon as we finish our XML parser)
@@ -340,13 +382,18 @@ This builds `SwiftXState`, `SwiftXStateInspect`, and the URLSession inspect stub
 6. Load machine configs / full machines from external sources: awaiting security review.
 7. First-class wasm WebGPU adapter.
 
-## Related links
+---
+
+# Related links
 
 - [XState](https://github.com/statelyai/xstate) — the JavaScript reference implementation
 - [Stately](https://stately.ai) — visual editor, inspector, and state-machine tooling
 - [@statelyai/inspect](https://github.com/statelyai/inspect) — inspector protocol SwiftXState speaks on the wire
 - [SCXML (W3C)](https://www.w3.org/TR/scxml/) — historical spec that influenced XState's design
-## License
+
+---
+
+# License
 
 SwiftXState is released under the [MIT License](LICENSE).
 

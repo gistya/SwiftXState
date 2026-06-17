@@ -149,6 +149,19 @@ Multipass mounts are effectively read-only for Swift’s .build directory (Opera
 # default: ~/swift-build/swift-xstate inside the VM
 SWIFTXSTATE_LINUX_BUILD_PATH=~/swift-build/swift-xstate ./Scripts/linux-smoke-test.sh
 ```
+
+### Linux smoke test (Ubuntu)
+
+On a Linux host with Swift 6.2+ installed ([swift.org install guide](https://www.swift.org/install/linux/)):
+
+```bash
+# Clone or sync the repo, then:
+chmod +x Scripts/linux-smoke-test.sh
+./Scripts/linux-smoke-test.sh
+```
+
+This builds `SwiftXState`, `SwiftXStateInspect`, and the URLSession inspect stub, then runs `SwiftXStateTests` and `SwiftXStateInspectTests`. It skips Apple-only SwiftData test targets. Report failures with `swift --version` and the full script output.
+
 ## Current Status on Linux
 
 Current status: 

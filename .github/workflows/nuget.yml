@@ -3,6 +3,9 @@ name: NuGet
 # Builds the native bridge for each platform, packs the managed wrapper + natives into a single
 # NuGet package, and (on a version tag) publishes it via NuGet.org Trusted Publishing (OIDC) — no
 # long-lived API key. PRs build + pack only. PackageId must be one you own (SwiftXState.csproj).
+#
+# The Windows RID also bundles the Swift runtime DLLs next to the bridge so the package runs on a
+# machine without the Swift toolchain installed (macOS/Linux get the runtime from the system Swift).
 on:
   push:
     # Match the repo's bare semver tags (e.g. 0.9.4), and tolerate an optional `v` prefix.
@@ -52,10 +55,68 @@ jobs:
           test -n "$SRC" || { echo "::error::built native not found"; exit 1; }
           cp "$SRC" "$OUT/${{ matrix.file }}"
 
+      # On Windows the bridge dynamically links the Swift runtime DLLs. macOS/Linux consumers get the
+      # runtime from a system-installed toolchain, but a Windows machine without Swift installed can't
+      # load the bridge unless these ship beside it. NuGet deploys everything in runtimes/win-x64/native
+      # next to the bridge, so the DLLs resolve. (Microsoft's CRT/UCRT/KERNEL32 are NOT bundled — they
+      # come from the OS + the VC++ redistributable.)
+      - name: Bundle Swift runtime DLLs (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $out = "$env:NATIVE_DIR/win-x64/native"
+          New-Item -ItemType Directory -Force $out | Out-Null
+
+          # Direct Swift runtime dependencies of the bridge — must be present or it won't load.
+          $required = @(
+            'swift_Concurrency.dll', 'swiftDispatch.dll', 'BlocksRuntime.dll', 'swift_Core.dll',
+            'Foundation.dll', 'FoundationEssentials.dll', 'swiftWinSDK.dll', 'swiftCRT.dll'
+          )
+          # Foundation pulls these in transitively on Windows (i18n + ICU). Best-effort: copy if found.
+          $optional = @('FoundationInternationalization.dll', '_FoundationICU.dll')
+
+          # The toolchain puts its runtime DLLs on PATH (so built binaries run); also check the standard
+          # installer layout as a fallback.
+          $dirs = @()
+          $swiftExe = (Get-Command swift -ErrorAction SilentlyContinue).Source
+          if ($swiftExe) { $dirs += Split-Path $swiftExe }   # runtime DLLs sit beside swiftc on Windows
+          $dirs += ($env:PATH -split ';' | Where-Object { $_ -and (Test-Path $_) })
+          $dirs += Get-ChildItem -ErrorAction SilentlyContinue -Directory `
+                     "$env:LOCALAPPDATA\Programs\Swift\Runtimes\*\usr\bin" |
+                     Select-Object -ExpandProperty FullName
+
+          function Find-Dll($name) {
+            foreach ($d in $dirs) { $p = Join-Path $d $name; if (Test-Path $p) { return $p } }
+            return $null
+          }
+
+          $missing = @()
+          foreach ($dll in $required) {
+            $src = Find-Dll $dll
+            if ($src) { Copy-Item $src $out -Force; Write-Host "bundled  $dll  <- $src" }
+            else { $missing += $dll }
+          }
+          foreach ($dll in $optional) {
+            $src = Find-Dll $dll
+            if ($src) { Copy-Item $src $out -Force; Write-Host "bundled  $dll  (optional)" }
+          }
+          # ICU data DLLs sit beside Foundation; their exact names vary by toolchain version.
+          $fdll = Find-Dll 'Foundation.dll'
+          if ($fdll) {
+            Get-ChildItem -Path (Split-Path $fdll) -Filter 'icu*.dll' -ErrorAction SilentlyContinue |
+              ForEach-Object { Copy-Item $_.FullName $out -Force; Write-Host "bundled  $($_.Name)  (icu)" }
+          }
+          if ($missing.Count) {
+            Write-Error "Missing required Swift runtime DLLs: $($missing -join ', '). Searched PATH + the Swift install."
+            exit 1
+          }
+          Write-Host "`nStaged for win-x64:"; Get-ChildItem $out | Select-Object Name, Length
+
+      # Upload the whole native folder (Windows carries the Swift runtime DLLs too; macOS/Linux is one file).
       - uses: actions/upload-artifact@v4
         with:
           name: native-${{ matrix.rid }}
-          path: ${{ env.NATIVE_DIR }}/${{ matrix.rid }}/native/${{ matrix.file }}
+          path: ${{ env.NATIVE_DIR }}/${{ matrix.rid }}/native/
 
   pack:
     needs: native
@@ -72,11 +133,13 @@ jobs:
           path: artifacts
       - name: Lay out natives
         run: |
+          # Copy every file from each per-RID artifact (Windows brings the bridge + its Swift runtime
+          # DLLs; macOS/Linux bring just the one library) into runtimes/<rid>/native.
           for rid in osx-arm64 linux-x64 win-x64; do
-            f=$(find "artifacts/native-$rid" -type f 2>/dev/null | head -1) || true
-            if [ -n "$f" ]; then
+            src="artifacts/native-$rid"
+            if [ -d "$src" ]; then
               mkdir -p "$NATIVE_DIR/$rid/native"
-              cp "$f" "$NATIVE_DIR/$rid/native/"
+              find "$src" -type f -exec cp {} "$NATIVE_DIR/$rid/native/" \;
             fi
           done
           find "$NATIVE_DIR" -type f
