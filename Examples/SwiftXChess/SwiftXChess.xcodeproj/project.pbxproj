@@ -17,7 +17,6 @@
 		73A839012FD52B7B009E47EE /* SwiftXStateSwiftData in Frameworks */ = {isa = PBXBuildFile; productRef = 73A839002FD52B7B009E47EE /* SwiftXStateSwiftData */; };
 		73A839032FD52B7B009E47EE /* SwiftXStateSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 73A839022FD52B7B009E47EE /* SwiftXStateSwiftUI */; };
 		73C0FFEF2FD6726A00DB0B4D /* SwiftXStateInspectorUI in Frameworks */ = {isa = PBXBuildFile; productRef = 73C0FFEE2FD6726A00DB0B4D /* SwiftXStateInspectorUI */; };
-		73F791082FD7EB91008E710F /* ChessKit in Frameworks */ = {isa = PBXBuildFile; productRef = 73F791072FD7EB91008E710F /* ChessKit */; };
 		73F791542FD7F095008E710F /* SwiftXChessOpenings in Frameworks */ = {isa = PBXBuildFile; productRef = 73F791532FD7F095008E710F /* SwiftXChessOpenings */; };
 		73F792522FD88DD7008E710F /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 73F792512FD88DD7008E710F /* SwiftXState */; };
 		73F792542FD88DD7008E710F /* SwiftXStateGraph in Frameworks */ = {isa = PBXBuildFile; productRef = 73F792532FD88DD7008E710F /* SwiftXStateGraph */; };
@@ -78,7 +77,6 @@
 			files = (
 				73A838FD2FD52B7B009E47EE /* SwiftXStateInspect in Frameworks */,
 				73F792522FD88DD7008E710F /* SwiftXState in Frameworks */,
-				73F791082FD7EB91008E710F /* ChessKit in Frameworks */,
 				730A09C42FD6726A00DB0B4D /* SwiftXState in Frameworks */,
 				73F792542FD88DD7008E710F /* SwiftXStateGraph in Frameworks */,
 				730A09CA2FD6726A00DB0B4D /* SwiftXStateInspectURLSession in Frameworks */,
@@ -167,7 +165,6 @@
 				73C0FFEE2FD6726A00DB0B4D /* SwiftXStateInspectorUI */,
 				730A09C72FD6726A00DB0B4D /* SwiftXStateInspect */,
 				730A09C92FD6726A00DB0B4D /* SwiftXStateInspectURLSession */,
-				73F791072FD7EB91008E710F /* ChessKit */,
 				73F791532FD7F095008E710F /* SwiftXChessOpenings */,
 				73F792512FD88DD7008E710F /* SwiftXState */,
 				73F792532FD88DD7008E710F /* SwiftXStateGraph */,
@@ -261,7 +258,6 @@
 			mainGroup = 73A8387B2FD52A28009E47EE;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				73F791062FD7EB91008E710F /* XCRemoteSwiftPackageReference "chesskit-swift" */,
 				73F793042FD8AAF3008E710F /* XCLocalSwiftPackageReference "SwiftXChessOpenings" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -676,17 +672,6 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		73F791062FD7EB91008E710F /* XCRemoteSwiftPackageReference "chesskit-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/chesskit-app/chesskit-swift";
-			requirement = {
-				branch = interactor;
-				kind = branch;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
 		730A09C32FD6726A00DB0B4D /* SwiftXState */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -727,11 +712,6 @@
 		73C0FFEE2FD6726A00DB0B4D /* SwiftXStateInspectorUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftXStateInspectorUI;
-		};
-		73F791072FD7EB91008E710F /* ChessKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 73F791062FD7EB91008E710F /* XCRemoteSwiftPackageReference "chesskit-swift" */;
-			productName = ChessKit;
 		};
 		73F791532FD7F095008E710F /* SwiftXChessOpenings */ = {
 			isa = XCSwiftPackageProductDependency;

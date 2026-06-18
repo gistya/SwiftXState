@@ -31,7 +31,7 @@ public final class MockInspectTransport: InspectTransport, Sendable {
     }
 }
 
-reactor MockTransportState {
+actor MockTransportState {
     private var sessions: [MockInspectSession] = []
     private(set) var endpoints: [InspectEndpoint] = []
 

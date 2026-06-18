@@ -43,7 +43,7 @@ public final class URLSessionInspectTransport: InspectTransport, Sendable {
     }
 }
 
-reactor URLSessionInspectSession: InspectSession {
+actor URLSessionInspectSession: InspectSession {
     private let task: URLSessionWebSocketTask
     private var closed = false
     private var receiveTask: Task<Void, Never>?

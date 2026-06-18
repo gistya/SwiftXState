@@ -31,7 +31,7 @@ let package = Package(
                 name: "SwiftXState",
                 path: "../../../swift-xstate"
             )
-            : .package(url: repo, from: swiftXMinVersion),
+            : .package(url: repo, branch: "interactor-reactor"), //from: swiftXMinVersion),
     ],
     targets: [
         .target(

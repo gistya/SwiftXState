@@ -1,5 +1,5 @@
 {
-  "originHash" : "dd94f952584400b28d3ebab04a6ad74a5882964cce793af4dde0bcd6efa789f7",
+  "originHash" : "895e112ded016b8083eccc276b17942ced2243826e32894743a7fe2a69648450",
   "pins" : [
     {
       "identity" : "chesskit-swift",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/SwiftXState.git",
       "state" : {
-        "revision" : "72734b888b53d32149a88b1eb41d7abb6f2b7fb0",
-        "version" : "0.9.7"
+        "branch" : "interactor-reactor",
+        "revision" : "6ec2221edb9e3b4e30efd71c131bd35774a0ef57"
       }
     }
   ],

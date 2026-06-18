@@ -41,7 +41,7 @@ public final class InspectBridge: Sendable {
     }
 }
 
-reactor InspectBridgeState {
+actor InspectBridgeState {
     private let transport: any InspectTransport
     private let endpoint: InspectEndpoint
     private let wireFormat: InspectWireFormat

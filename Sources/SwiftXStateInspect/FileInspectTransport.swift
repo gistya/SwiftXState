@@ -16,7 +16,7 @@ public final class FileInspectTransport: InspectTransport, Sendable {
     }
 }
 
-reactor FileInspectWriter {
+actor FileInspectWriter {
     private let fileURL: URL
     private var closed = false
 
@@ -48,7 +48,7 @@ reactor FileInspectWriter {
     }
 }
 
-reactor FileInspectSession: InspectSession {
+actor FileInspectSession: InspectSession {
     private let writer: FileInspectWriter
     private var closed = false
 
