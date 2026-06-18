@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:Examples/SwiftXChess/SwiftXChess.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Examples/SwiftXInspector/SwiftXInspector.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Examples/SX_XS_Visualizer_POC/SX_XS_Visualizer_POC.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Examples/XConway/XConway.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Examples/WasmDemo">
+   </FileRef>
+   <FileRef
+      location = "group:Examples/WasmGPUDemo">
+   </FileRef>
+   <FileRef
+      location = "group:Examples/WasmInspector">
+   </FileRef>
+</Workspace>

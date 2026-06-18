@@ -8,7 +8,7 @@ import PackageDescription
 /// In this project, SWIFTXDEV=1 is only set in the .xcproj User-Defined settings for DEBUG config.
 let useLocal = ProcessInfo.processInfo.environment["SWIFTXDEV"] != nil
 let repo = "https://github.com/gistya/SwiftXState.git"
-let swiftXMinVersion: Version = "0.9.0"
+let swiftXMinVersion: Version = "0.9.10"
 
 let package = Package(
     name: "SwiftXChessOpenings",
@@ -29,7 +29,7 @@ let package = Package(
         useLocal
             ? .package(
                 name: "SwiftXState",
-                path: "../../../swift-xstate"
+                path: "../../.."
             )
             : .package(url: repo, from: swiftXMinVersion),
     ],

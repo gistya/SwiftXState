@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		73128E222FE4837100401386 /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 73128E212FE4837100401386 /* SwiftXState */; };
 		733D43EB2FDBCFB100DD6932 /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 733D43EA2FDBCFB100DD6932 /* SwiftXState */; };
 		733D43EF2FDBCFB100DD6932 /* SwiftXStateInspect in Frameworks */ = {isa = PBXBuildFile; productRef = 733D43EE2FDBCFB100DD6932 /* SwiftXStateInspect */; };
 		733D43F32FDBCFB100DD6932 /* SwiftXStateSwiftData in Frameworks */ = {isa = PBXBuildFile; productRef = 733D43F22FDBCFB100DD6932 /* SwiftXStateSwiftData */; };
@@ -72,6 +73,7 @@
 				733D444A2FDCC9B200DD6932 /* SwiftXStateSwiftData in Frameworks */,
 				733D444C2FDCC9B200DD6932 /* SwiftXStateSwiftUI in Frameworks */,
 				733D44482FDCC9B200DD6932 /* SwiftXStateInspect in Frameworks */,
+				73128E222FE4837100401386 /* SwiftXState in Frameworks */,
 				733D43F52FDBCFB100DD6932 /* SwiftXStateSwiftUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -151,6 +153,7 @@
 				733D44472FDCC9B200DD6932 /* SwiftXStateInspect */,
 				733D44492FDCC9B200DD6932 /* SwiftXStateSwiftData */,
 				733D444B2FDCC9B200DD6932 /* SwiftXStateSwiftUI */,
+				73128E212FE4837100401386 /* SwiftXState */,
 			);
 			productName = XConway;
 			productReference = 733D43B12FDBCF3900DD6932 /* XConway.app */;
@@ -235,7 +238,7 @@
 			mainGroup = 733D43A82FDBCF3900DD6932;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				733D44442FDCC9B200DD6932 /* XCLocalSwiftPackageReference "../../../swift-xstate" */,
+				73128E202FE4837100401386 /* XCRemoteSwiftPackageReference "SwiftXState" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 733D43B22FDBCF3900DD6932 /* Products */;
@@ -648,14 +651,23 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		733D44442FDCC9B200DD6932 /* XCLocalSwiftPackageReference "../../../swift-xstate" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../swift-xstate";
+/* Begin XCRemoteSwiftPackageReference section */
+		73128E202FE4837100401386 /* XCRemoteSwiftPackageReference "SwiftXState" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gistya/SwiftXState";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.10;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		73128E212FE4837100401386 /* SwiftXState */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73128E202FE4837100401386 /* XCRemoteSwiftPackageReference "SwiftXState" */;
+			productName = SwiftXState;
+		};
 		733D43EA2FDBCFB100DD6932 /* SwiftXState */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftXState;

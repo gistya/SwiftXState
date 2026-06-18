@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		73128E342FE483DF00401386 /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 73128E332FE483DF00401386 /* SwiftXState */; };
+		73128E362FE483DF00401386 /* SwiftXStateInspect in Frameworks */ = {isa = PBXBuildFile; productRef = 73128E352FE483DF00401386 /* SwiftXStateInspect */; };
+		73128E382FE483DF00401386 /* SwiftXStateInspectURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 73128E372FE483DF00401386 /* SwiftXStateInspectURLSession */; };
+		73128E3A2FE483DF00401386 /* SwiftXStateSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 73128E392FE483DF00401386 /* SwiftXStateSwiftUI */; };
 		73F791FB2FD85631008E710F /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 73F791FA2FD85631008E710F /* SwiftXState */; };
 		73F791FD2FD85631008E710F /* SwiftXStateInspect in Frameworks */ = {isa = PBXBuildFile; productRef = 73F791FC2FD85631008E710F /* SwiftXStateInspect */; };
 		73F791FF2FD85631008E710F /* SwiftXStateInspectURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 73F791FE2FD85631008E710F /* SwiftXStateInspectURLSession */; };
@@ -38,6 +42,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		73128E3F2FE4845400401386 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		73FE74DB2FD48B6E002805A4 /* SX_XS_Visualizer_POC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SX_XS_Visualizer_POC.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		73FE74EE2FD48B70002805A4 /* SX_XS_Visualizer_POCTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SX_XS_Visualizer_POCTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		73FE74F82FD48B70002805A4 /* SX_XS_Visualizer_POCUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SX_XS_Visualizer_POCUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -67,6 +72,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				73FE75272FD490C4002805A4 /* SwiftXStateInspect in Frameworks */,
+				73128E342FE483DF00401386 /* SwiftXState in Frameworks */,
+				73128E3A2FE483DF00401386 /* SwiftXStateSwiftUI in Frameworks */,
+				73128E362FE483DF00401386 /* SwiftXStateInspect in Frameworks */,
+				73128E382FE483DF00401386 /* SwiftXStateInspectURLSession in Frameworks */,
 				73F792022FD85686008E710F /* SwiftXState in Frameworks */,
 				73FE75252FD490C4002805A4 /* SwiftXState in Frameworks */,
 				73FE75292FD490C4002805A4 /* SwiftXStateInspectURLSession in Frameworks */,
@@ -100,6 +109,7 @@
 		73FE74D22FD48B6E002805A4 = {
 			isa = PBXGroup;
 			children = (
+				73128E3F2FE4845400401386 /* README.md */,
 				73FE75202FD48FDA002805A4 /* SX_XS_Visualizer_POC */,
 				73FE74F12FD48B70002805A4 /* SX_XS_Visualizer_POCTests */,
 				73FE74FB2FD48B70002805A4 /* SX_XS_Visualizer_POCUITests */,
@@ -148,6 +158,10 @@
 				73F792032FD85686008E710F /* SwiftXStateInspect */,
 				73F792052FD85686008E710F /* SwiftXStateInspectURLSession */,
 				73F792072FD85686008E710F /* SwiftXStateSwiftUI */,
+				73128E332FE483DF00401386 /* SwiftXState */,
+				73128E352FE483DF00401386 /* SwiftXStateInspect */,
+				73128E372FE483DF00401386 /* SwiftXStateInspectURLSession */,
+				73128E392FE483DF00401386 /* SwiftXStateSwiftUI */,
 			);
 			productName = SX_XS_Visualizer_POC;
 			productReference = 73FE74DB2FD48B6E002805A4 /* SX_XS_Visualizer_POC.app */;
@@ -233,7 +247,7 @@
 			mainGroup = 73FE74D22FD48B6E002805A4;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				73F792002FD85686008E710F /* XCLocalSwiftPackageReference "../../../swift-xstate" */,
+				73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 73FE74DC2FD48B6E002805A4 /* Products */;
@@ -637,14 +651,38 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		73F792002FD85686008E710F /* XCLocalSwiftPackageReference "../../../swift-xstate" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "../../../swift-xstate";
+/* Begin XCRemoteSwiftPackageReference section */
+		73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gistya/SwiftXState";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.10;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		73128E332FE483DF00401386 /* SwiftXState */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */;
+			productName = SwiftXState;
+		};
+		73128E352FE483DF00401386 /* SwiftXStateInspect */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */;
+			productName = SwiftXStateInspect;
+		};
+		73128E372FE483DF00401386 /* SwiftXStateInspectURLSession */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */;
+			productName = SwiftXStateInspectURLSession;
+		};
+		73128E392FE483DF00401386 /* SwiftXStateSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */;
+			productName = SwiftXStateSwiftUI;
+		};
 		73F791FA2FD85631008E710F /* SwiftXState */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftXState;

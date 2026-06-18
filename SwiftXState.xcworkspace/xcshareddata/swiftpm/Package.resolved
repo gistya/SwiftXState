@@ -1,5 +1,5 @@
 {
-  "originHash" : "6a22c38bce3232f4e4751426c874c682c50af02eeb9c74efe304b07ad2938224",
+  "originHash" : "39a7489e44877d1488682ec15092e990fbea3f0e72d2f589836e7003c3c85525",
   "pins" : [
     {
       "identity" : "chesskit-swift",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "44ef7a1aa9da25bf0a9606a8960591a4dde3fad2",
         "version" : "0.17.0"
+      }
+    },
+    {
+      "identity" : "javascriptkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftwasm/JavaScriptKit",
+      "state" : {
+        "revision" : "403ae956d68503957699b6dc4c07b73caad031b7",
+        "version" : "0.53.0"
       }
     },
     {
@@ -20,9 +29,18 @@
       }
     },
     {
+      "identity" : "swift-webgpu",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/1amageek/swift-webgpu",
+      "state" : {
+        "branch" : "main",
+        "revision" : "df2bc6ad734c96bfe8ea03f313776233bb1c97b0"
+      }
+    },
+    {
       "identity" : "swiftxstate",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gistya/SwiftXState.git",
+      "location" : "https://github.com/gistya/SwiftXState",
       "state" : {
         "revision" : "a81fa9ba0200e9e59e9eda902d968cd8be0002fa",
         "version" : "0.9.10"

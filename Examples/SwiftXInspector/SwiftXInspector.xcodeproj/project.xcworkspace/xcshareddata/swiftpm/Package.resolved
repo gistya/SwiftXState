@@ -1,22 +1,13 @@
 {
-  "originHash" : "bdaa397b08fa14169d864ec7edcf4d62fbbefdbc380720ac37c7b74472d41804",
+  "originHash" : "7107d1ef104ea77b99707272fed3e2aaa63845907cd64ffea4954e5fc5686823",
   "pins" : [
-    {
-      "identity" : "chesskit-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/chesskit-app/chesskit-swift",
-      "state" : {
-        "revision" : "44ef7a1aa9da25bf0a9606a8960591a4dde3fad2",
-        "version" : "0.17.0"
-      }
-    },
     {
       "identity" : "swift-syntax",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-syntax.git",
       "state" : {
-        "revision" : "0687f71944021d616d34d922343dcef086855920",
-        "version" : "600.0.1"
+        "revision" : "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
+        "version" : "603.0.2"
       }
     }
   ],
