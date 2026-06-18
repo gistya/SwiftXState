@@ -185,14 +185,30 @@ public func actorEvents(_ handle: Int64) -> UnsafeMutablePointer<CChar>? {
 /// Register a C callback to receive this actor's live inspection events (one JSON document per event:
 /// `@xstate.snapshot`, `@xstate.event`, transitions, …). Pass null to clear. The JSON pointer is only
 /// valid during the call — copy it immediately. Callbacks fire on the actor's thread.
+///
+/// Cross-ABI contract (the bridge cannot enforce these across the C boundary, so the host must):
+/// - Keep the delegate/function pointer alive until after `actorRelease` returns. The slot stores a
+///   raw `@convention(c)` pointer; if the host frees the delegate while an event is in flight, the
+///   callback fires into freed memory. `actorRelease` clears this slot first to narrow that window,
+///   but an event already mid-dispatch on the actor's thread can still be running.
+/// - Do not swap the callback (call this) concurrently with `actorRelease` on the same handle, and do
+///   not set a new callback from inside the callback. The slot lock is not reentrant.
 @WinC
 public func actorSetSnapshotCallback(_ handle: Int64, _ callback: InspectCCallback?) {
     BridgeRegistry.shared.get(handle)?.inspect.set(callback)
 }
 
 /// Release an actor handle (drops the actor). Safe to call with an unknown handle.
+///
+/// Clears the inspection callback before dropping the actor so a late event during teardown (e.g. a
+/// delayed transition firing as the actor deallocates) can't call into a callback the host is about
+/// to free. This narrows — but cannot fully close — the window: an event already past the slot's
+/// lock and mid-dispatch on the actor's thread may still be invoking the old callback when this
+/// returns. The host must keep the delegate alive until after this call (see `actorSetSnapshotCallback`).
 @WinC
 public func actorRelease(_ handle: Int64) {
+    // Proactively detach the host callback first, then drop the actor.
+    BridgeRegistry.shared.get(handle)?.inspect.set(nil)
     BridgeRegistry.shared.remove(handle)
 }
 

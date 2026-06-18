@@ -28,12 +28,10 @@ internal static class NativeLoader
 
         if (libraryName == "SwiftXStateWinBridge.dll")
         {
-            // Explicit override for tests / local development.
-            var overridePath = Environment.GetEnvironmentVariable("SWIFTXSTATE_BRIDGE");
-            if (!string.IsNullOrEmpty(overridePath) && NativeLibrary.TryLoad(overridePath, out var ov))
-                return ov;
-
-            // Otherwise let the runtime locate the file deployed under runtimes/<rid>/native.
+            // Locate the library deployed under runtimes/<rid>/native (the file name is plain on
+            // Windows and lib-prefixed elsewhere). The default search path is the only source — the
+            // shipping resolver deliberately has no environment-variable override, so the native load
+            // can't be redirected by anything that can set the process environment.
             string[] names = OperatingSystem.IsWindows()
                 ? new[] { "SwiftXStateWinBridge.dll", "SwiftXStateWinBridge" }
                 : OperatingSystem.IsMacOS()

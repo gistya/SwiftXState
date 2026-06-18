@@ -1,8 +1,11 @@
 name: NuGet
 
-# Builds the native bridge for each platform, packs the managed wrapper + natives into a single
-# NuGet package, and (on a version tag) publishes it via NuGet.org Trusted Publishing (OIDC) — no
+# Builds the native bridge (Windows), packs the managed wrapper + native into a single NuGet
+# package, and (on a version tag) publishes it via NuGet.org Trusted Publishing (OIDC) — no
 # long-lived API key. PRs build + pack only. PackageId must be one you own (SwiftXState.csproj).
+#
+# The package ships a Windows native only, and bundles the Swift runtime DLLs next to the bridge so
+# it runs on a machine without the Swift toolchain installed.
 on:
   push:
     # Match the repo's bare semver tags (e.g. 0.9.4), and tolerate an optional `v` prefix.
@@ -15,25 +18,21 @@ env:
   NATIVE_DIR: Interop/csharp/SwiftXState/runtimes
 
 jobs:
-  # One native library per runtime identifier. Each uploads its file as an artifact named for the RID.
+  # The package ships a Windows native only. The bridge exposes just the core actor/machine API over
+  # the C ABI; the SwiftUI/SwiftData/Graph products aren't C-callable and are consumed via SwiftPM,
+  # not NuGet, so a macOS/Linux native would add nothing to the package. (The macOS dylib is still
+  # built and round-trip tested in the separate win-bridge workflow.)
   native:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest,   rid: osx-arm64,  file: libSwiftXStateWinBridge.dylib }
-          - { os: ubuntu-latest,  rid: linux-x64,  file: libSwiftXStateWinBridge.so }
-          - { os: windows-latest, rid: win-x64,    file: SwiftXStateWinBridge.dll }
+          - { os: windows-latest, rid: win-x64, file: SwiftXStateWinBridge.dll }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
 
-      # macOS ships Swift with Xcode; Linux/Windows need the toolchain installed.
-      - name: Set up Swift (Linux)
-        if: runner.os == 'Linux'
-        uses: swift-actions/setup-swift@v2
       - name: Set up Swift (Windows)
-        if: runner.os == 'Windows'
         uses: compnerd/gha-setup-swift@main
         with:
           branch: swift-6.1-release
@@ -52,10 +51,90 @@ jobs:
           test -n "$SRC" || { echo "::error::built native not found"; exit 1; }
           cp "$SRC" "$OUT/${{ matrix.file }}"
 
+      # On Windows the bridge dynamically links the Swift runtime DLLs. macOS/Linux consumers get the
+      # runtime from a system-installed toolchain, but a Windows machine without Swift installed can't
+      # load the bridge unless these ship beside it. NuGet deploys everything in runtimes/win-x64/native
+      # next to the bridge, so the DLLs resolve. (Microsoft's CRT/UCRT/KERNEL32 are NOT bundled — they
+      # come from the OS + the VC++ redistributable.)
+      - name: Bundle Swift runtime DLLs (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $out = "$env:NATIVE_DIR/win-x64/native"
+          New-Item -ItemType Directory -Force $out | Out-Null
+
+          # Direct Swift runtime dependencies of the bridge — must be present or it won't load. Each
+          # entry lists accepted filename variants: Swift on Windows has changed the swiftX / swift_X
+          # runtime naming between toolchain versions (e.g. swiftCore.dll on 6.1 vs swift_Core.dll),
+          # and the two aren't consistent within a release (swift_Concurrency.dll keeps the underscore).
+          $required = @(
+            @('swiftCore.dll', 'swift_Core.dll'),
+            @('swift_Concurrency.dll', 'swiftConcurrency.dll'),
+            @('swiftDispatch.dll', 'swift_Dispatch.dll'),
+            @('BlocksRuntime.dll'),
+            @('Foundation.dll'),
+            @('FoundationEssentials.dll'),
+            @('swiftWinSDK.dll', 'swift_WinSDK.dll'),
+            @('swiftCRT.dll', 'swift_CRT.dll')
+          )
+          # Foundation pulls these in transitively on Windows (i18n + ICU). Best-effort: copy if found.
+          $optional = @('FoundationInternationalization.dll', '_FoundationICU.dll')
+
+          # The toolchain puts its runtime DLLs on PATH (so built binaries run); also check the standard
+          # installer layout as a fallback.
+          $dirs = @()
+          $swiftExe = (Get-Command swift -ErrorAction SilentlyContinue).Source
+          if ($swiftExe) { $dirs += Split-Path $swiftExe }   # runtime DLLs sit beside swiftc on Windows
+          $dirs += ($env:PATH -split ';' | Where-Object { $_ -and (Test-Path $_) })
+          $dirs += Get-ChildItem -ErrorAction SilentlyContinue -Directory `
+                     "$env:LOCALAPPDATA\Programs\Swift\Runtimes\*\usr\bin" |
+                     Select-Object -ExpandProperty FullName
+
+          function Find-Dll($name) {
+            foreach ($d in $dirs) { $p = Join-Path $d $name; if (Test-Path $p) { return $p } }
+            return $null
+          }
+
+          $missing = @()
+          foreach ($variants in $required) {
+            $copied = $false
+            foreach ($dll in $variants) {
+              $src = Find-Dll $dll
+              if ($src) { Copy-Item $src $out -Force; Write-Host "bundled  $dll  <- $src"; $copied = $true; break }
+            }
+            if (-not $copied) { $missing += ($variants -join ' | ') }
+          }
+          foreach ($dll in $optional) {
+            $src = Find-Dll $dll
+            if ($src) { Copy-Item $src $out -Force; Write-Host "bundled  $dll  (optional)" }
+          }
+          # ICU data DLLs sit beside Foundation; their exact names vary by toolchain version.
+          $fdll = Find-Dll 'Foundation.dll'
+          if ($fdll) {
+            Get-ChildItem -Path (Split-Path $fdll) -Filter 'icu*.dll' -ErrorAction SilentlyContinue |
+              ForEach-Object { Copy-Item $_.FullName $out -Force; Write-Host "bundled  $($_.Name)  (icu)" }
+          }
+          if ($missing.Count) {
+            Write-Error "Missing required Swift runtime DLLs: $($missing -join ', '). Searched PATH + the Swift install."
+            exit 1
+          }
+          Write-Host "`nStaged for win-x64:"; Get-ChildItem $out | Select-Object Name, Length
+
+          # Record the shipped native set in the job summary so it's easy to audit per release.
+          $rows = Get-ChildItem $out -Filter *.dll | Sort-Object Name |
+                    ForEach-Object { "| {0} | {1:N0} KB |" -f $_.Name, ($_.Length / 1KB) }
+          @(
+            "### Bundled native DLLs (win-x64)",
+            "",
+            "| File | Size |",
+            "| --- | ---: |"
+          ) + $rows | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      # Upload the whole native folder (Windows carries the Swift runtime DLLs too; macOS/Linux is one file).
       - uses: actions/upload-artifact@v4
         with:
           name: native-${{ matrix.rid }}
-          path: ${{ env.NATIVE_DIR }}/${{ matrix.rid }}/native/${{ matrix.file }}
+          path: ${{ env.NATIVE_DIR }}/${{ matrix.rid }}/native/
 
   pack:
     needs: native
@@ -66,19 +145,18 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Reassemble runtimes/<rid>/native from the per-platform artifacts.
+      # Reassemble runtimes/win-x64/native from the Windows native artifact.
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Lay out natives
         run: |
-          for rid in osx-arm64 linux-x64 win-x64; do
-            f=$(find "artifacts/native-$rid" -type f 2>/dev/null | head -1) || true
-            if [ -n "$f" ]; then
-              mkdir -p "$NATIVE_DIR/$rid/native"
-              cp "$f" "$NATIVE_DIR/$rid/native/"
-            fi
-          done
+          # Windows-only native: the bridge plus its bundled Swift runtime DLLs.
+          rid=win-x64
+          src="artifacts/native-$rid"
+          test -d "$src" || { echo "::error::missing native-$rid artifact"; exit 1; }
+          mkdir -p "$NATIVE_DIR/$rid/native"
+          find "$src" -type f -exec cp {} "$NATIVE_DIR/$rid/native/" \;
           find "$NATIVE_DIR" -type f
 
       # On a tag, the package version is the tag (an optional leading `v` is stripped), so the NuGet

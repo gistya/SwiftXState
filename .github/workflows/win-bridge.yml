@@ -65,4 +65,5 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: C# round trip
-        run: SWIFTXSTATE_BRIDGE="$DYLIB" dotnet run --project Interop/csharp/Sample
+        # The Sample's resolver finds the freshly built bridge under .build automatically — no env var.
+        run: dotnet run --project Interop/csharp/Sample
