@@ -163,8 +163,8 @@ enum GameWatcherRules {
         var updated = occupants
         var commands: [GameWatcherCommand] = []
 
-        let fromCoord = BoardActorIds.coord(move.from)
-        let toCoord = BoardActorIds.coord(move.to)
+        let fromCoord = BoardReactorIds.coord(move.from)
+        let toCoord = BoardReactorIds.coord(move.to)
         guard let pieceId = updated[fromCoord] else { return ([], occupants) }
 
         if let capturedId = updated[toCoord] {
@@ -185,8 +185,8 @@ enum GameWatcherRules {
             let row = move.from.row
             let rookFromCol = castle == .kingside ? 7 : 0
             let rookToCol = castle == .kingside ? 5 : 3
-            let rookFrom = BoardActorIds.coord(Square(row: row, col: rookFromCol))
-            let rookTo = BoardActorIds.coord(Square(row: row, col: rookToCol))
+            let rookFrom = BoardReactorIds.coord(Square(row: row, col: rookFromCol))
+            let rookTo = BoardReactorIds.coord(Square(row: row, col: rookToCol))
             if let rookId = updated[rookFrom] {
                 commands.append(.squareClear(rookFrom))
                 commands.append(.pieceMoveTo(pieceId: rookId, coord: rookTo))
@@ -247,23 +247,23 @@ enum GameWatcherRules {
 enum GameWatcherMachine {
     static let id = "game-watcher"
 
-    /// - Parameter inspectableBoardActors: when `true`, the 96 per-square/piece board actors
+    /// - Parameter inspectableBoardReactors: when `true`, the 96 per-square/piece board actors
     ///   are streamed to inspectors too (a deliberate stress test — this count kills the web
     ///   client but the native inspector handles it).
-    static func make(inspectableBoardActors: Bool = false) -> StateMachine<GameWatcherContext> {
-        machineConfig(includeBoardSpawns: true, inspectableBoardActors: inspectableBoardActors)
+    static func make(inspectableBoardReactors: Bool = false) -> StateMachine<GameWatcherContext> {
+        machineConfig(includeBoardSpawns: true, inspectableBoardReactors: inspectableBoardReactors)
     }
 
     /// Compact graph for Stately Inspector — runtime still spawns 96 off-inspector board actors.
     static func inspectorSummaryMachine() -> StateMachine<GameWatcherContext> {
-        machineConfig(includeBoardSpawns: false, inspectableBoardActors: false)
+        machineConfig(includeBoardSpawns: false, inspectableBoardReactors: false)
     }
 
-    private static func machineConfig(includeBoardSpawns: Bool, inspectableBoardActors: Bool) -> StateMachine<GameWatcherContext> {
+    private static func machineConfig(includeBoardSpawns: Bool, inspectableBoardReactors: Bool) -> StateMachine<GameWatcherContext> {
         let initial = GameWatcherContext.initial()
         var boot = StateNodeConfig<GameWatcherContext>(always: [TransitionConfig(target: "game")])
         if includeBoardSpawns {
-            boot.entry = BoardActorSpawn.entryActions(layout: initial.layout, inspectableBoardActors: inspectableBoardActors)
+            boot.entry = BoardReactorSpawn.entryActions(layout: initial.layout, inspectableBoardReactors: inspectableBoardReactors)
         }
         let description = includeBoardSpawns
             ? "Chess orchestrator — one inspector graph; 96 board actors run off-inspector"
@@ -474,13 +474,13 @@ enum GameWatcherMachine {
         for command in commands {
             switch command {
             case let .squareClear(coord):
-                builder.sendTo(BoardActorIds.square(coord), Event("CLEAR"))
+                builder.sendTo(BoardReactorIds.square(coord), Event("CLEAR"))
             case let .squareOccupy(coord, pieceId):
-                builder.sendTo(BoardActorIds.square(coord), Event("OCCUPY.\(pieceId)"))
+                builder.sendTo(BoardReactorIds.square(coord), Event("OCCUPY.\(pieceId)"))
             case let .pieceMoveTo(pieceId, coord):
-                builder.sendTo(BoardActorIds.piece(id: pieceId), Event("MOVE_TO.\(coord)"))
+                builder.sendTo(BoardReactorIds.piece(id: pieceId), Event("MOVE_TO.\(coord)"))
             case let .pieceCaptured(pieceId):
-                builder.sendTo(BoardActorIds.piece(id: pieceId), Event("CAPTURED"))
+                builder.sendTo(BoardReactorIds.piece(id: pieceId), Event("CAPTURED"))
             }
             if let inspectorEvent = BoardInspectorSync.inspectorEvent(for: command) {
                 for mode in BoardMode.allCases {

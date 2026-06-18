@@ -1,27 +1,27 @@
 import Foundation
 import SwiftXState
 
-enum BoardActorSpawn {
-    static func entryActions(layout: BoardLayoutSeed, inspectableBoardActors: Bool = false) -> [ActionRef<GameWatcherContext>] {
+enum BoardReactorSpawn {
+    static func entryActions(layout: BoardLayoutSeed, inspectableBoardReactors: Bool = false) -> [ActionRef<GameWatcherContext>] {
         var actions: [ActionRef<GameWatcherContext>] = []
         for square in layout.squares {
-            let childId = BoardActorIds.square(square.coord)
+            let childId = BoardReactorIds.square(square.coord)
             let context = SquareContext(coord: square.coord, occupantId: square.occupantId)
             actions.append(
                 spawnChild(
-                    fromMachine(SquareActorMachine.machine, context: { input in
+                    fromMachine(SquareReactorMachine.machine, context: { input in
                         input?.get(SquareContext.self) ?? context
                     }),
                     id: childId,
-                    systemId: SquareActorMachine.id,
+                    systemId: SquareReactorMachine.id,
                     input: { _ in SendableValue(context) },
                     syncSnapshot: false,
-                    inspectable: inspectableBoardActors
+                    inspectable: inspectableBoardReactors
                 )
             )
         }
         for piece in layout.pieces {
-            let childId = BoardActorIds.piece(id: piece.id)
+            let childId = BoardReactorIds.piece(id: piece.id)
             let context = PieceContext(
                 pieceId: piece.id,
                 kind: piece.kind,
@@ -30,14 +30,14 @@ enum BoardActorSpawn {
             )
             actions.append(
                 spawnChild(
-                    fromMachine(PieceActorMachine.machine, context: { input in
+                    fromMachine(PieceReactorMachine.machine, context: { input in
                         input?.get(PieceContext.self) ?? context
                     }),
                     id: childId,
-                    systemId: PieceActorMachine.id,
+                    systemId: PieceReactorMachine.id,
                     input: { _ in SendableValue(context) },
                     syncSnapshot: false,
-                    inspectable: inspectableBoardActors
+                    inspectable: inspectableBoardReactors
                 )
             )
         }

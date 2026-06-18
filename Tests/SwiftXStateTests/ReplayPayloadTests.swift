@@ -69,9 +69,9 @@ struct ReplayPayloadTests {
     @Test("InspectionRecorder captures typed payloads")
     func recorderCapturesPayload() {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = createReactor(
             tapMachine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start(context: TapContext(lastRow: nil, lastCol: nil))
 
         actor.send(TapEvent(row: 1, col: 2))
@@ -94,9 +94,9 @@ struct ReplayPayloadTests {
     @Test("pure replay with decoder matches recorded session")
     func verifyPayloadReplay() {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = createReactor(
             tapMachine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start(context: TapContext(lastRow: nil, lastCol: nil))
 
         actor.send(TapEvent(row: 4, col: 6))
@@ -128,9 +128,9 @@ struct ReplayPayloadTests {
     @Test("ReplaySession JSON round-trips typed payloads")
     func jsonRoundTrip() throws {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = createReactor(
             tapMachine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start(context: TapContext(lastRow: nil, lastCol: nil))
         actor.send(TapEvent(row: 2, col: 7))
 

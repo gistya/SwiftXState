@@ -120,7 +120,7 @@ struct LogTests {
         LogHandler.setSink { _ in }
         defer { LogHandler.setSink(nil) }
 
-        createActor(machine, options: ActorOptions(inspect: collector.observe())).start().send(Event("GO"))
+        createReactor(machine, options: ReactorOptions(inspect: collector.observe())).start().send(Event("GO"))
 
         #expect(collector.recordedEvents().contains { $0.kind == .action && $0.actionType == "xstate.log" })
     }

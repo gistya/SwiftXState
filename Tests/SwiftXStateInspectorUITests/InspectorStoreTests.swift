@@ -23,7 +23,7 @@ struct InspectorStoreTests {
     func ingestsLiveStream() {
         let store = InspectorStore()
         let machine = makeMachine()
-        let actor = createActor(machine, options: ActorOptions(inspect: { event in
+        let actor = createReactor(machine, options: ReactorOptions(inspect: { event in
             // Drive synchronously for the test rather than through observe()'s Task hop.
             MainActor.assumeIsolated { store.ingest(event) }
         })).start()
@@ -52,7 +52,7 @@ struct InspectorStoreTests {
     func feedCap() {
         let store = InspectorStore()
         store.feedCap = 10
-        let ref = InspectionActorRef(sessionId: "s1", machineId: "m")
+        let ref = InspectionReactorRef(sessionId: "s1", machineId: "m")
         for _ in 0..<50 {
             store.ingest(InspectionEvent(kind: .event, rootId: "s1", actor: ref, event: .init(type: "PING")))
         }
@@ -61,7 +61,7 @@ struct InspectorStoreTests {
 
     @Test("Raw inspection event re-encodes to a JSON tree")
     func rawJSON() {
-        let ref = InspectionActorRef(sessionId: "s1", machineId: "m")
+        let ref = InspectionReactorRef(sessionId: "s1", machineId: "m")
         let event = InspectionEvent(kind: .event, rootId: "s1", actor: ref, event: .init(type: "TAP"))
         let json = event.inspectorJSONValue()
         #expect(json.kind == .object)

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Stable actor child ids for Stately (`square.e4`, `piece.wPe2`, …).
-enum BoardActorIds {
+enum BoardReactorIds {
     static func square(row: Int, col: Int) -> String {
         "square.\(file(col))\(row + 1)"
     }
@@ -51,7 +51,7 @@ struct PieceInstanceId: Sendable, Equatable, Codable {
         case .queen: kindLetter = "Q"
         case .king: kindLetter = "K"
         }
-        return PieceInstanceId(token: "\(prefix)\(kindLetter)\(BoardActorIds.file(home.col))\(home.row + 1)")
+        return PieceInstanceId(token: "\(prefix)\(kindLetter)\(BoardReactorIds.file(home.col))\(home.row + 1)")
     }
 }
 
@@ -77,7 +77,7 @@ struct BoardLayoutSeed: Sendable, Equatable, Codable {
 
         for row in 0..<Board.size {
             for col in 0..<Board.size {
-                let coord = "\(BoardActorIds.file(col))\(row + 1)"
+                let coord = "\(BoardReactorIds.file(col))\(row + 1)"
                 squares.append(SquareSeed(coord: coord, occupantId: nil))
             }
         }
@@ -89,7 +89,7 @@ struct BoardLayoutSeed: Sendable, Equatable, Codable {
                 guard let piece = board[sq] else { continue }
                 let home = sq
                 let id = PieceInstanceId.make(color: piece.color, kind: piece.kind, home: home).token
-                let coord = BoardActorIds.coord(sq)
+                let coord = BoardReactorIds.coord(sq)
                 if let index = squares.firstIndex(where: { $0.coord == coord }) {
                     squares[index] = SquareSeed(coord: coord, occupantId: id)
                 }
@@ -101,11 +101,11 @@ struct BoardLayoutSeed: Sendable, Equatable, Codable {
     }
 
     var squareChildIds: [String] {
-        squares.map { BoardActorIds.square($0.coord) }
+        squares.map { BoardReactorIds.square($0.coord) }
     }
 
     var pieceChildIds: [String] {
-        pieces.map { BoardActorIds.piece(id: $0.id) }
+        pieces.map { BoardReactorIds.piece(id: $0.id) }
     }
 
     var allChildIds: [String] {

@@ -25,9 +25,9 @@ struct ReplayTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
 
         actor.send(Event("INC"))
@@ -59,9 +59,9 @@ struct ReplayTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
 
         actor.send(Event("INC"))
@@ -94,9 +94,9 @@ struct ReplayTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
 
         actor.send(Event("INC"))
@@ -117,7 +117,7 @@ struct ReplayTests {
     }
 
     @Test("live actor replay matches recording")
-    func liveActorReplay() {
+    func liveReactorReplay() {
         let recorder = InspectionRecorder()
 
         let machine = createMachine(MachineConfig(
@@ -134,27 +134,27 @@ struct ReplayTests {
             ]
         ))
 
-        let recordedActor = createActor(
+        let recordedReactor = createReactor(
             machine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
-        recordedActor.send(Event("INC"))
-        recordedActor.send(Event("GO"))
+        recordedReactor.send(Event("INC"))
+        recordedReactor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
             return
         }
 
-        let (replayedActor, verifications) = replayActor(
+        let (replayedReactor, verifications) = replayReactor(
             machine,
             context: ReplayCounterContext(count: 0),
             session: session
         )
 
         #expect(verifications.filter { !$0.matches }.isEmpty)
-        #expect(replayedActor.snapshot.matches("done"))
-        #expect(replayedActor.snapshot.context.count == 1)
+        #expect(replayedReactor.snapshot.matches("done"))
+        #expect(replayedReactor.snapshot.context.count == 1)
     }
 
     @Test("StoreRecorder captures and replays store session")

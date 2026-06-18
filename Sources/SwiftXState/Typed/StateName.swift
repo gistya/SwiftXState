@@ -27,9 +27,9 @@ public extension StateName {
 /// ])
 /// // generates: enum AppState: String, StateName { case idle; case running; case runningFast = "running.fast"; … }
 /// ```
-@attached(peer, names: arbitrary)
-public macro MachineStates(_ name: String) =
-    #externalMacro(module: "SwiftXStateMacros", type: "MachineStatesMacro")
+//@attached(peer, names: arbitrary)
+//public macro MachineStates(_ name: String) =
+//    #externalMacro(module: "SwiftXStateMacros", type: "MachineStatesMacro")
 
 // MARK: - Typed targets (Tier 2)
 

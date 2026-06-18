@@ -25,26 +25,26 @@ struct SwiftDataPersistenceTests {
         ))
     }
 
-    private func makeStore() throws -> ActorPersistenceStore {
+    private func makeStore() throws -> ReactorPersistenceStore {
         let container = try withSwiftDataContainerLock {
             try ModelContainer(
-                for: ActorSnapshotRecord.self,
+                for: ReactorSnapshotRecord.self,
                 configurations: ModelConfiguration(isStoredInMemoryOnly: true)
             )
         }
-        return ActorPersistenceStore(modelContext: ModelContext(container))
+        return ReactorPersistenceStore(modelContext: ModelContext(container))
     }
 
     @Test("saves and restores actor snapshot from SwiftData")
     func saveAndRestore() throws {
         let store = try makeStore()
-        let actor = createActor(cartMachine).start(context: CartContext(items: 0))
+        let actor = createReactor(cartMachine).start(context: CartContext(items: 0))
         actor.send(Event("ADD"))
         actor.send(Event("ADD"))
 
         try store.save(actor, key: "session-1")
 
-        let reloaded = try #require(try store.createActor(cartMachine, key: "session-1"))
+        let reloaded = try #require(try store.createReactor(cartMachine, key: "session-1"))
 
         #expect(reloaded.snapshot.context.items == 2)
         #expect(reloaded.snapshot.matches("browsing"))
@@ -62,7 +62,7 @@ struct SwiftDataPersistenceTests {
     @Test("delete removes persisted snapshot")
     func deleteSnapshot() throws {
         let store = try makeStore()
-        let actor = createActor(cartMachine).start()
+        let actor = createReactor(cartMachine).start()
         try store.save(actor, key: "temp")
 
         try store.delete(key: "temp")
@@ -72,7 +72,7 @@ struct SwiftDataPersistenceTests {
     @Test("upsert overwrites existing snapshot")
     func upsert() throws {
         let store = try makeStore()
-        let actor = createActor(cartMachine).start(context: CartContext(items: 0))
+        let actor = createReactor(cartMachine).start(context: CartContext(items: 0))
 
         actor.send(Event("ADD"))
         try store.save(actor, key: "cart")

@@ -5,7 +5,7 @@ protocol PersistedChildSnapshotProviding {
 }
 
 func collectPersistedChildSnapshots(
-    from children: [String: any ChildActorRef]
+    from children: [String: any ChildReactorRef]
 ) throws -> [String: PersistedChildSnapshot] {
     var result: [String: PersistedChildSnapshot] = [:]
     for (id, child) in children {
@@ -17,9 +17,9 @@ func collectPersistedChildSnapshots(
     return result
 }
 
-final class MachineChildRef<ChildContext: Sendable>: ChildActorRef, @unchecked Sendable {
-    let actor: Actor<ChildContext>
-    private weak var parent: (any ActorParentRef)?
+final class MachineChildRef<ChildContext: Sendable>: ChildReactorRef, @unchecked Sendable {
+    let actor: Reactor<ChildContext>
+    private weak var parent: (any ReactorParentRef)?
     private var subscription: Subscription?
     private var doneSent = false
     private let initialContext: ChildContext
@@ -39,8 +39,8 @@ final class MachineChildRef<ChildContext: Sendable>: ChildActorRef, @unchecked S
     }
 
     init(
-        actor: Actor<ChildContext>,
-        parent: any ActorParentRef,
+        actor: Reactor<ChildContext>,
+        parent: any ReactorParentRef,
         context: ChildContext,
         syncSnapshot: Bool = false,
         persistedRestore: PersistedSnapshot? = nil,
@@ -68,9 +68,9 @@ final class MachineChildRef<ChildContext: Sendable>: ChildActorRef, @unchecked S
 
             if syncSnapshot, snapshot.status == .active {
                 parent?.enqueueFromChild(
-                    SnapshotActorEvent(
+                    SnapshotReactorEvent(
                         actorId: id,
-                        snapshot: ChildActorSnapshot(
+                        snapshot: ChildReactorSnapshot(
                             id: id,
                             status: snapshot.status,
                             value: snapshot.value.description
@@ -82,7 +82,7 @@ final class MachineChildRef<ChildContext: Sendable>: ChildActorRef, @unchecked S
             guard !doneSent, snapshot.status == .done else { return }
             doneSent = true
             parent?.enqueueFromChild(
-                DoneActorEvent(
+                DoneReactorEvent(
                     actorId: id,
                     output: snapshot.output
                 )
@@ -114,11 +114,11 @@ extension MachineChildRef: PersistedChildSnapshotProviding where ChildContext: C
     }
 }
 
-final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecked Sendable {
+final class TaskChildRef<Output: Sendable & Equatable>: ChildReactorRef, @unchecked Sendable {
     let id: String
     let systemId: String?
-    private weak var parent: (any ActorParentRef)?
-    private let logic: TaskActorLogic<Output>
+    private weak var parent: (any ReactorParentRef)?
+    private let logic: TaskReactorLogic<Output>
     private let input: SendableValue?
     private let emitListeners = EmitListeners()
     private var task: Task<Void, Never>?
@@ -133,8 +133,8 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
         id: String,
         systemId: String?,
         input: SendableValue?,
-        parent: any ActorParentRef,
-        logic: TaskActorLogic<Output>
+        parent: any ReactorParentRef,
+        logic: TaskReactorLogic<Output>
     ) {
         self.id = id
         self.systemId = systemId
@@ -163,7 +163,7 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
                 guard !Task.isCancelled else { return }
                 status = .done
                 parent?.enqueueFromChild(
-                    DoneActorEvent(actorId: id, output: SendableValue(output))
+                    DoneReactorEvent(actorId: id, output: SendableValue(output))
                 )
             } catch is CancellationError {
                 return
@@ -173,7 +173,7 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
                 status = .error
                 lastError = message
                 parent?.enqueueFromChild(
-                    ErrorActorEvent(actorId: id, error: message)
+                    ErrorReactorEvent(actorId: id, error: message)
                 )
             }
         }
@@ -189,8 +189,8 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
         emitListeners.removeAll()
     }
 
-    private func makeScope() -> TaskActorScope {
-        TaskActorScope(
+    private func makeScope() -> TaskReactorScope {
+        TaskReactorScope(
             input: input,
             sendToParent: { [weak self] event in
                 self?.parent?.enqueueFromChild(event)
@@ -220,13 +220,13 @@ extension TaskChildRef: PersistedChildSnapshotProviding {
     }
 }
 
-final class CallbackChildRef: ChildActorRef, @unchecked Sendable {
+final class CallbackChildRef: ChildReactorRef, @unchecked Sendable {
     let id: String
     let systemId: String?
-    private weak var parent: (any ActorParentRef)?
-    private let logic: CallbackActorLogic
+    private weak var parent: (any ReactorParentRef)?
+    private let logic: CallbackReactorLogic
     private let input: SendableValue?
-    private let system: ActorSystem
+    private let system: ReactorSystem
     private let emitListeners = EmitListeners()
     private var receivers: [@Sendable (any Eventable) -> Void] = []
     private var dispose: (@Sendable () -> Void)?
@@ -238,9 +238,9 @@ final class CallbackChildRef: ChildActorRef, @unchecked Sendable {
         id: String,
         systemId: String?,
         input: SendableValue?,
-        parent: any ActorParentRef,
-        logic: CallbackActorLogic,
-        system: ActorSystem
+        parent: any ReactorParentRef,
+        logic: CallbackReactorLogic,
+        system: ReactorSystem
     ) {
         self.id = id
         self.systemId = systemId
@@ -254,7 +254,7 @@ final class CallbackChildRef: ChildActorRef, @unchecked Sendable {
         guard dispose == nil else { return }
         status = .active
 
-        let scope = CallbackActorScope(
+        let scope = CallbackReactorScope(
             input: input,
             sendToParent: { [weak self] event in
                 self?.parent?.enqueueFromChild(event)
@@ -307,11 +307,11 @@ extension CallbackChildRef: PersistedChildSnapshotProviding {
     }
 }
 
-final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecked Sendable {
+final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildReactorRef, @unchecked Sendable {
     let id: String
     let systemId: String?
-    private weak var parent: (any ActorParentRef)?
-    private let logic: TaskGroupActorLogic<Output>
+    private weak var parent: (any ReactorParentRef)?
+    private let logic: TaskGroupReactorLogic<Output>
     private let input: SendableValue?
     private let emitListeners = EmitListeners()
     private var task: Task<Void, Never>?
@@ -326,8 +326,8 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unc
         id: String,
         systemId: String?,
         input: SendableValue?,
-        parent: any ActorParentRef,
-        logic: TaskGroupActorLogic<Output>
+        parent: any ReactorParentRef,
+        logic: TaskGroupReactorLogic<Output>
     ) {
         self.id = id
         self.systemId = systemId
@@ -356,7 +356,7 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unc
                 guard !Task.isCancelled else { return }
                 status = .done
                 parent?.enqueueFromChild(
-                    DoneActorEvent(actorId: id, output: SendableValue(outputs))
+                    DoneReactorEvent(actorId: id, output: SendableValue(outputs))
                 )
             } catch is CancellationError {
                 return
@@ -366,7 +366,7 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unc
                 status = .error
                 lastError = message
                 parent?.enqueueFromChild(
-                    ErrorActorEvent(actorId: id, error: message)
+                    ErrorReactorEvent(actorId: id, error: message)
                 )
             }
         }

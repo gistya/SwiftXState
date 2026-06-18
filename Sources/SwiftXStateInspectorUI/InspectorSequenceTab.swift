@@ -5,7 +5,7 @@ import SwiftXState
 /// Sequence diagram: actors as vertical lifelines, events as arrows between them over
 /// time (oldest at top). Snapshots appear as small state markers on a lifeline. With many
 /// actors (e.g. the 96-actor stress test) only the lifelines touched by the recent window
-/// are shown, so the diagram stays legible while the Actors tab carries the full list.
+/// are shown, so the diagram stays legible while the Reactors tab carries the full list.
 struct InspectorSequenceTab: View {
     let store: InspectorStore
     @Environment(\.inspectorStyle) private var style

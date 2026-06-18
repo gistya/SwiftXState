@@ -26,9 +26,9 @@ struct ReplayPersistenceTests {
 
     private func recordSession() -> ReplaySession {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = createReactor(
             counterMachine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayPersistContext(count: 0))
 
         actor.send(Event("INC"))

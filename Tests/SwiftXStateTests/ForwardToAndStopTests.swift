@@ -39,7 +39,7 @@ struct ForwardToAndStopTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("PING"))
         await actor.waitForSnapshot { $0.context.gotPong }
 
@@ -78,7 +78,7 @@ struct ForwardToAndStopTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("PING"))
         await actor.waitForSnapshot { $0.context.gotPong }
 
@@ -129,7 +129,7 @@ struct ForwardToAndStopTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         let didStart = await started.wait()
         await actor.waitForSnapshot { $0.children["worker"]?.status == .active }
         #expect(didStart)
@@ -167,7 +167,7 @@ struct ForwardToAndStopTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         await actor.waitForSnapshot { $0.children["worker"]?.status == .active }
         #expect(actor.snapshot.children["worker"]?.status == .active)
 

@@ -27,7 +27,7 @@ struct HistoryTests {
 
     @Test("restores most recently visited state (explicit shallow)")
     func shallowHistory() {
-        let actor = createActor(powerMachine(historyType: .shallow)).start()
+        let actor = createReactor(powerMachine(historyType: .shallow)).start()
 
         actor.send(Event("SWITCH"))
         actor.send(Event("POWER"))
@@ -38,7 +38,7 @@ struct HistoryTests {
 
     @Test("restores most recently visited state (default shallow)")
     func defaultShallowHistory() {
-        let actor = createActor(powerMachine(historyType: nil)).start()
+        let actor = createReactor(powerMachine(historyType: nil)).start()
 
         actor.send(Event("SWITCH"))
         actor.send(Event("POWER"))
@@ -65,7 +65,7 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("POWER"))
 
         #expect(actor.snapshot.value == .compound(["on": .atomic("first")]))
@@ -89,7 +89,7 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("POWER"))
 
         #expect(actor.snapshot.value == .compound(["on": .atomic("first")]))
@@ -106,7 +106,7 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         #expect(actor.snapshot.matches("bar"))
     }
 
@@ -127,7 +127,7 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("NEXT"))
 
         #expect(actor.snapshot.value == .compound(["bar": .atomic("qwe")]))
@@ -158,7 +158,7 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("GO"))
         actor.send(Event("LEAVE"))
         actor.send(Event("RETURN"))

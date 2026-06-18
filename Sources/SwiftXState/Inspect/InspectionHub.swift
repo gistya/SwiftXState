@@ -10,7 +10,7 @@ import Foundation
 /// everything actually observed, in-process or (since it merges *streams*, not closures) across a
 /// transport when an Interactor is remote.
 ///
-/// Lock-based and `@unchecked Sendable`, matching the codebase's other registries (`ActorSystem`,
+/// Lock-based and `@unchecked Sendable`, matching the codebase's other registries (`Reactor.System`,
 /// `InspectionCollector`) — the per-Interactor sinks fire on producer threads, so a global actor
 /// would only add hops.
 public final class InspectionHub: @unchecked Sendable {
@@ -65,24 +65,24 @@ public final class InspectionHub: @unchecked Sendable {
 /// stream — exactly the two-level (clusters + inter-domain edges) graph the inspector renders.
 public struct UnifiedGraph: Sendable, Equatable {
     public struct Node: Sendable, Equatable, Hashable {
-        public let address: ActorAddress
+        public let address: ReactorAddress
         public var machineID: String?
         public var stateValue: String?
         public var alive: Bool
     }
 
     public struct Edge: Sendable, Equatable, Hashable {
-        public let from: ActorAddress
-        public let to: ActorAddress
+        public let from: ReactorAddress
+        public let to: ReactorAddress
         public let event: String
         public var count: Int
     }
 
-    public private(set) var nodes: [ActorAddress: Node] = [:]
+    public private(set) var nodes: [ReactorAddress: Node] = [:]
     /// Attributed message edges (those with a known sender).
     public private(set) var edges: [Edge] = []
-    /// Actor ids grouped by their Interactor (the clusters).
-    public var clusters: [String: [ActorAddress]] {
+    ///Reactor ids grouped by their Interactor (the clusters).
+    public var clusters: [String: [ReactorAddress]] {
         Dictionary(grouping: nodes.keys, by: \.interactorID).mapValues { $0.sorted { $0.actorID < $1.actorID } }
     }
     /// Just the edges that actually cross an Interactor boundary — the inter-domain wiring.
@@ -96,7 +96,7 @@ public struct UnifiedGraph: Sendable, Equatable {
     public mutating func apply(_ scoped: ScopedInspectionEvent) {
         switch scoped.payload {
         case let .inspection(event):
-            let address = ActorAddress(interactorID: scoped.interactorID, actorID: event.actor.sessionId)
+            let address = ReactorAddress(interactorID: scoped.interactorID, actorID: event.actor.sessionId)
             var node = nodes[address] ?? Node(address: address, machineID: event.actor.machineId, stateValue: nil, alive: true)
             if let value = event.snapshot?.value { node.stateValue = value }
             if node.machineID == nil { node.machineID = event.actor.machineId }

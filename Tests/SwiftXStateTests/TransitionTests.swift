@@ -109,7 +109,7 @@ struct TransitionTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("INCREMENT"))
         #expect(actor.snapshot.context.count == 1)
     }

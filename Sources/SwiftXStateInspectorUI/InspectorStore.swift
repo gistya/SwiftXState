@@ -3,7 +3,7 @@ import Foundation
 import Observation
 import SwiftXState
 // Re-export the platform-neutral inspector core so every view file in this module (and consumers)
-// sees ActorEntry, FeedEntry, the JSONValue tree helpers, MachineDefinitionImporter, and
+// sees ReactorEntry, FeedEntry, the JSONValue tree helpers, MachineDefinitionImporter, and
 // InspectorState without an extra import.
 @_exported import SwiftXStateInspectorCore
 
@@ -12,7 +12,7 @@ import SwiftXState
 /// this and the browser inspector can't drift apart. Mutating the single tracked `state` property
 /// is what drives SwiftUI invalidation.
 ///
-/// Plug `observe()` into any actor's `ActorOptions(inspect:)` (combine with other sinks as needed).
+/// Plug `observe()` into any actor's `ReactorOptions(inspect:)` (combine with other sinks as needed).
 /// All ingestion hops to the main actor.
 @MainActor
 @Observable
@@ -25,8 +25,8 @@ public final class InspectorStore {
 
     // MARK: Forwarded state (so existing call sites and bindings keep working)
 
-    /// Actors in registration order.
-    public var actors: [ActorEntry] { state.actors }
+    /// Reactors in registration order.
+    public var actors: [ReactorEntry] { state.actors }
     /// Chronological event feed (oldest first), capped at `feedCap`.
     public var feed: [FeedEntry] { state.feed }
     /// Currently selected actor (drives the State/Events/Graph tabs).
@@ -42,7 +42,7 @@ public final class InspectorStore {
 
     // MARK: Ingestion
 
-    /// Returns an inspect sink for `ActorOptions(inspect:)`. Safe to combine with others.
+    /// Returns an inspect sink for `ReactorOptions(inspect:)`. Safe to combine with others.
     public func observe() -> @Sendable (InspectionEvent) -> Void {
         { [weak self] event in
             Task { @MainActor in self?.ingest(event) }
@@ -74,20 +74,20 @@ public final class InspectorStore {
 
     // MARK: Lookups
 
-    public func actor(_ sessionID: String) -> ActorEntry? { state.actor(sessionID) }
+    public func actor(_ sessionID: String) -> ReactorEntry? { state.actor(sessionID) }
 
-    public var selectedActor: ActorEntry? { state.selectedActor }
+    public var selectedReactor: ReactorEntry? { state.selectedReactor }
 
     /// Feed filtered to a single actor (or all if `nil`).
     public func feed(for sessionID: String?) -> [FeedEntry] { state.feed(for: sessionID) }
 
     /// Direct children of an actor, in registration order.
-    public func children(of sessionID: String) -> [ActorEntry] { state.children(of: sessionID) }
+    public func children(of sessionID: String) -> [ReactorEntry] { state.children(of: sessionID) }
 
     /// Root actors (no known parent in the registry).
-    public var rootActors: [ActorEntry] { state.rootActors }
+    public var rootReactors: [ReactorEntry] { state.rootReactors }
 
     /// Flattened parent→child ordering with indentation depth, for the sidebar list.
-    public func actorTree() -> [(actor: ActorEntry, depth: Int)] { state.actorTree() }
+    public func actorTree() -> [(actor: ReactorEntry, depth: Int)] { state.actorTree() }
 }
 #endif

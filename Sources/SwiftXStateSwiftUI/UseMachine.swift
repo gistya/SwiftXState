@@ -8,10 +8,10 @@ import SwiftXState
 @Observable
 public final class MachineDriver<Context: Sendable> {
     public private(set) var snapshot: MachineSnapshot<Context>
-    public let actor: Actor<Context>
+    public let actor: Reactor<Context>
 
     public init(_ machine: StateMachine<Context>, input: SendableValue? = nil) {
-        self.actor = createActor(machine, input: input)
+        self.actor = createReactor(machine, input: input)
         self.snapshot = actor.start().snapshot
         _ = actor.subscribe { [weak self] snapshot in
             Task { @MainActor in
@@ -32,7 +32,7 @@ public final class MachineDriver<Context: Sendable> {
 public func useMachine<Context: Sendable>(
     _ machine: StateMachine<Context>,
     input: SendableValue? = nil
-) -> (snapshot: MachineSnapshot<Context>, send: (any Eventable) -> Void, actor: Actor<Context>) {
+) -> (snapshot: MachineSnapshot<Context>, send: (any Eventable) -> Void, actor: Reactor<Context>) {
     let driver = MachineDriver(machine, input: input)
     return (
         driver.snapshot,

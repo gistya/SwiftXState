@@ -4,7 +4,7 @@ import SwiftXStateWinBridge
 
 /// Drives the C bridge through its public Swift facade functions (the same code the `@_cdecl` exports
 /// forward to). Returned C strings are freed, exactly as the C# side does.
-final class WinBridgeActorTests: XCTestCase {
+final class WinBridgeReactorTests: XCTestCase {
 
     private func take(_ p: UnsafeMutablePointer<CChar>?) -> String {
         guard let p else { return "" }

@@ -105,7 +105,7 @@ struct GraphModelBuilderTests {
     @Test("Active set updates as the actor transitions")
     func liveUpdates() {
         let machine = makeTrafficParallelMachine()
-        let actor = createActor(machine)
+        let actor = createReactor(machine)
         _ = actor.start(context: 0)
         // The view's live subscription pushes each new snapshot through `setActive`; here we
         // exercise that exact path directly.
@@ -125,7 +125,7 @@ struct GraphModelBuilderTests {
     @Test("Active set is computed from a live snapshot")
     func activeHighlighting() {
         let machine = makeTrafficParallelMachine()
-        let actor = createActor(machine)
+        let actor = createReactor(machine)
         _ = actor.start(context: 0)
         let render = GraphRenderModel(model: GraphModelBuilder.build(from: machine))
         render.setActive(stateValue: actor.snapshot.value)

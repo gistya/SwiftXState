@@ -30,14 +30,14 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("START"))
         actor.send(Event("STOP"))
 
         #expect(await cancelled.wait())
     }
 
-    @Test("TaskActorScope checkCancellation stops in-flight work")
+    @Test("TaskReactorScope checkCancellation stops in-flight work")
     func scopeCheckCancellation() async {
         let cancelled = TestSignal()
 
@@ -64,7 +64,7 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.stop()
 
         #expect(await cancelled.wait())
@@ -96,7 +96,7 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("STOP"))
 
         #expect(await cancelled.wait())
@@ -128,12 +128,12 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         let persisted = try actor.getPersistedSnapshot()
         #expect(persisted.children["task"] != nil)
 
-        let restored = createActor(parentMachine).start(from: persisted)
-        #expect(restored.childActor(id: "task") == nil)
+        let restored = createReactor(parentMachine).start(from: persisted)
+        #expect(restored.childReactor(id: "task") == nil)
         #expect(restored.snapshot.children["task"]?.status == .active)
     }
 }

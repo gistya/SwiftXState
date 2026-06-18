@@ -58,7 +58,7 @@ struct ParallelTransitionTests {
 
     @Test("parallel regions transition together on the same event")
     func parallelRegionsTogether() {
-        let actor = createActor(parallelMachine).start()
+        let actor = createReactor(parallelMachine).start()
         actor.send(Event("SYNC"))
 
         #expect(actor.snapshot.matches(StateValue.compound([
@@ -95,7 +95,7 @@ struct ParallelTransitionTests {
             type: .parallel
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("SET_DARK_CUSTOM"))
 
         #expect(actor.snapshot.matches(StateValue.compound([
@@ -126,7 +126,7 @@ struct ParallelTransitionTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("GO"))
 
         #expect(actor.snapshot.matches(StateValue.compound([
@@ -167,7 +167,7 @@ struct ParallelTransitionTests {
             type: .parallel
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("SYNC"))
 
         #expect(actor.snapshot.context.modeCount == 1)

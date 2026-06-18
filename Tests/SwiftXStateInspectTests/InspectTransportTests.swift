@@ -96,7 +96,7 @@ struct InspectTransportTests {
 
         let event = InspectionEvent.actor(
             rootId: "root",
-            actor: InspectionActorRef(sessionId: "root", machineId: "app")
+            actor: InspectionReactorRef(sessionId: "root", machineId: "app")
         )
         bridge.observe()(event)
 
@@ -163,7 +163,7 @@ struct InspectTransportTests {
     func wireEncoding() throws {
         let source = InspectionEvent.transition(
             rootId: "root",
-            actor: InspectionActorRef(sessionId: "root", machineId: "app"),
+            actor: InspectionReactorRef(sessionId: "root", machineId: "app"),
             triggeringEvent: Event("GO"),
             machineSnapshot: MachineSnapshot(
                 machine: createMachine(MachineConfig(

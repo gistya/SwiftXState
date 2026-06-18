@@ -16,7 +16,7 @@ struct StateMetaTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         let meta = actor.snapshot.getMeta()
 
         #expect(meta.count == 1)
@@ -38,7 +38,7 @@ struct StateMetaTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("NEXT"))
 
         let meta = actor.snapshot.getMeta()
@@ -58,7 +58,7 @@ struct StateMetaTests {
             type: .parallel
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         let meta = actor.snapshot.getMeta()
 
         #expect(meta.count == 2)
@@ -84,7 +84,7 @@ struct StateMetaTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         let meta = actor.snapshot.getMeta()
 
         #expect(meta.count == 2)

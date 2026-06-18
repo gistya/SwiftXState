@@ -39,7 +39,7 @@ enum PieceEvent: Eventable, Equatable, Sendable {
     }
 }
 
-enum PieceActorMachine {
+enum PieceReactorMachine {
     static let id = "piece"
 
     static let machine: StateMachine<PieceContext> = createMachine(

@@ -199,24 +199,24 @@ public func restoreSnapshot<Context: Codable & Sendable>(
         historyValue: historyValue,
         output: persisted.output.flatMap(decodeSendableValue),
         error: persisted.error.flatMap(decodeSendableValue),
-        children: childActorSnapshots(from: persisted.children)
+        children: childReactorSnapshots(from: persisted.children)
     )
 }
 
-func childActorSnapshots(
+func childReactorSnapshots(
     from children: [String: PersistedChildSnapshot]
-) -> [String: ChildActorSnapshot] {
-    var result: [String: ChildActorSnapshot] = [:]
+) -> [String: ChildReactorSnapshot] {
+    var result: [String: ChildReactorSnapshot] = [:]
     for (id, persisted) in children {
         switch persisted {
         case let .machine(snapshot):
-            result[id] = ChildActorSnapshot(
+            result[id] = ChildReactorSnapshot(
                 id: id,
                 status: snapshot.status,
                 value: snapshot.value.description
             )
         case let .opaque(snapshot):
-            result[id] = ChildActorSnapshot(
+            result[id] = ChildReactorSnapshot(
                 id: id,
                 status: snapshot.status,
                 error: snapshot.error

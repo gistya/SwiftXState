@@ -1,5 +1,5 @@
 //
-//  ActorBridge.swift
+//  ReactorBridge.swift
 //  SwiftXState — Windows / C# bridge
 //
 //  Handle-based actor exports. Because `Actor<Context>` is generic, it can't cross the C ABI directly,
@@ -42,7 +42,7 @@ private func encodeEvent(_ event: InspectionEvent) -> String {
 // MARK: - Type-erased actor handle + registry
 
 /// A running actor with its context erased behind closures — all the C bridge needs.
-private struct ActorHandleBox {
+private struct ReactorHandleBox {
     let events: [String]
     let send: (String) -> Bool          // true if the event caused a transition
     let state: () -> String
@@ -50,10 +50,10 @@ private struct ActorHandleBox {
     let inspect: CallbackSlot           // live inspection events go here (set via actorSetSnapshotCallback)
 }
 
-private func makeBox<C: Sendable & Equatable>(_ machine: StateMachine<C>) -> ActorHandleBox {
+private func makeBox<C: Sendable & Equatable>(_ machine: StateMachine<C>) -> ReactorHandleBox {
     let slot = CallbackSlot()
-    let actor = createActor(machine, inspect: { event in slot.fire(encodeEvent(event)) }).start()
-    return ActorHandleBox(
+    let actor = createReactor(machine, inspect: { event in slot.fire(encodeEvent(event)) }).start()
+    return ReactorHandleBox(
         events: machine.events,
         send: { name in
             let event = Event(name)
@@ -78,16 +78,16 @@ private func makeBox<C: Sendable & Equatable>(_ machine: StateMachine<C>) -> Act
 private final class BridgeRegistry: @unchecked Sendable {
     static let shared = BridgeRegistry()
     private let lock = NSLock()
-    private var actors: [Int64: ActorHandleBox] = [:]
+    private var actors: [Int64: ReactorHandleBox] = [:]
     private var nextHandle: Int64 = 1
 
-    func add(_ box: ActorHandleBox) -> Int64 {
+    func add(_ box: ReactorHandleBox) -> Int64 {
         lock.lock(); defer { lock.unlock() }
         let id = nextHandle; nextHandle += 1
         actors[id] = box
         return id
     }
-    func get(_ id: Int64) -> ActorHandleBox? {
+    func get(_ id: Int64) -> ReactorHandleBox? {
         lock.lock(); defer { lock.unlock() }
         return actors[id]
     }
@@ -105,7 +105,7 @@ private struct EmptyCtx: Sendable, Equatable {}
 /// registered the same way; loading behavior from JSON is a separate, larger feature.)
 let availableMachines = ["toggle", "counter", "vending"]
 
-private func buildMachine(_ name: String) -> ActorHandleBox? {
+private func buildMachine(_ name: String) -> ReactorHandleBox? {
     switch name {
     case "toggle":
         return makeBox(createMachine(MachineConfig(

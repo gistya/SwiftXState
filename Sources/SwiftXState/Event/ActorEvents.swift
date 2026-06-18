@@ -14,40 +14,40 @@ public struct DoneStateEvent: Eventable {
 }
 
 /// Event emitted when an invoked child actor reaches a final state.
-public struct DoneActorEvent: Eventable {
+public struct DoneReactorEvent: Eventable {
     public let type: String
     public let actorId: String
     public let output: SendableValue?
 
     public init(actorId: String, output: SendableValue? = nil) {
         self.actorId = actorId
-        self.type = createDoneActorEventType(actorId)
+        self.type = createDoneReactorEventType(actorId)
         self.output = output
     }
 }
 
 /// Event emitted when an invoked child actor fails.
-public struct ErrorActorEvent: Eventable {
+public struct ErrorReactorEvent: Eventable {
     public let type: String
     public let actorId: String
     public let error: String
 
     public init(actorId: String, error: String) {
         self.actorId = actorId
-        self.type = createErrorActorEventType(actorId)
+        self.type = createErrorReactorEventType(actorId)
         self.error = error
     }
 }
 
 /// Event emitted when a child actor's snapshot changes (with `syncSnapshot`).
-public struct SnapshotActorEvent: Eventable {
+public struct SnapshotReactorEvent: Eventable {
     public let type: String
     public let actorId: String
-    public let snapshot: ChildActorSnapshot
+    public let snapshot: ChildReactorSnapshot
 
-    public init(actorId: String, snapshot: ChildActorSnapshot) {
+    public init(actorId: String, snapshot: ChildReactorSnapshot) {
         self.actorId = actorId
-        self.type = createSnapshotActorEventType(actorId)
+        self.type = createSnapshotReactorEventType(actorId)
         self.snapshot = snapshot
     }
 }
@@ -56,14 +56,14 @@ public func createDoneStateEventType(_ stateId: String) -> String {
     "xstate.done.state.\(stateId)"
 }
 
-public func createDoneActorEventType(_ actorId: String) -> String {
+public func createDoneReactorEventType(_ actorId: String) -> String {
     "xstate.done.actor.\(actorId)"
 }
 
-public func createErrorActorEventType(_ actorId: String) -> String {
+public func createErrorReactorEventType(_ actorId: String) -> String {
     "xstate.error.actor.\(actorId)"
 }
 
-public func createSnapshotActorEventType(_ actorId: String) -> String {
+public func createSnapshotReactorEventType(_ actorId: String) -> String {
     "xstate.snapshot.\(actorId)"
 }

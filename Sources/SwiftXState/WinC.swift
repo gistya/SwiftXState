@@ -23,5 +23,5 @@
 /// // With SWIFTXWIN set, also emits:
 /// //   @_cdecl("AddNumbers") public func AddNumbers(_ a: Int32, _ b: Int32) -> Int32 { addNumbers(a, b) }
 /// ```
-@attached(peer, names: suffixed(_WinC))
-public macro WinC() = #externalMacro(module: "SwiftXStateMacros", type: "WinCMacro")
+//@attached(peer, names: suffixed(_WinC))
+//public macro WinC() = #externalMacro(module: "SwiftXStateMacros", type: "WinCMacro")

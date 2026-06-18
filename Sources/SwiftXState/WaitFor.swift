@@ -53,7 +53,7 @@ public enum WaitForError: Error, Equatable, LocalizedError {
 /// Checks the current snapshot first. Throws if the predicate is not satisfied
 /// before an optional timeout (default: no timeout) or if the actor stops.
 public func waitFor<Context: Sendable>(
-    _ actor: Actor<Context>,
+    _ actor: Reactor<Context>,
     predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool,
     options: WaitForOptions = WaitForOptions()
 ) async throws -> MachineSnapshot<Context> {

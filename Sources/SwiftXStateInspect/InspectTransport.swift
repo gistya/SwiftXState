@@ -25,8 +25,8 @@ public struct InspectWireMessage: Sendable, Equatable, Codable {
 public struct InspectWireEvent: Sendable, Equatable, Codable {
     public var kind: String
     public var rootId: String
-    public var actor: InspectWireActorRef
-    public var source: InspectWireActorRef?
+    public var actor: InspectWireReactorRef
+    public var source: InspectWireReactorRef?
     public var event: InspectWireEventDescription?
     public var snapshot: InspectWireSnapshot?
     public var actionType: String?
@@ -36,8 +36,8 @@ public struct InspectWireEvent: Sendable, Equatable, Codable {
     public init(from inspectionEvent: InspectionEvent) {
         kind = inspectionEvent.kind.rawValue
         rootId = inspectionEvent.rootId
-        actor = InspectWireActorRef(from: inspectionEvent.actor)
-        source = inspectionEvent.source.map(InspectWireActorRef.init(from:))
+        actor = InspectWireReactorRef(from: inspectionEvent.actor)
+        source = inspectionEvent.source.map(InspectWireReactorRef.init(from:))
         event = inspectionEvent.event.map(InspectWireEventDescription.init(from:))
         snapshot = inspectionEvent.snapshot.map(InspectWireSnapshot.init(from:))
         actionType = inspectionEvent.actionType
@@ -58,12 +58,12 @@ public struct InspectWireTransition: Sendable, Equatable, Codable {
     }
 }
 
-public struct InspectWireActorRef: Sendable, Equatable, Codable {
+public struct InspectWireReactorRef: Sendable, Equatable, Codable {
     public var sessionId: String
     public var systemId: String?
     public var machineId: String?
 
-    public init(from ref: InspectionActorRef) {
+    public init(from ref: InspectionReactorRef) {
         sessionId = ref.sessionId
         systemId = ref.systemId
         machineId = ref.machineId

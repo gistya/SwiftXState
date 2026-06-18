@@ -29,7 +29,7 @@ struct AfterTests {
     @Test("transitions after delay")
     func transitionsAfterDelay() {
         let clock = SimulatedClock()
-        let actor = createActor(lightMachine, options: ActorOptions(clock: clock)).start()
+        let actor = createReactor(lightMachine, options: ReactorOptions(clock: clock)).start()
 
         #expect(actor.snapshot.matches("green"))
 
@@ -64,7 +64,7 @@ struct AfterTests {
             ]
         ))
 
-        let actor = createActor(machine, options: ActorOptions(clock: clock)).start()
+        let actor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
         actor.send(Event("SKIP"))
 
         #expect(actor.snapshot.matches("skipped"))
@@ -91,7 +91,7 @@ struct AfterTests {
             ]
         ))
 
-        let actor = createActor(machine, options: ActorOptions(clock: clock)).start()
+        let actor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
 
         clock.increment(500)
         actor.send(Event("PAUSE"))
@@ -130,7 +130,7 @@ struct AfterTests {
             ]
         ))
 
-        let actor = createActor(machine, options: ActorOptions(clock: clock)).start()
+        let actor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
         clock.increment(10)
 
         #expect(actor.snapshot.matches("y"))
@@ -162,7 +162,7 @@ struct AfterTests {
             )
         )
 
-        let actor = createActor(machine, options: ActorOptions(clock: clock)).start()
+        let actor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
         #expect(resolved.value == DelayContext(delay: 500))
         #expect(actor.snapshot.matches("inactive"))
 

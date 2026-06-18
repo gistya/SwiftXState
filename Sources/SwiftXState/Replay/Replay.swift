@@ -13,14 +13,14 @@ public enum ReplayableEvent: Sendable, Equatable, Codable {
     public init(from event: any Eventable) {
         if let system = event as? SystemEvent {
             self = .system(system)
-        } else if let done = event as? DoneActorEvent {
+        } else if let done = event as? DoneReactorEvent {
             self = .done(
                 actorId: done.actorId,
                 outputDescription: done.output.map { String(describing: $0) }
             )
-        } else if let error = event as? ErrorActorEvent {
+        } else if let error = event as? ErrorReactorEvent {
             self = .error(actorId: error.actorId, message: error.error)
-        } else if let snapshot = event as? SnapshotActorEvent {
+        } else if let snapshot = event as? SnapshotReactorEvent {
             self = .snapshotSync(actorId: snapshot.actorId, value: snapshot.snapshot.value)
         } else if let payloadEvent = event as? PayloadEvent {
             self = .simple(type: payloadEvent.type, payload: payloadEvent.payload)
@@ -60,16 +60,16 @@ public enum ReplayableEvent: Sendable, Equatable, Codable {
         case let .system(system):
             return system
         case let .done(actorId, outputDescription):
-            return DoneActorEvent(
+            return DoneReactorEvent(
                 actorId: actorId,
                 output: outputDescription.map { SendableValue($0) }
             )
         case let .error(actorId, message):
-            return ErrorActorEvent(actorId: actorId, error: message)
+            return ErrorReactorEvent(actorId: actorId, error: message)
         case let .snapshotSync(actorId, value):
-            return SnapshotActorEvent(
+            return SnapshotReactorEvent(
                 actorId: actorId,
-                snapshot: ChildActorSnapshot(id: actorId, status: .active, value: value)
+                snapshot: ChildReactorSnapshot(id: actorId, status: .active, value: value)
             )
         }
     }
@@ -188,7 +188,7 @@ public final class InspectionRecorder: @unchecked Sendable {
 
     public init() {}
 
-    /// Returns an inspection observer suitable for `ActorOptions.inspect` or `ActorSystem.inspect`.
+    /// Returns an inspection observer suitable for `ReactorOptions.inspect` or `Reactor.System.inspect`.
     public func observe() -> @Sendable (InspectionEvent) -> Void {
         { [weak self] event in
             self?.handle(event)
@@ -365,7 +365,7 @@ private func inspectionSnapshot<Context>(
 ) -> InspectionSnapshot {
     .from(
         snapshot,
-        actor: InspectionActorRef(sessionId: rootId, machineId: machineId)
+        actor: InspectionReactorRef(sessionId: rootId, machineId: machineId)
     )
 }
 
@@ -379,21 +379,21 @@ private func snapshotsMatch(_ expected: InspectionSnapshot, _ actual: Inspection
 
 /// Starts a fresh actor and replays a recorded session, returning per-step verification.
 @discardableResult
-public func replayActor<Context: Sendable>(
+public func replayReactor<Context: Sendable>(
     _ machine: StateMachine<Context>,
     context: Context,
     session: ReplaySession,
-    options: ActorOptions = ActorOptions(),
+    options: ReactorOptions = ReactorOptions(),
     decodeEvent: ReplayEventDecoder? = nil
-) -> (actor: Actor<Context>, verifications: [ReplayVerification]) {
-    let actor = createActor(machine, options: options).start(context: context)
+) -> (actor: Reactor<Context>, verifications: [ReplayVerification]) {
+    let actor = createReactor(machine, options: options).start(context: context)
     var verifications: [ReplayVerification] = []
 
     for step in session.steps where step.event.isReplayable {
         actor.send(step.event.makeEvent(decoder: decodeEvent))
         let actual = InspectionSnapshot.from(
             actor.snapshot,
-            actor: InspectionActorRef(sessionId: actor.id, machineId: machine.id)
+            actor: InspectionReactorRef(sessionId: actor.id, machineId: machine.id)
         )
         verifications.append(
             ReplayVerification(

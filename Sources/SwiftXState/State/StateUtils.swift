@@ -752,7 +752,7 @@ func processEnteredFinalStates<Context: Sendable>(
         if finalNode.tags.contains("terminal-error") {
             status = .error
             output = nil
-            if let errorEvent = event as? ErrorActorEvent {
+            if let errorEvent = event as? ErrorReactorEvent {
                 error = SendableValue(errorEvent.error)
             }
             continue

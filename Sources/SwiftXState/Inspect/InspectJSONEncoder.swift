@@ -24,7 +24,7 @@ enum InspectJSONEncoder {
         return mirrorEncode(value.boxedForInspection) ?? .null
     }
 
-    static func encodeChildren(_ children: [String: ChildActorSnapshot]) -> JSONValue {
+    static func encodeChildren(_ children: [String: ChildReactorSnapshot]) -> JSONValue {
         var object: [String: JSONValue] = [:]
         for (key, child) in children.sorted(by: { $0.key < $1.key }) {
             var childObject: [String: JSONValue] = [

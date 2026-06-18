@@ -37,7 +37,7 @@ struct BoardInspectorTests {
 
     @Test("e4 opening flips the boards' square states")
     func mirrorsOpeningMove() async {
-        let actor = createActor(GameWatcherMachine.make()).start()
+        let actor = createReactor(GameWatcherMachine.make()).start()
         try? await Task.sleep(for: .milliseconds(100))
 
         actor.send(Event("TAP.1.4"))
@@ -45,8 +45,8 @@ struct BoardInspectorTests {
         actor.send(Event("TAP.3.4"))
         try? await Task.sleep(for: .milliseconds(80))
 
-        guard let occupancy = actor.childActor(id: BoardInspectorMachine.childId(.occupancy)) as? MachineChildRef<BoardInspectorContext>,
-              let pieces = actor.childActor(id: BoardInspectorMachine.childId(.pieces)) as? MachineChildRef<BoardInspectorContext> else {
+        guard let occupancy = actor.childReactor(id: BoardInspectorMachine.childId(.occupancy)) as? MachineChildRef<BoardInspectorContext>,
+              let pieces = actor.childReactor(id: BoardInspectorMachine.childId(.pieces)) as? MachineChildRef<BoardInspectorContext> else {
             Issue.record("board-inspector children missing")
             return
         }

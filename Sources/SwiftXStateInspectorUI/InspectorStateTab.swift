@@ -5,7 +5,7 @@ import SwiftXState
 /// The selected actor's current snapshot: its state value and context as JSON trees,
 /// plus status / tags / output / error.
 struct InspectorStateTab: View {
-    let actor: ActorEntry?
+    let actor:ReactorEntry?
     /// When set and the actor is simulatable (pasted/static), shows "Send events" controls.
     var store: InspectorStore? = nil
     @Environment(\.inspectorStyle) private var style
@@ -50,7 +50,7 @@ struct InspectorStateTab: View {
     }
 
     @ViewBuilder
-    private func header(_ actor: ActorEntry, _ snapshot: InspectionSnapshot) -> some View {
+    private func header(_ actor:ReactorEntry, _ snapshot: InspectionSnapshot) -> some View {
         HStack(spacing: 10) {
             Text(actor.displayName)
                 .font(.system(size: 15, weight: .bold))

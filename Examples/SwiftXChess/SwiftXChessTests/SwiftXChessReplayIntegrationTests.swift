@@ -18,7 +18,7 @@ struct SwiftXChessReplayIntegrationTests {
 
     @Test("TAP events update chess context on live actor")
     func tapUpdatesContext() {
-        let actor = createActor(ChessMachineFactory.machine).start()
+        let actor = createReactor(ChessMachineFactory.machine).start()
         #expect(actor.snapshot.matches(ChessGameState.playing))
         #expect(actor.snapshot.typed(as: ChessGameState.self).inState(.playing))
 
@@ -46,9 +46,9 @@ struct SwiftXChessReplayIntegrationTests {
     func replayScrubRestoresBoard() {
         let recorder = InspectionRecorder()
         let machine = ChessMachineFactory.machine
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start()
 
         // White pawn e2 -> e4
@@ -104,9 +104,9 @@ struct SwiftXChessReplayIntegrationTests {
     func snapshotDecodeMatchesTimeTravel() {
         let recorder = InspectionRecorder()
         let machine = ChessMachineFactory.machine
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start()
 
         actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
@@ -156,9 +156,9 @@ struct SwiftXChessReplayIntegrationTests {
 
         let recorder = InspectionRecorder()
         let gate = Gate()
-        let actor = createActor(
+        let actor = createReactor(
             ChessMachineFactory.machine,
-            options: ActorOptions(inspect: gate.observe(recorder))
+            options: ReactorOptions(inspect: gate.observe(recorder))
         ).start()
 
         actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
@@ -206,9 +206,9 @@ struct SwiftXChessReplayIntegrationTests {
     func verifyRecordedGame() {
         let recorder = InspectionRecorder()
         let machine = ChessMachineFactory.machine
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start()
 
         actor.send(ChessEvent.tap(Square(row: 1, col: 4)))

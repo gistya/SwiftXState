@@ -39,7 +39,7 @@ struct SendToTests {
                     invoke: [
                         InvokeConfig(
                             id: "worker",
-                            src: .machine(MachineActorLogicBox(childMachine) { _ in
+                            src: .machine(MachineReactorLogicBox(childMachine) { _ in
                                 SendToContext(count: 0, childId: "", message: "")
                             })
                         ),
@@ -48,7 +48,7 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("GO"))
         await actor.waitForSnapshot { $0.context.count == 1 }
 
@@ -87,7 +87,7 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("GO"))
         await actor.waitForSnapshot { $0.context.count == 1 }
 
@@ -130,7 +130,7 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("ARM"))
         await actor.waitForSnapshot { $0.context.count == 1 }
 
@@ -170,7 +170,7 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("ARM"))
         actor.send(Event("CANCEL"))
         try? await Task.sleep(for: .milliseconds(150))
@@ -230,7 +230,7 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("GO"))
         await actor.waitForSnapshot { $0.context.count == 1 }
 

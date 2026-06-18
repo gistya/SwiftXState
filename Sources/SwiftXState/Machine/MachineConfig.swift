@@ -72,7 +72,7 @@ public struct StateNodeConfig<Context: Sendable>: Sendable {
     public var always: [TransitionConfig<Context>]?
     /// Delayed transitions — keys are delay in milliseconds or a named delay reference.
     public var after: [String: TransitionInput<Context>]?
-    /// Actors invoked while this state is active (`fromTask`, `fromCallback`, child machines, …).
+    ///Reactors invoked while this state is active (`fromTask`, `fromCallback`, child machines, …).
     public var invoke: [InvokeConfig<Context>]?
     /// Actions run when this state is entered.
     public var entry: [ActionRef<Context>]?

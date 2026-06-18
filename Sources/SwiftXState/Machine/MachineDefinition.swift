@@ -297,7 +297,7 @@ enum MachineDefinitionExporter {
     ) -> JSONValue {
         var object: [String: JSONValue] = [
             "id": .string(config.id),
-            "src": serializeActorSource(config.src),
+            "src": serializeReactorSource(config.src),
         ]
 
         if let systemId = config.systemId {
@@ -323,7 +323,7 @@ enum MachineDefinitionExporter {
         return .object(object)
     }
 
-    static func serializeActorSource(_ source: ActorSource) -> JSONValue {
+    static func serializeReactorSource(_ source: ReactorSource) -> JSONValue {
         switch source {
         case let .named(name):
             return .string(name)

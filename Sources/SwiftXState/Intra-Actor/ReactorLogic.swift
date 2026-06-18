@@ -1,21 +1,21 @@
 import Foundation
 
 /// Reference from a child actor back to its parent interpreter.
-public protocol ActorParentRef: AnyObject, Sendable {
+public protocol ReactorParentRef: AnyObject, Sendable {
     func enqueueFromChild(_ event: any Eventable)
-    var actorSystem: ActorSystem { get }
-    func inspectSpawnedChild(_ child: any ChildActorRef, machineId: String?)
+    var actorSystem: ReactorSystem { get }
+    func inspectSpawnedChild(_ child: any ChildReactorRef, machineId: String?)
     func persistedChildSnapshot(for id: String) -> PersistedChildSnapshot?
 }
 
-extension ActorParentRef {
+extension ReactorParentRef {
     public func persistedChildSnapshot(for id: String) -> PersistedChildSnapshot? {
         nil
     }
 }
 
 /// A running child actor managed by a parent state machine actor.
-public protocol ChildActorRef: ActorSystemRef, AnyObject, Sendable {
+public protocol ChildReactorRef: ReactorSystemRef, AnyObject, Sendable {
     var id: String { get }
     var status: SnapshotStatus { get }
     var errorMessage: String? { get }
@@ -29,7 +29,7 @@ public protocol ChildActorRef: ActorSystemRef, AnyObject, Sendable {
     func on(_ eventType: String, handler: @escaping @Sendable (EmittedEvent) -> Void) -> Subscription
 }
 
-extension ChildActorRef {
+extension ChildReactorRef {
     public var sessionId: String { id }
     public var errorMessage: String? { nil }
     public var machineId: String? { nil }
@@ -38,19 +38,19 @@ extension ChildActorRef {
 }
 
 /// Source logic for spawning a child actor.
-public enum ActorSource: Sendable {
+public enum ReactorSource: Sendable {
     case named(String)
-    case machine(MachineActorLogicBox)
-    case task(TaskActorLogicBox)
-    case callback(CallbackActorLogicBox)
-    case taskGroup(TaskGroupActorLogicBox)
-    case transition(TransitionActorLogicBox)
-    case observable(ObservableActorLogicBox)
-    case store(StoreActorLogicBox)
+    case machine(MachineReactorLogicBox)
+    case task(TaskReactorLogicBox)
+    case callback(CallbackReactorLogicBox)
+    case taskGroup(TaskGroupReactorLogicBox)
+    case transition(TransitionReactorLogicBox)
+    case observable(ObservableReactorLogicBox)
+    case store(StoreReactorLogicBox)
 }
 
 /// Scope passed to task-based actor logic (`fromTask`).
-public struct TaskActorScope: Sendable {
+public struct TaskReactorScope: Sendable {
     public let input: SendableValue?
     public let sendToParent: @Sendable (any Eventable) -> Void
     public let emit: @Sendable (EmittedEvent) -> Void
@@ -67,19 +67,19 @@ public struct TaskActorScope: Sendable {
 }
 
 /// Scope passed to callback-based actor logic (`fromCallback`).
-public struct CallbackActorScope: Sendable {
+public struct CallbackReactorScope: Sendable {
     public let input: SendableValue?
     public let sendToParent: @Sendable (any Eventable) -> Void
     public let receive: @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Void
     public let emit: @Sendable (EmittedEvent) -> Void
-    public let system: ActorSystem
+    public let system: ReactorSystem
 
     public init(
         input: SendableValue?,
         sendToParent: @escaping @Sendable (any Eventable) -> Void,
         receive: @escaping @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Void,
         emit: @escaping @Sendable (EmittedEvent) -> Void,
-        system: ActorSystem
+        system: ReactorSystem
     ) {
         self.input = input
         self.sendToParent = sendToParent
@@ -135,13 +135,13 @@ public struct TaskGroupScope: Sendable {
 }
 
 /// Async task logic, mirroring XState's `fromPromise`.
-public struct TaskActorLogic<Output: Sendable & Equatable>: Sendable {
-    public let run: @Sendable (TaskActorScope) async throws -> Output
-    public let onCancel: @Sendable (TaskActorScope) async -> Void
+public struct TaskReactorLogic<Output: Sendable & Equatable>: Sendable {
+    public let run: @Sendable (TaskReactorScope) async throws -> Output
+    public let onCancel: @Sendable (TaskReactorScope) async -> Void
 
     public init(
-        run: @escaping @Sendable (TaskActorScope) async throws -> Output,
-        onCancel: (@Sendable (TaskActorScope) async -> Void)? = nil
+        run: @escaping @Sendable (TaskReactorScope) async throws -> Output,
+        onCancel: (@Sendable (TaskReactorScope) async -> Void)? = nil
     ) {
         self.run = run
         self.onCancel = onCancel ?? { _ in }
@@ -149,16 +149,16 @@ public struct TaskActorLogic<Output: Sendable & Equatable>: Sendable {
 }
 
 /// Callback logic for long-running listeners, mirroring XState's `fromCallback`.
-public struct CallbackActorLogic: Sendable {
-    public let run: @Sendable (CallbackActorScope) -> (@Sendable () -> Void)?
+public struct CallbackReactorLogic: Sendable {
+    public let run: @Sendable (CallbackReactorScope) -> (@Sendable () -> Void)?
 
-    public init(run: @escaping @Sendable (CallbackActorScope) -> (@Sendable () -> Void)?) {
+    public init(run: @escaping @Sendable (CallbackReactorScope) -> (@Sendable () -> Void)?) {
         self.run = run
     }
 }
 
 /// Task group logic for structured concurrent child work.
-public struct TaskGroupActorLogic<Output: Sendable & Equatable>: Sendable {
+public struct TaskGroupReactorLogic<Output: Sendable & Equatable>: Sendable {
     public let run: @Sendable (TaskGroupScope) async throws -> [Output]
     public let onCancel: @Sendable (TaskGroupScope) async -> Void
 
@@ -172,15 +172,15 @@ public struct TaskGroupActorLogic<Output: Sendable & Equatable>: Sendable {
 }
 
 /// Type-erased machine actor logic for child state machines.
-public struct MachineActorLogicBox: Sendable {
+public struct MachineReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
-        ActorOptions,
+        any ReactorParentRef,
+        ReactorOptions,
         Bool,
         PersistedChildSnapshot?
-    ) -> any ChildActorRef
+    ) -> any ChildReactorRef
 
     /// Uses the child machine's `context` or `contextFromInput` to build initial context.
     public init<ChildContext: Sendable>(_ machine: StateMachine<ChildContext>) {
@@ -192,7 +192,7 @@ public struct MachineActorLogicBox: Sendable {
                 machineId: machine.id
             )
             return MachineChildRef(
-                actor: Actor(
+                actor: Reactor(
                     machine,
                     id: id,
                     options: options,
@@ -210,7 +210,7 @@ public struct MachineActorLogicBox: Sendable {
     /// Child snapshots can be persisted and restored when `ChildContext` is `Codable`.
     public init<ChildContext: Codable & Sendable>(_ machine: StateMachine<ChildContext>) {
         _spawn = { id, input, parent, options, syncSnapshot, persistedChild in
-            let actor = Actor(
+            let actor = Reactor(
                 machine,
                 id: id,
                 options: options,
@@ -244,7 +244,7 @@ public struct MachineActorLogicBox: Sendable {
                 machineId: machine.id
             )
             return MachineChildRef(
-                actor: Actor(
+                actor: Reactor(
                     machine,
                     id: id,
                     options: options,
@@ -263,7 +263,7 @@ public struct MachineActorLogicBox: Sendable {
         context: @escaping @Sendable (SendableValue?) -> ChildContext
     ) {
         _spawn = { id, input, parent, options, syncSnapshot, persistedChild in
-            let actor = Actor(
+            let actor = Reactor(
                 machine,
                 id: id,
                 options: options,
@@ -288,11 +288,11 @@ public struct MachineActorLogicBox: Sendable {
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
-        options: ActorOptions,
+        parent: any ReactorParentRef,
+        options: ReactorOptions,
         syncSnapshot: Bool,
         persistedChild: PersistedChildSnapshot? = nil
-    ) -> any ChildActorRef {
+    ) -> any ChildReactorRef {
         _spawn(id, input, parent, options, syncSnapshot, persistedChild)
     }
 }
@@ -318,15 +318,15 @@ private func machinePersistedRestore(
 }
 
 /// Type-erased task actor logic.
-public struct TaskActorLogicBox: Sendable {
+public struct TaskReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
+        any ReactorParentRef,
         String?
-    ) -> any ChildActorRef
+    ) -> any ChildReactorRef
 
-    public init<Output: Sendable & Equatable>(_ logic: TaskActorLogic<Output>) {
+    public init<Output: Sendable & Equatable>(_ logic: TaskReactorLogic<Output>) {
         _spawn = { id, input, parent, systemId in
             TaskChildRef(id: id, systemId: systemId, input: input, parent: parent, logic: logic)
         }
@@ -335,24 +335,24 @@ public struct TaskActorLogicBox: Sendable {
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
+        parent: any ReactorParentRef,
         systemId: String?
-    ) -> any ChildActorRef {
+    ) -> any ChildReactorRef {
         _spawn(id, input, parent, systemId)
     }
 }
 
 /// Type-erased callback actor logic.
-public struct CallbackActorLogicBox: Sendable {
+public struct CallbackReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
-        ActorSystem,
+        any ReactorParentRef,
+        ReactorSystem,
         String?
-    ) -> any ChildActorRef
+    ) -> any ChildReactorRef
 
-    public init(_ logic: CallbackActorLogic) {
+    public init(_ logic: CallbackReactorLogic) {
         _spawn = { id, input, parent, system, systemId in
             CallbackChildRef(
                 id: id,
@@ -368,24 +368,24 @@ public struct CallbackActorLogicBox: Sendable {
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
-        system: ActorSystem,
+        parent: any ReactorParentRef,
+        system: ReactorSystem,
         systemId: String?
-    ) -> any ChildActorRef {
+    ) -> any ChildReactorRef {
         _spawn(id, input, parent, system, systemId)
     }
 }
 
 /// Type-erased task group actor logic.
-public struct TaskGroupActorLogicBox: Sendable {
+public struct TaskGroupReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
+        any ReactorParentRef,
         String?
-    ) -> any ChildActorRef
+    ) -> any ChildReactorRef
 
-    public init<Output: Sendable & Equatable>(_ logic: TaskGroupActorLogic<Output>) {
+    public init<Output: Sendable & Equatable>(_ logic: TaskGroupReactorLogic<Output>) {
         _spawn = { id, input, parent, systemId in
             TaskGroupChildRef(id: id, systemId: systemId, input: input, parent: parent, logic: logic)
         }
@@ -394,69 +394,69 @@ public struct TaskGroupActorLogicBox: Sendable {
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
+        parent: any ReactorParentRef,
         systemId: String?
-    ) -> any ChildActorRef {
+    ) -> any ChildReactorRef {
         _spawn(id, input, parent, systemId)
     }
 }
 
-/// Actor logic backed by an `async` task — XState's `fromPromise`. The returned `Output` becomes
+/// Reactor logic backed by an `async` task — XState's `fromPromise`. The returned `Output` becomes
 /// the child's `done` data (drives `onDone`); throwing drives `onError`; `onCancel` runs if the
 /// invoking state exits first. Use as an `invoke` `src` or with `spawnChild`.
 public func fromTask<Output: Sendable & Equatable>(
-    _ run: @escaping @Sendable (TaskActorScope) async throws -> Output,
-    onCancel: (@Sendable (TaskActorScope) async -> Void)? = nil
-) -> ActorSource {
-    .task(TaskActorLogicBox(TaskActorLogic(run: run, onCancel: onCancel)))
+    _ run: @escaping @Sendable (TaskReactorScope) async throws -> Output,
+    onCancel: (@Sendable (TaskReactorScope) async -> Void)? = nil
+) -> ReactorSource {
+    .task(TaskReactorLogicBox(TaskReactorLogic(run: run, onCancel: onCancel)))
 }
 
 /// `fromTask` with the `onCancel` handler supplied first (trailing-closure ergonomics).
 public func fromTask<Output: Sendable & Equatable>(
-    onCancel: @escaping @Sendable (TaskActorScope) async -> Void,
-    _ run: @escaping @Sendable (TaskActorScope) async throws -> Output
-) -> ActorSource {
+    onCancel: @escaping @Sendable (TaskReactorScope) async -> Void,
+    _ run: @escaping @Sendable (TaskReactorScope) async throws -> Output
+) -> ReactorSource {
     fromTask(run, onCancel: onCancel)
 }
 
-/// Actor logic backed by a long-lived callback — XState's `fromCallback`. `run` receives a scope
+/// Reactor logic backed by a long-lived callback — XState's `fromCallback`. `run` receives a scope
 /// to `send` events back to the parent and returns an optional cleanup closure run on stop.
 public func fromCallback(
-    _ run: @escaping @Sendable (CallbackActorScope) -> (@Sendable () -> Void)?
-) -> ActorSource {
-    .callback(CallbackActorLogicBox(CallbackActorLogic(run: run)))
+    _ run: @escaping @Sendable (CallbackReactorScope) -> (@Sendable () -> Void)?
+) -> ReactorSource {
+    .callback(CallbackReactorLogicBox(CallbackReactorLogic(run: run)))
 }
 
 public func fromTaskGroup<Output: Sendable & Equatable>(
     _ run: @escaping @Sendable (TaskGroupScope) async throws -> [Output],
     onCancel: (@Sendable (TaskGroupScope) async -> Void)? = nil
-) -> ActorSource {
-    .taskGroup(TaskGroupActorLogicBox(TaskGroupActorLogic(run: run, onCancel: onCancel)))
+) -> ReactorSource {
+    .taskGroup(TaskGroupReactorLogicBox(TaskGroupReactorLogic(run: run, onCancel: onCancel)))
 }
 
 public func fromTaskGroup<Output: Sendable & Equatable>(
     onCancel: @escaping @Sendable (TaskGroupScope) async -> Void,
     _ run: @escaping @Sendable (TaskGroupScope) async throws -> [Output]
-) -> ActorSource {
+) -> ReactorSource {
     fromTaskGroup(run, onCancel: onCancel)
 }
 
 public func fromMachine<ChildContext: Sendable>(
     _ machine: StateMachine<ChildContext>
-) -> ActorSource {
-    .machine(MachineActorLogicBox(machine))
+) -> ReactorSource {
+    .machine(MachineReactorLogicBox(machine))
 }
 
 public func fromMachine<ChildContext: Sendable>(
     _ machine: StateMachine<ChildContext>,
     context: @escaping @Sendable (SendableValue?) -> ChildContext
-) -> ActorSource {
-    .machine(MachineActorLogicBox(machine, context: context))
+) -> ReactorSource {
+    .machine(MachineReactorLogicBox(machine, context: context))
 }
 
 public func fromMachine<ChildContext: Sendable>(
     _ machine: StateMachine<ChildContext>,
     context: ChildContext
-) -> ActorSource {
-    .machine(MachineActorLogicBox(machine, context: { _ in context }))
+) -> ReactorSource {
+    .machine(MachineReactorLogicBox(machine, context: { _ in context }))
 }

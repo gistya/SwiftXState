@@ -83,7 +83,7 @@ struct RaiseTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         #expect(actor.snapshot.matches("idle"))
 
         actor.send(Event("ARM"))
@@ -115,7 +115,7 @@ struct RaiseTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("ARM"))
         actor.send(Event("CANCEL"))
         try? await Task.sleep(for: .milliseconds(150))

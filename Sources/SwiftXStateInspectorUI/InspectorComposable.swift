@@ -17,7 +17,7 @@ public struct InspectorInfoBar: View {
 
     public var body: some View {
         HStack(spacing: 10) {
-            if let actor = store.selectedActor {
+            if let actor = store.selectedReactor {
                 Text(actor.displayName)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(style.primaryText)
@@ -41,7 +41,7 @@ public struct InspectorInfoBar: View {
 public struct InspectorPanel: View {
     private let store: InspectorStore
     @Binding private var tab: InspectorTab
-    @State private var eventsScopeToActor = false
+    @State private var eventsScopeToReactor = false
     @Environment(\.inspectorStyle) private var style
 
     public init(store: InspectorStore, tab: Binding<InspectorTab>) {
@@ -59,7 +59,7 @@ public struct InspectorPanel: View {
                 .labelsHidden()
 
                 if tab == .events {
-                    Toggle("This actor only", isOn: $eventsScopeToActor)
+                    Toggle("This actor only", isOn: $eventsScopeToReactor)
                         .toggleStyle(.switch)
                         .controlSize(.mini)
                         .font(.caption)
@@ -83,9 +83,9 @@ public struct InspectorPanel: View {
     private var content: some View {
         switch tab {
         case .state:
-            InspectorStateTab(actor: store.selectedActor, store: store)
+            InspectorStateTab(actor: store.selectedReactor, store: store)
         case .events:
-            InspectorEventsTab(store: store, filterSessionID: eventsScopeToActor ? store.selectedSessionID : nil)
+            InspectorEventsTab(store: store, filterSessionID: eventsScopeToReactor ? store.selectedSessionID : nil)
         case .sequence:
             InspectorSequenceTab(store: store)
         }
@@ -103,13 +103,13 @@ public struct InspectorGraphView: View {
     }
 
     public var body: some View {
-        InspectorGraphTab(actor: store.selectedActor, graphStyle: graphStyle)
+        InspectorGraphTab(actor: store.selectedReactor, graphStyle: graphStyle)
     }
 }
 
 /// The full-width actors drawer: a horizontally scrolling strip of actor chips; tap to select.
 /// `expanded` controls the collapsed/expanded strip.
-public struct InspectorActorsDrawer: View {
+public struct InspectorReactorsDrawer: View {
     private let store: InspectorStore
     @Binding private var expanded: Bool
 
@@ -119,7 +119,7 @@ public struct InspectorActorsDrawer: View {
     }
 
     public var body: some View {
-        InspectorActorBar(store: store, expanded: $expanded)
+        InspectorReactorBar(store: store, expanded: $expanded)
     }
 }
 #endif

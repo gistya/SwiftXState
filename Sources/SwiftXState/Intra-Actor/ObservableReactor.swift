@@ -1,14 +1,14 @@
 import Foundation
 
 /// Scope passed to observable actor logic (`fromObservable`).
-public struct ObservableActorScope: Sendable {
+public struct ObservableReactorScope: Sendable {
     public let input: SendableValue?
-    public let system: ActorSystem
+    public let system: ReactorSystem
     public let emit: @Sendable (EmittedEvent) -> Void
 
     public init(
         input: SendableValue?,
-        system: ActorSystem,
+        system: ReactorSystem,
         emit: @escaping @Sendable (EmittedEvent) -> Void
     ) {
         self.input = input
@@ -18,27 +18,27 @@ public struct ObservableActorScope: Sendable {
 }
 
 /// Observable stream actor logic, mirroring XState's `fromObservable`.
-public struct ObservableActorLogic<Context: Sendable & Equatable>: Sendable {
-    public let create: @Sendable (ObservableActorScope) -> AnySubscribable<Context>
+public struct ObservableReactorLogic<Context: Sendable & Equatable>: Sendable {
+    public let create: @Sendable (ObservableReactorScope) -> AnySubscribable<Context>
 
     public init(
-        create: @escaping @Sendable (ObservableActorScope) -> AnySubscribable<Context>
+        create: @escaping @Sendable (ObservableReactorScope) -> AnySubscribable<Context>
     ) {
         self.create = create
     }
 }
 
 /// Type-erased observable actor logic.
-public struct ObservableActorLogicBox: Sendable {
+public struct ObservableReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
+        any ReactorParentRef,
         String?,
         Bool
-    ) -> any ChildActorRef
+    ) -> any ChildReactorRef
 
-    public init<Context: Sendable & Equatable>(_ logic: ObservableActorLogic<Context>) {
+    public init<Context: Sendable & Equatable>(_ logic: ObservableReactorLogic<Context>) {
         _spawn = { id, input, parent, systemId, syncSnapshot in
             ObservableChildRef(
                 id: id,
@@ -54,19 +54,19 @@ public struct ObservableActorLogicBox: Sendable {
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
+        parent: any ReactorParentRef,
         systemId: String?,
         syncSnapshot: Bool
-    ) -> any ChildActorRef {
+    ) -> any ChildReactorRef {
         _spawn(id, input, parent, systemId, syncSnapshot)
     }
 }
 
-final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @unchecked Sendable {
+final class ObservableChildRef<Context: Sendable & Equatable>: ChildReactorRef, @unchecked Sendable {
     let id: String
     let systemId: String?
-    private weak var parent: (any ActorParentRef)?
-    private let logic: ObservableActorLogic<Context>
+    private weak var parent: (any ReactorParentRef)?
+    private let logic: ObservableReactorLogic<Context>
     private let input: SendableValue?
     private let syncSnapshot: Bool
     private let emitListeners = EmitListeners()
@@ -84,8 +84,8 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         id: String,
         systemId: String?,
         input: SendableValue?,
-        parent: any ActorParentRef,
-        logic: ObservableActorLogic<Context>,
+        parent: any ReactorParentRef,
+        logic: ObservableReactorLogic<Context>,
         syncSnapshot: Bool
     ) {
         self.id = id
@@ -107,9 +107,9 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         doneSent = false
         lock.unlock()
 
-        let scope = ObservableActorScope(
+        let scope = ObservableReactorScope(
             input: input,
-            system: parent?.actorSystem ?? ActorSystem(),
+            system: parent?.actorSystem ?? ReactorSystem(),
             emit: { [emitListeners] event in
                 emitListeners.notify(event)
             }
@@ -160,9 +160,9 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
 
         if syncSnapshot {
             parent?.enqueueFromChild(
-                SnapshotActorEvent(
+                SnapshotReactorEvent(
                     actorId: id,
-                    snapshot: ChildActorSnapshot(
+                    snapshot: ChildReactorSnapshot(
                         id: id,
                         status: .active,
                         value: snapshotValue
@@ -187,7 +187,7 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         subscription = nil
 
         parent?.enqueueFromChild(
-            ErrorActorEvent(actorId: id, error: message)
+            ErrorReactorEvent(actorId: id, error: message)
         )
     }
 
@@ -206,23 +206,23 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         subscription = nil
 
         parent?.enqueueFromChild(
-            DoneActorEvent(actorId: id, output: output)
+            DoneReactorEvent(actorId: id, output: output)
         )
     }
 }
 
 /// Returns observable actor logic from a subscribable creator.
 public func fromObservable<Context: Sendable & Equatable>(
-    _ observableCreator: @escaping @Sendable (ObservableActorScope) -> any Subscribable<Context>
-) -> ActorSource {
-    .observable(ObservableActorLogicBox(ObservableActorLogic { scope in
+    _ observableCreator: @escaping @Sendable (ObservableReactorScope) -> any Subscribable<Context>
+) -> ReactorSource {
+    .observable(ObservableReactorLogicBox(ObservableReactorLogic { scope in
         AnySubscribable(observableCreator(scope))
     }))
 }
 
 /// Returns observable actor logic from a type-erased subscribable creator.
 public func fromObservable<Context: Sendable & Equatable>(
-    _ observableCreator: @escaping @Sendable (ObservableActorScope) -> AnySubscribable<Context>
-) -> ActorSource {
-    .observable(ObservableActorLogicBox(ObservableActorLogic(create: observableCreator)))
+    _ observableCreator: @escaping @Sendable (ObservableReactorScope) -> AnySubscribable<Context>
+) -> ReactorSource {
+    .observable(ObservableReactorLogicBox(ObservableReactorLogic(create: observableCreator)))
 }

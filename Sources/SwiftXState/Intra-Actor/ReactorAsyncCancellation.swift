@@ -94,7 +94,7 @@ func shouldSpawnOpaqueChild(
 ///
 /// Use `checkCancellation()` or `isCancelled` inside long loops, and `withCancellationHandler`
 /// for scoped cleanup around sub-operations (wraps `withTaskCancellationHandler`).
-public enum ActorAsyncCancellation {
+public enum ReactorAsyncCancellation {
     public static var isCancelled: Bool { Task.isCancelled }
 
     public static func checkCancellation() throws {
@@ -110,32 +110,32 @@ public enum ActorAsyncCancellation {
     }
 }
 
-extension TaskActorScope {
-    public var isCancelled: Bool { ActorAsyncCancellation.isCancelled }
+extension TaskReactorScope {
+    public var isCancelled: Bool { ReactorAsyncCancellation.isCancelled }
 
     public func checkCancellation() throws {
-        try ActorAsyncCancellation.checkCancellation()
+        try ReactorAsyncCancellation.checkCancellation()
     }
 
     public func withCancellationHandler<T: Sendable>(
         onCancel: @escaping @Sendable () async -> Void,
         operation: @escaping @Sendable () async throws -> T
     ) async throws -> T {
-        try await ActorAsyncCancellation.withHandler(onCancel: onCancel, operation: operation)
+        try await ReactorAsyncCancellation.withHandler(onCancel: onCancel, operation: operation)
     }
 }
 
 extension TaskGroupScope {
-    public var isCancelled: Bool { ActorAsyncCancellation.isCancelled }
+    public var isCancelled: Bool { ReactorAsyncCancellation.isCancelled }
 
     public func checkCancellation() throws {
-        try ActorAsyncCancellation.checkCancellation()
+        try ReactorAsyncCancellation.checkCancellation()
     }
 
     public func withCancellationHandler<T: Sendable>(
         onCancel: @escaping @Sendable () async -> Void,
         operation: @escaping @Sendable () async throws -> T
     ) async throws -> T {
-        try await ActorAsyncCancellation.withHandler(onCancel: onCancel, operation: operation)
+        try await ReactorAsyncCancellation.withHandler(onCancel: onCancel, operation: operation)
     }
 }

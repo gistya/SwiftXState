@@ -39,9 +39,9 @@ struct ReplaySwiftDataTests {
 
     private func recordSession() -> (InspectionRecorder, ReplaySession) {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = createReactor(
             counterMachine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayPersistContext(count: 0))
 
         actor.send(Event("INC"))
@@ -86,7 +86,7 @@ struct ReplaySwiftDataTests {
         try store.save(session, key: "run-3")
 
         let loaded = try store.load(key: "run-3")!
-        let (actor, verifications) = replayActor(
+        let (actor, verifications) = replayReactor(
             counterMachine,
             context: ReplayPersistContext(count: 0),
             session: loaded

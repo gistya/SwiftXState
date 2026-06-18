@@ -47,11 +47,11 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("TICK"))
         actor.send(Event("TICK"))
 
-        let child = actor.childActor(id: "counter")
+        let child = actor.childReactor(id: "counter")
         child?.send(Event("INCREMENT"))
 
         #expect(child != nil)
@@ -79,7 +79,7 @@ struct TransitionObservableTests {
                             ),
                             onSnapshot: .single(TransitionConfig(
                                 actions: [assign { ctx, args in
-                                    if let event = args.event as? SnapshotActorEvent,
+                                    if let event = args.event as? SnapshotReactorEvent,
                                        let value = event.snapshot.value,
                                        value.contains("count: 3") {
                                         ctx.count = 3
@@ -92,10 +92,10 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
 
         for _ in 0..<3 {
-            actor.childActor(id: "counter")?.send(Event("INCREMENT"))
+            actor.childReactor(id: "counter")?.send(Event("INCREMENT"))
         }
 
         await actor.waitForSnapshot { $0.context.count == 3 }
@@ -119,7 +119,7 @@ struct TransitionObservableTests {
                             onDone: .single(TransitionConfig(
                                 target: "finished",
                                 actions: [assign { ctx, args in
-                                    if let event = args.event as? DoneActorEvent,
+                                    if let event = args.event as? DoneReactorEvent,
                                        let value = event.output?.get(Int.self) {
                                         ctx.count = value
                                     }
@@ -132,7 +132,7 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         await actor.waitForSnapshot { $0.matches("finished") }
 
         #expect(actor.snapshot.matches("finished"))
@@ -159,7 +159,7 @@ struct TransitionObservableTests {
                             onError: .single(TransitionConfig(
                                 target: "failed",
                                 actions: [assign { ctx, args in
-                                    if let event = args.event as? ErrorActorEvent {
+                                    if let event = args.event as? ErrorReactorEvent {
                                         ctx.step = event.error.count
                                     }
                                 }]
@@ -171,7 +171,7 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         await actor.waitForSnapshot { $0.matches("failed") }
 
         #expect(actor.snapshot.matches("failed"))
@@ -199,19 +199,19 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "stream")?.send(Event("IGNORED"))
+        let actor = createReactor(parentMachine).start()
+        actor.childReactor(id: "stream")?.send(Event("IGNORED"))
         await actor.waitForSnapshot { $0.matches("finished") }
 
         #expect(actor.snapshot.matches("finished"))
     }
 
     @Test("named fromTransition via setup")
-    func namedTransitionActor() async {
+    func namedTransitionReactor() async {
         let parentMachine = setup(
             actors: [
-                "counter": ActorLogicEntry(transition: TransitionActorLogicBox(
-                    TransitionActorLogic(
+                "counter":ReactorLogicEntry(transition: TransitionReactorLogicBox(
+                    TransitionReactorLogic(
                         transition: { state, event, _ in
                             if event.type == "INCREMENT" {
                                 return TransitionCounterContext(count: state.count + 1, step: state.step)
@@ -235,7 +235,7 @@ struct TransitionObservableTests {
                             src: .named("counter"),
                             onSnapshot: .single(TransitionConfig(
                                 actions: [assign { ctx, args in
-                                    if let event = args.event as? SnapshotActorEvent,
+                                    if let event = args.event as? SnapshotReactorEvent,
                                        let value = event.snapshot.value,
                                        value.contains("count: 2") {
                                         ctx.count = 2
@@ -248,9 +248,9 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "counter")?.send(Event("INCREMENT"))
-        actor.childActor(id: "counter")?.send(Event("INCREMENT"))
+        let actor = createReactor(parentMachine).start()
+        actor.childReactor(id: "counter")?.send(Event("INCREMENT"))
+        actor.childReactor(id: "counter")?.send(Event("INCREMENT"))
 
         await actor.waitForSnapshot { $0.context.count == 2 }
 

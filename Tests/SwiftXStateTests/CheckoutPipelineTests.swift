@@ -6,7 +6,7 @@ struct CheckoutPipelineTests {
     @Test("successful checkout completes with output")
     func successPath() async {
         let machine = CheckoutMachineFactory.make()
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("SUBMIT"))
 
         await actor.waitForSnapshot { $0.status == .done }
@@ -20,7 +20,7 @@ struct CheckoutPipelineTests {
     @Test("declined card ends in error with message")
     func failurePath() async {
         let machine = CheckoutMachineFactory.make()
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("SUBMIT_DECLINED"))
 
         await actor.waitForSnapshot { $0.status == .error }

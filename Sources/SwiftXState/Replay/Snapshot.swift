@@ -13,7 +13,7 @@ public enum SnapshotStatus: Sendable, Equatable, Codable {
 }
 
 /// A lightweight snapshot of a child actor tracked by a parent machine.
-public struct ChildActorSnapshot: Sendable, Equatable {
+public struct ChildReactorSnapshot: Sendable, Equatable {
     public let id: String
     public let status: SnapshotStatus
     public let value: String?
@@ -45,7 +45,7 @@ public struct MachineSnapshot<Context: Sendable>: Sendable {
     /// Error that stopped the machine (`status == .error`).
     public let error: SendableValue?
     /// Snapshots of invoked/spawned child actors, keyed by id.
-    public let children: [String: ChildActorSnapshot]
+    public let children: [String: ChildReactorSnapshot]
     let _nodes: [StateNode<Context>]
     let historyValue: HistoryValue<Context>
 
@@ -59,7 +59,7 @@ public struct MachineSnapshot<Context: Sendable>: Sendable {
         historyValue: HistoryValue<Context> = HistoryValue(),
         output: SendableValue? = nil,
         error: SendableValue? = nil,
-        children: [String: ChildActorSnapshot] = [:]
+        children: [String: ChildReactorSnapshot] = [:]
     ) {
         self.machine = machine
         self.value = value

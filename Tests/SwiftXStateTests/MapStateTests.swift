@@ -18,7 +18,7 @@ struct MapStateTests {
             ]
         ))
 
-        let snapshot = createActor(machine).start().snapshot
+        let snapshot = createReactor(machine).start().snapshot
         let mapper = StateMap<CounterContext, String>(
             states: [
                 "a": .mapped { _ in "in-a" },
@@ -55,7 +55,7 @@ struct MapStateTests {
             ]
         )
 
-        let snapshot = createActor(machine).start().snapshot
+        let snapshot = createReactor(machine).start().snapshot
         let results = snapshot.mapState(mapper)
 
         #expect(results.map(\.result) == ["child", "parent"])
@@ -92,7 +92,7 @@ struct MapStateTests {
             ]
         )
 
-        let results = createActor(machine).start().snapshot.mapState(mapper)
+        let results = createReactor(machine).start().snapshot.mapState(mapper)
         let mapped = Set(results.map { $0.result })
         #expect(mapped == ["foo-on", "bar-on", "foo", "bar"])
     }
@@ -120,7 +120,7 @@ struct MapStateTests {
             ]
         )
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         #expect(actor.snapshot.mapStateFirst(mapper) == ViewState(label: "playing", isInteractive: true))
 
         actor.send(Event("PAUSE"))

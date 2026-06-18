@@ -72,9 +72,9 @@ struct ChessParallelReplayTests {
     @Test("REPLAY_SCRUB updates context while in replaying")
     func replayScrubInParallelMachine() {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start()
 
         actor.send(Event("TAP.0"))

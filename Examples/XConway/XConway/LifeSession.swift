@@ -12,8 +12,8 @@ import Combine
 @Observable
 public final class LifeSession {
     public private(set) var snapshot: MachineSnapshot<LifeContext>
-    public let actor: Actor<LifeContext>
-    private let persistence: ActorPersistenceStore?
+    public let actor: Reactor<LifeContext>
+    private let persistence: ReactorPersistenceStore?
     // Bump this when the default grid shape changes — a persisted snapshot bakes in its own
     // width/height, so an old save would otherwise override the new LifeContext.empty() default.
     private let persistenceKey = "xconway.life.actor.v3"
@@ -44,22 +44,22 @@ public final class LifeSession {
     public init(modelContext: ModelContext? = nil) {
         let machine = LifeMachineFactory.machine
         if let mc = modelContext {
-            let store = ActorPersistenceStore(modelContext: mc)
+            let store = ReactorPersistenceStore(modelContext: mc)
             self.persistence = store
-            if let restored = try? store.createActor(machine, key: persistenceKey) {
+            if let restored = try? store.createReactor(machine, key: persistenceKey) {
                 self.actor = restored
                 self.snapshot = actor.snapshot
                 let c = snapshot.context
                 self.history = [GridSnapshot(generation: c.generation, cells: c.cells)]
             } else {
-                self.actor = createActor(machine)
+                self.actor = createReactor(machine)
                 self.snapshot = actor.start(context: LifeContext.empty()).snapshot
                 let c = snapshot.context
                 self.history = [GridSnapshot(generation: c.generation, cells: c.cells)]
             }
         } else {
             self.persistence = nil
-            self.actor = createActor(machine)
+            self.actor = createReactor(machine)
             self.snapshot = actor.start(context: LifeContext.empty()).snapshot
             let c = snapshot.context
             self.history = [GridSnapshot(generation: c.generation, cells: c.cells)]
@@ -260,7 +260,7 @@ public final class LifeSession {
     }
 
     /// Explicitly persists the current actor snapshot (the full grid, rules, generation, playback state, etc.)
-    /// to the SwiftData store using ActorPersistenceStore. This is the "last snapshot only" write
+    /// to the SwiftData store using ReactorPersistenceStore. This is the "last snapshot only" write
     /// the user requested — no automatic per-step persistence happens anymore.
     public func saveSnapshot() {
         saveIfNeeded()

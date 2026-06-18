@@ -25,7 +25,7 @@ public enum InspectorTab: String, CaseIterable, Sendable {
 /// The top bar offers show/hide sidebar, **Maximize** / **Minimize** sidebar, and a toggle for
 /// the actors drawer.
 ///
-/// Wire `store.observe()` into your actors' `ActorOptions(inspect:)`; this view renders
+/// Wire `store.observe()` into your actors' `ReactorOptions(inspect:)`; this view renders
 /// whatever the store has accumulated.
 @MainActor
 public struct MachineInspectorView: View {
@@ -59,13 +59,13 @@ public struct MachineInspectorView: View {
                             .frame(width: clampedSidebarWidth(total: geo.size.width))
                         resizeHandle(total: geo.size.width)
                     }
-                    InspectorGraphTab(actor: store.selectedActor, graphStyle: graphStyle)
+                    InspectorGraphTab(actor: store.selectedReactor, graphStyle: graphStyle)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxHeight: .infinity)
 
                 // Bottom drawer: actors across the full width.
-                InspectorActorBar(store: store, expanded: $actorsExpanded)
+                InspectorReactorBar(store: store, expanded: $actorsExpanded)
             }
         }
         .background(style.background)

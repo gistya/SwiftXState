@@ -49,7 +49,7 @@ struct MachineTests {
 
     @Test("transitions through states")
     func transitions() {
-        let actor = createActor(lightMachine).start()
+        let actor = createReactor(lightMachine).start()
 
         #expect(actor.snapshot.matches("green"))
 
@@ -65,7 +65,7 @@ struct MachineTests {
 
     @Test("nested states")
     func nestedStates() {
-        let actor = createActor(lightMachine).start()
+        let actor = createReactor(lightMachine).start()
 
         actor.send(Event("TIMER"))
         actor.send(Event("TIMER"))

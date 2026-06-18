@@ -1,15 +1,15 @@
 import Foundation
 
 /// Scope passed to transition-based actor logic (`fromTransition`).
-public struct TransitionActorScope: Sendable {
+public struct TransitionReactorScope: Sendable {
     public let input: SendableValue?
-    public let system: ActorSystem
+    public let system: ReactorSystem
     public let sendToParent: @Sendable (any Eventable) -> Void
     public let emit: @Sendable (EmittedEvent) -> Void
 
     public init(
         input: SendableValue?,
-        system: ActorSystem,
+        system: ReactorSystem,
         sendToParent: @escaping @Sendable (any Eventable) -> Void,
         emit: @escaping @Sendable (EmittedEvent) -> Void
     ) {
@@ -21,12 +21,12 @@ public struct TransitionActorScope: Sendable {
 }
 
 /// Reducer-style actor logic, mirroring XState's `fromTransition`.
-public struct TransitionActorLogic<Context: Sendable & Equatable>: Sendable {
-    public let transition: @Sendable (Context, any Eventable, TransitionActorScope) -> Context
+public struct TransitionReactorLogic<Context: Sendable & Equatable>: Sendable {
+    public let transition: @Sendable (Context, any Eventable, TransitionReactorScope) -> Context
     public let resolveInitialContext: @Sendable (SendableValue?) -> Context
 
     public init(
-        transition: @escaping @Sendable (Context, any Eventable, TransitionActorScope) -> Context,
+        transition: @escaping @Sendable (Context, any Eventable, TransitionReactorScope) -> Context,
         resolveInitialContext: @escaping @Sendable (SendableValue?) -> Context
     ) {
         self.transition = transition
@@ -35,16 +35,16 @@ public struct TransitionActorLogic<Context: Sendable & Equatable>: Sendable {
 }
 
 /// Type-erased transition actor logic.
-public struct TransitionActorLogicBox: Sendable {
+public struct TransitionReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
+        any ReactorParentRef,
         String?,
         Bool
-    ) -> any ChildActorRef
+    ) -> any ChildReactorRef
 
-    public init<Context: Sendable & Equatable>(_ logic: TransitionActorLogic<Context>) {
+    public init<Context: Sendable & Equatable>(_ logic: TransitionReactorLogic<Context>) {
         _spawn = { id, input, parent, systemId, syncSnapshot in
             TransitionChildRef(
                 id: id,
@@ -60,19 +60,19 @@ public struct TransitionActorLogicBox: Sendable {
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
+        parent: any ReactorParentRef,
         systemId: String?,
         syncSnapshot: Bool
-    ) -> any ChildActorRef {
+    ) -> any ChildReactorRef {
         _spawn(id, input, parent, systemId, syncSnapshot)
     }
 }
 
-final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @unchecked Sendable {
+final class TransitionChildRef<Context: Sendable & Equatable>: ChildReactorRef, @unchecked Sendable {
     let id: String
     let systemId: String?
-    private weak var parent: (any ActorParentRef)?
-    private let logic: TransitionActorLogic<Context>
+    private weak var parent: (any ReactorParentRef)?
+    private let logic: TransitionReactorLogic<Context>
     private let input: SendableValue?
     private let syncSnapshot: Bool
     private let emitListeners = EmitListeners()
@@ -86,8 +86,8 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         id: String,
         systemId: String?,
         input: SendableValue?,
-        parent: any ActorParentRef,
-        logic: TransitionActorLogic<Context>,
+        parent: any ReactorParentRef,
+        logic: TransitionReactorLogic<Context>,
         syncSnapshot: Bool
     ) {
         self.id = id
@@ -112,9 +112,9 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
 
         if syncSnapshot {
             parent?.enqueueFromChild(
-                SnapshotActorEvent(
+                SnapshotReactorEvent(
                     actorId: id,
-                    snapshot: ChildActorSnapshot(
+                    snapshot: ChildReactorSnapshot(
                         id: id,
                         status: .active,
                         value: snapshotValue
@@ -138,9 +138,9 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
             return
         }
 
-        let scope = TransitionActorScope(
+        let scope = TransitionReactorScope(
             input: input,
-            system: parent?.actorSystem ?? ActorSystem(),
+            system: parent?.actorSystem ?? ReactorSystem(),
             sendToParent: { [weak self] childEvent in
                 self?.parent?.enqueueFromChild(childEvent)
             },
@@ -154,9 +154,9 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
 
         if syncSnapshot {
             parent?.enqueueFromChild(
-                SnapshotActorEvent(
+                SnapshotReactorEvent(
                     actorId: id,
-                    snapshot: ChildActorSnapshot(
+                    snapshot: ChildReactorSnapshot(
                         id: id,
                         status: .active,
                         value: snapshotValue
@@ -176,10 +176,10 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
 
 /// Returns transition actor logic with a fixed initial context.
 public func fromTransition<Context: Sendable & Equatable>(
-    _ transition: @escaping @Sendable (Context, any Eventable, TransitionActorScope) -> Context,
+    _ transition: @escaping @Sendable (Context, any Eventable, TransitionReactorScope) -> Context,
     initialContext: Context
-) -> ActorSource {
-    .transition(TransitionActorLogicBox(TransitionActorLogic(
+) -> ReactorSource {
+    .transition(TransitionReactorLogicBox(TransitionReactorLogic(
         transition: transition,
         resolveInitialContext: { _ in initialContext }
     )))
@@ -187,10 +187,10 @@ public func fromTransition<Context: Sendable & Equatable>(
 
 /// Returns transition actor logic with initial context derived from input.
 public func fromTransition<Context: Sendable & Equatable>(
-    _ transition: @escaping @Sendable (Context, any Eventable, TransitionActorScope) -> Context,
+    _ transition: @escaping @Sendable (Context, any Eventable, TransitionReactorScope) -> Context,
     initialContext: @escaping @Sendable (SendableValue?) -> Context
-) -> ActorSource {
-    .transition(TransitionActorLogicBox(TransitionActorLogic(
+) -> ReactorSource {
+    .transition(TransitionReactorLogicBox(TransitionReactorLogic(
         transition: transition,
         resolveInitialContext: initialContext
     )))

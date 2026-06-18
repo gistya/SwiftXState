@@ -4,7 +4,7 @@ import SwiftData
 import SwiftXState
 
 /// Persists and restores actor snapshots using SwiftData.
-public struct ActorPersistenceStore {
+public struct ReactorPersistenceStore {
     private let modelContext: ModelContext
 
     public init(modelContext: ModelContext) {
@@ -13,13 +13,13 @@ public struct ActorPersistenceStore {
 
     /// Saves the actor's current snapshot under a stable key (upserts).
     public func save<Context: Codable & Sendable>(
-        _ actor: Actor<Context>,
+        _ actor: Reactor<Context>,
         key: String
     ) throws {
         let persisted = try actor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
 
-        var descriptor = FetchDescriptor<ActorSnapshotRecord>(
+        var descriptor = FetchDescriptor<ReactorSnapshotRecord>(
             predicate: #Predicate { $0.key == key }
         )
         descriptor.fetchLimit = 1
@@ -30,7 +30,7 @@ public struct ActorPersistenceStore {
             existing.updatedAt = .now
         } else {
             modelContext.insert(
-                ActorSnapshotRecord(
+                ReactorSnapshotRecord(
                     key: key,
                     machineId: persisted.machineId,
                     snapshotData: data
@@ -43,7 +43,7 @@ public struct ActorPersistenceStore {
 
     /// Loads a persisted snapshot for the given key.
     public func load(key: String) throws -> PersistedSnapshot? {
-        var descriptor = FetchDescriptor<ActorSnapshotRecord>(
+        var descriptor = FetchDescriptor<ReactorSnapshotRecord>(
             predicate: #Predicate { $0.key == key }
         )
         descriptor.fetchLimit = 1
@@ -55,7 +55,7 @@ public struct ActorPersistenceStore {
 
     /// Deletes a persisted snapshot for the given key.
     public func delete(key: String) throws {
-        var descriptor = FetchDescriptor<ActorSnapshotRecord>(
+        var descriptor = FetchDescriptor<ReactorSnapshotRecord>(
             predicate: #Predicate { $0.key == key }
         )
         descriptor.fetchLimit = 1
@@ -68,7 +68,7 @@ public struct ActorPersistenceStore {
     /// Restores an actor from a persisted snapshot stored under `key`.
     @discardableResult
     public func restore<Context: Codable & Sendable>(
-        _ actor: Actor<Context>,
+        _ actor: Reactor<Context>,
         key: String,
         context: Context? = nil
     ) throws -> Bool {
@@ -80,17 +80,17 @@ public struct ActorPersistenceStore {
     }
 
     /// Creates and hydrates an actor from a persisted snapshot stored under `key`.
-    public func createActor<Context: Codable & Sendable>(
+    public func createReactor<Context: Codable & Sendable>(
         _ machine: StateMachine<Context>,
         key: String,
         id: String? = nil,
-        options: ActorOptions = ActorOptions(),
+        options: ReactorOptions = ReactorOptions(),
         context: Context? = nil
-    ) throws -> Actor<Context>? {
+    ) throws -> Reactor<Context>? {
         guard let persisted = try load(key: key) else {
             return nil
         }
-        return SwiftXState.createActor(
+        return SwiftXState.createReactor(
             machine,
             snapshot: persisted,
             id: id,
@@ -103,7 +103,7 @@ public struct ActorPersistenceStore {
 /// Convenience for registering SwiftXState persistence models in a `ModelContainer`.
 public enum SwiftXStatePersistenceSchema {
     public static let modelTypes: [any PersistentModel.Type] = [
-        ActorSnapshotRecord.self,
+        ReactorSnapshotRecord.self,
         ReplaySessionRecord.self,
     ]
 }

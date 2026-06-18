@@ -251,7 +251,7 @@ enum CheckoutMachineFactory {
                             onDone: .single(TransitionConfig(
                                 target: "completed",
                                 actions: [assign { context, args in
-                                    if let event = args.event as? DoneActorEvent,
+                                    if let event = args.event as? DoneReactorEvent,
                                        let transactionId = event.output?.get(String.self)
                                     {
                                         context.transactionId = transactionId

@@ -11,8 +11,8 @@ enum ChessSAN {
         let fen = fenString(board: board, turn: turn, castlingRights: castlingRights)
         guard let position = Position(fen: fen) else { return nil }
         var ckBoard = ChessKit.Board(position: position)
-        let from = ChessKit.Square(BoardActorIds.coord(move.from))
-        let to = ChessKit.Square(BoardActorIds.coord(move.to))
+        let from = ChessKit.Square(BoardReactorIds.coord(move.from))
+        let to = ChessKit.Square(BoardReactorIds.coord(move.to))
         guard let applied = ckBoard.move(pieceAt: from, to: to) else { return nil }
         return applied.san
     }

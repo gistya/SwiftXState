@@ -9,8 +9,8 @@ import SwiftXStateSwiftUI
 @Observable
 final class ChessSession {
     private(set) var snapshot: MachineSnapshot<ChessContext>
-    let actor: Actor<ChessContext>
-    private let typedActor: TypedActor<ChessContext, ChessGameState>
+    let actor:Reactor<ChessContext>
+    private let typedReactor: TypedReactor<ChessContext, ChessGameState>
     let recorder = InspectionRecorder()
 
     private(set) var connectionStatus: String = "Idle"
@@ -26,7 +26,7 @@ final class ChessSession {
 
     /// TypeState-lite view of the `game` region (`game.playing`, `game.replaying`, …).
     var gameSnapshot: TypedSnapshot<ChessContext, ChessGameState> {
-        typedActor.snapshot
+        typedReactor.snapshot
     }
 
     var gamePhase: ChessGameState? { gameSnapshot.gamePhase }
@@ -64,7 +64,7 @@ final class ChessSession {
             runtime: InspectRuntimeContext(isDebugBuild: true)
         )
 
-        let actor: Actor<ChessContext>
+        let actor:Reactor<ChessContext>
         do {
             let (bridge, statelyInspect) = try Self.makeInspectBridge(
                 machine: machine,
@@ -73,23 +73,23 @@ final class ChessSession {
             )
             self.bridge = bridge
             let inspect = Self.combineInspect(recordingGate.observe(recorder), statelyInspect)
-            actor = createActor(
+            actor = createReactor(
                 machine,
-                options: ActorOptions(inspect: inspect)
+                options: ReactorOptions(inspect: inspect)
             )
             connectionStatus = "Connected → Stately Inspector"
         } catch {
-            actor = createActor(
+            actor = createReactor(
                 machine,
-                options: ActorOptions(inspect: recordingGate.observe(recorder))
+                options: ReactorOptions(inspect: recordingGate.observe(recorder))
             )
             connectionStatus = "Inspect unavailable"
             inspectorEndpoint = String(describing: error)
         }
 
         self.actor = actor
-        typedActor = actor.typed(as: ChessGameState.self)
-        snapshot = typedActor.start(context: ChessContext.initial()).raw
+        typedReactor = actor.typed(as: ChessGameState.self)
+        snapshot = typedReactor.start(context: ChessContext.initial()).raw
     }
 
     func tap(row: Int, col: Int) {
@@ -125,7 +125,7 @@ final class ChessSession {
     }
 
     func send(_ event: ChessEvent) {
-        snapshot = typedActor.send(event).raw
+        snapshot = typedReactor.send(event).raw
     }
 
     func verifyRecording() -> Bool {

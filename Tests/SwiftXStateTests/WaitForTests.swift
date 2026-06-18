@@ -19,7 +19,7 @@ struct WaitForTests {
 
     @Test("resolves immediately when current snapshot matches")
     func resolvesImmediately() async throws {
-        let actor = createActor(taggedMachine).start()
+        let actor = createReactor(taggedMachine).start()
 
         let snapshot = try await waitFor(actor) { $0.hasTag("loading") }
 
@@ -29,7 +29,7 @@ struct WaitForTests {
 
     @Test("resolves when a later snapshot matches")
     func resolvesOnTransition() async throws {
-        let actor = createActor(taggedMachine).start()
+        let actor = createReactor(taggedMachine).start()
 
         async let snapshot = waitFor(actor) { $0.hasTag("loaded") }
 
@@ -42,7 +42,7 @@ struct WaitForTests {
 
     @Test("times out when predicate is never satisfied")
     func timesOut() async {
-        let actor = createActor(taggedMachine).start()
+        let actor = createReactor(taggedMachine).start()
 
         await #expect(throws: WaitForError.timeout(milliseconds: 50)) {
             try await waitFor(
@@ -55,7 +55,7 @@ struct WaitForTests {
 
     @Test("throws when actor stops before predicate matches")
     func actorTerminated() async {
-        let actor = createActor(taggedMachine).start()
+        let actor = createReactor(taggedMachine).start()
 
         let task = Task {
             try await waitFor(actor) { $0.hasTag("loaded") }
@@ -70,7 +70,7 @@ struct WaitForTests {
 
     @Test("rejects immediately for negative timeout")
     func negativeTimeout() async {
-        let actor = createActor(taggedMachine).start()
+        let actor = createReactor(taggedMachine).start()
 
         await #expect(throws: WaitForError.timeout(milliseconds: -1)) {
             try await waitFor(
@@ -83,7 +83,7 @@ struct WaitForTests {
 
     @Test("supports task cancellation")
     func taskCancellation() async {
-        let actor = createActor(taggedMachine).start()
+        let actor = createReactor(taggedMachine).start()
 
         let task = Task {
             try await waitFor(actor) { $0.hasTag("loaded") }
@@ -104,7 +104,7 @@ struct WaitForTests {
 
     @Test("matches string state paths")
     func matchesStatePath() async throws {
-        let actor = createActor(taggedMachine).start()
+        let actor = createReactor(taggedMachine).start()
 
         async let snapshot = waitFor(actor) { $0.matches("ready") }
 

@@ -5,7 +5,7 @@ import Testing
 
 @MainActor
 @Suite("Inspector multi-actor (stress-test mechanism)")
-struct InspectorMultiActorTests {
+struct InspectorMultiReactorTests {
     /// A child machine each spawned actor runs.
     private func childMachine() -> StateMachine<Int> {
         createMachine(MachineConfig<Int>(
@@ -39,13 +39,13 @@ struct InspectorMultiActorTests {
     func childrenRegister() {
         let store = InspectorStore()
         let parent = parentMachine(childCount: 96)
-        _ = createActor(parent, options: ActorOptions(inspect: { event in
+        _ = createReactor(parent, options: ReactorOptions(inspect: { event in
             MainActor.assumeIsolated { store.ingest(event) }
         })).start()
 
         // Parent + 96 children all show up in the actor list.
         #expect(store.actors.count == 97)
-        #expect(store.children(of: store.rootActors.first!.sessionID).count == 96)
+        #expect(store.children(of: store.rootReactors.first!.sessionID).count == 96)
 
         // The tree flattening produces one row per actor (drives the sidebar).
         #expect(store.actorTree().count == 97)

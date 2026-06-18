@@ -35,7 +35,7 @@ struct TypedEventsTests {
 
     @Test("typed action narrows the event and updates context")
     func typedActionNarrows() {
-        let actor = createActor(machine()).start()
+        let actor = createReactor(machine()).start()
         actor.send(Focus())
         #expect(actor.snapshot.matches("active"))
 
@@ -60,7 +60,7 @@ struct TypedEventsTests {
                 "picked": StateNodeConfig(),
             ]
         ))
-        let actor = createActor(m).start()
+        let actor = createReactor(m).start()
         actor.send(ItemClick(itemId: 99))     // out of range -> guard false -> no transition
         #expect(actor.snapshot.matches("idle"))
         actor.send(ItemClick(itemId: 0))      // valid -> transition
@@ -69,7 +69,7 @@ struct TypedEventsTests {
 
     @Test("typed send only accepts StateEvents but works exactly like Tier 1")
     func typedSend() {
-        let actor = createActor(machine()).start()
+        let actor = createReactor(machine()).start()
         actor.send(Focus())                    // typed value; send<E: Eventable> accepts it directly
         #expect(actor.snapshot.matches("active"))
     }

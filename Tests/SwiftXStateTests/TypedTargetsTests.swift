@@ -31,7 +31,7 @@ struct TypedTargetsTests {
 
     @Test("typed targets drive real transitions")
     func typedTargetsDrive() {
-        let actor = createActor(createMachine(Lights.config)).start()
+        let actor = createReactor(createMachine(Lights.config)).start()
         #expect(actor.snapshot.matches("green"))
         actor.send(Lights.Next())
         #expect(actor.snapshot.matches("yellow"))

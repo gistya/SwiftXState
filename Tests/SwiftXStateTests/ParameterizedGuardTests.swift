@@ -55,11 +55,11 @@ struct ParameterizedGuardTests {
                 ]
             ))
 
-        let low = createActor(machine).start(context: ThresholdContext(value: 5))
+        let low = createReactor(machine).start(context: ThresholdContext(value: 5))
         low.send(Event("CHECK"))
         #expect(low.snapshot.matches("rejected"))
 
-        let high = createActor(machine).start(context: ThresholdContext(value: 25))
+        let high = createReactor(machine).start(context: ThresholdContext(value: 25))
         high.send(Event("CHECK"))
         #expect(high.snapshot.matches("approved"))
     }
@@ -93,7 +93,7 @@ struct ParameterizedGuardTests {
             ]
         ))
 
-        let actor = createActor(machine).start(context: ThresholdContext(value: 12))
+        let actor = createReactor(machine).start(context: ThresholdContext(value: 12))
         actor.send(Event("CHECK"))
         #expect(actor.snapshot.matches("approved"))
     }
@@ -123,7 +123,7 @@ struct ParameterizedGuardTests {
                 ]
             ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("GO"))
         #expect(box.labels == ["ok"])
         #expect(actor.snapshot.matches("done"))
@@ -152,7 +152,7 @@ struct ParameterizedGuardTests {
                 ]
             ))
 
-        let actor = createActor(machine).start(context: ThresholdContext(value: 12))
+        let actor = createReactor(machine).start(context: ThresholdContext(value: 12))
         actor.send(Event("CHECK"))
         #expect(actor.snapshot.matches("approved"))
     }

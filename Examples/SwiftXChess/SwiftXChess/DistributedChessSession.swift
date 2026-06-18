@@ -8,7 +8,7 @@ import SwiftXStateInspectURLSession
 @MainActor
 @Observable
 final class DistributedChessSession {
-    let actor: Actor<GameWatcherContext>
+    let actor:Reactor<GameWatcherContext>
     /// The machine the actor runs — exposed so a graph view can visualize this exact session.
     let machine: StateMachine<GameWatcherContext>
     private let treeSession: OpeningTreeSession
@@ -82,7 +82,7 @@ final class DistributedChessSession {
 
         // Stream the 96 per-square/piece board actors too — a deliberate stress test for the
         // inspector (this actor count kills the web client; the native one handles it).
-        let gameMachine = GameWatcherMachine.make(inspectableBoardActors: false)
+        let gameMachine = GameWatcherMachine.make(inspectableBoardReactors: false)
         self.machine = gameMachine
 
         do {
@@ -117,7 +117,7 @@ final class DistributedChessSession {
             let bridgeInspect = bridge.observe()
             let combined = Self.combineInspect(recordingGate.observe(recorder), bridgeInspect)
             let inspect = Self.combineInspect(combined, extraInspect ?? { _ in })
-            let actor = createActor(gameMachine, options: ActorOptions(inspect: inspect)).start()
+            let actor = createReactor(gameMachine, options: ReactorOptions(inspect: inspect)).start()
             treeSession.attachInspect(Self.combineInspect(bridgeInspect, extraInspect ?? { _ in }))
             self.actor = actor
             self.bridge = bridge
@@ -126,9 +126,9 @@ final class DistributedChessSession {
             syncRecordingState()
         } catch {
             let inspect = Self.combineInspect(recordingGate.observe(recorder), extraInspect ?? { _ in })
-            let actor = createActor(
+            let actor = createReactor(
                 gameMachine,
-                options: ActorOptions(inspect: inspect)
+                options: ReactorOptions(inspect: inspect)
             ).start()
             self.actor = actor
             connectionStatus = "Inspect unavailable"

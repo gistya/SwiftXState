@@ -56,7 +56,7 @@ public enum MachineDefinitionImporter {
         let initial = resolveInitial(obj)
         let context = obj["context"] ?? .object([:])
 
-        let ref = InspectionActorRef(sessionId: machineID, systemId: machineID, machineId: machineID)
+        let ref = InspectionReactorRef(sessionId: machineID, systemId: machineID, machineId: machineID)
         let snapshot = InspectionSnapshot(
             actor: ref,
             status: .active,

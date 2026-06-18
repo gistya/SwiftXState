@@ -48,7 +48,7 @@ public struct DefaultClock: Clock {
 ///
 /// These platforms provide no built-in timer source, so delayed (`after:`) transitions do **not**
 /// fire under this clock. Apps that need delays should inject a host-backed `Clock` — for example
-/// one driven by JavaScript's `setTimeout` via JavaScriptKit — through `ActorOptions.clock`.
+/// one driven by JavaScript's `setTimeout` via JavaScriptKit — through `ReactorOptions.clock`.
 public struct DefaultClock: Clock {
     public init() {}
 

@@ -110,8 +110,8 @@ struct MachineImportTests {
         #expect(id == "lights")
         #expect(store.actors.count == 1)
         #expect(store.selectedSessionID == "lights")
-        #expect(store.selectedActor?.stateValue == .atomic("off"))
-        #expect(store.selectedActor?.definitionJSON != nil)
+        #expect(store.selectedReactor?.stateValue == .atomic("off"))
+        #expect(store.selectedReactor?.definitionJSON != nil)
 
         // Loading again replaces the previous definition.
         let json2 = #"{ "id": "door", "initial": "closed", "states": { "closed": {}, "open": {} } }"#

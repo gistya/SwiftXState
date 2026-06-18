@@ -40,7 +40,7 @@ struct InvokeTests {
                     invoke: [
                         InvokeConfig(
                             id: "fetchUser",
-                            src: .machine(MachineActorLogicBox(childMachine) { input in
+                            src: .machine(MachineReactorLogicBox(childMachine) { input in
                                 ChildContext(
                                     userId: input?.get(String.self) ?? "",
                                     userName: "David"
@@ -50,7 +50,7 @@ struct InvokeTests {
                             onDone: .single(TransitionConfig(
                                 target: "received",
                                 actions: [assign { ctx, args in
-                                    if let event = args.event as? DoneActorEvent {
+                                    if let event = args.event as? DoneReactorEvent {
                                         ctx.userName = event.output?.get(String.self)
                                     }
                                 }]
@@ -62,7 +62,7 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("GO"))
 
         await actor.waitForSnapshot { $0.matches("received") }
@@ -73,7 +73,7 @@ struct InvokeTests {
     }
 
     @Test("named actor via setup invokes child machine")
-    func namedActorInvoke() async {
+    func namedReactorInvoke() async {
         let childMachine = createMachine(MachineConfig(
             initial: "done",
             context: EmptyContext(),
@@ -84,7 +84,7 @@ struct InvokeTests {
 
         let parentMachine = setup(
             actors: [
-                "child": ActorLogicEntry(machine: MachineActorLogicBox(childMachine) { _ in
+                "child":ReactorLogicEntry(machine: MachineReactorLogicBox(childMachine) { _ in
                     EmptyContext()
                 }),
             ]
@@ -95,7 +95,7 @@ struct InvokeTests {
                 "running": StateNodeConfig(
                     invoke: [
                         InvokeConfig(
-                            id: "childActor",
+                            id: "childReactor",
                             src: .named("child"),
                             onDone: .to("finished")
                         ),
@@ -105,7 +105,7 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         await actor.waitForSnapshot { $0.matches("finished") }
 
         #expect(actor.snapshot.matches("finished"))
@@ -135,7 +135,7 @@ struct InvokeTests {
                             onDone: .single(TransitionConfig(
                                 target: "done",
                                 actions: [assign { ctx, args in
-                                    if let event = args.event as? DoneActorEvent {
+                                    if let event = args.event as? DoneReactorEvent {
                                         ctx.userName = event.output?.get(String.self)
                                     }
                                 }]
@@ -147,7 +147,7 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         await actor.waitForSnapshot { $0.matches("done") }
 
         #expect(actor.snapshot.context.count == 1)
@@ -171,7 +171,7 @@ struct InvokeTests {
 
         let parentMachine = setup(
             actors: [
-                "child": ActorLogicEntry(machine: MachineActorLogicBox(childMachine) { _ in
+                "child":ReactorLogicEntry(machine: MachineReactorLogicBox(childMachine) { _ in
                     ParentContext(count: 0, userName: nil)
                 }),
             ]
@@ -195,7 +195,7 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         for _ in 0..<3 {
             actor.send(Event("FORWARD_DEC"))
         }
@@ -229,7 +229,7 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         let didStart = await started.wait()
         await actor.waitForSnapshot { $0.children["worker"]?.status == .active }
         #expect(didStart)
@@ -273,8 +273,8 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "listener")?.send(Event("PING"))
+        let actor = createReactor(parentMachine).start()
+        actor.childReactor(id: "listener")?.send(Event("PING"))
 
         #expect(await received.wait())
     }
@@ -315,10 +315,10 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         #expect(await resized.wait())
 
-        actor.childActor(id: "listener")?.send(Event("FORWARD"))
+        actor.childReactor(id: "listener")?.send(Event("FORWARD"))
         #expect(await forwarded.wait())
     }
 
@@ -344,7 +344,7 @@ struct InvokeTests {
                     invoke: [
                         InvokeConfig(
                             id: "counter",
-                            src: .machine(MachineActorLogicBox(childMachine) { _ in
+                            src: .machine(MachineReactorLogicBox(childMachine) { _ in
                                 ParentContext(count: 0, userName: nil)
                             }),
                             onSnapshot: .single(TransitionConfig(
@@ -356,8 +356,8 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "counter")?.send(Event("INC"))
+        let actor = createReactor(parentMachine).start()
+        actor.childReactor(id: "counter")?.send(Event("INC"))
         await actor.waitForSnapshot { $0.context.count == 1 }
 
         #expect(actor.snapshot.context.count == 1)
@@ -384,7 +384,7 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         await actor.waitForSnapshot { $0.children["worker"] != nil }
 
         let registered = actor.actorSystem.get(systemId: "myWorker")
@@ -417,7 +417,7 @@ struct InvokeTests {
                             onDone: .single(TransitionConfig(
                                 target: "done",
                                 actions: [assign { ctx, args in
-                                    if let event = args.event as? DoneActorEvent,
+                                    if let event = args.event as? DoneReactorEvent,
                                        let outputs = event.output?.get([Int].self) {
                                         ctx.count = outputs.reduce(0, +)
                                     }
@@ -430,7 +430,7 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         await actor.waitForSnapshot { $0.matches("done") }
 
         #expect(actor.snapshot.matches("done"))
@@ -447,7 +447,7 @@ struct InvokeTests {
             states: [
                 "idle": StateNodeConfig(
                     on: [
-                        createDoneActorEventType("spawned"): .single(TransitionConfig(
+                        createDoneReactorEventType("spawned"): .single(TransitionConfig(
                             actions: [.inline { _ in done.fire() }]
                         )),
                     ],
@@ -464,7 +464,7 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         let fired = await done.wait()
 
         #expect(fired)

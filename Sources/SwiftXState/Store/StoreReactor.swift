@@ -1,7 +1,7 @@
 import Foundation
 
-/// Store-backed actor logic, mirroring XState's `fromStore`.
-public struct StoreActorLogic<Context: Sendable & Equatable, E: Eventable>: Sendable {
+/// Store-backed reactor logic, mirroring XState's `fromStore`.
+public struct StoreReactorLogic<Context: Sendable & Equatable, E: Eventable>: Sendable {
     public let logic: StoreLogic<Context, E>
 
     public init(_ logic: StoreLogic<Context, E>) {
@@ -10,16 +10,16 @@ public struct StoreActorLogic<Context: Sendable & Equatable, E: Eventable>: Send
 }
 
 /// Type-erased store actor logic.
-public struct StoreActorLogicBox: Sendable {
+public struct StoreReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
+        any ReactorParentRef,
         String?,
         Bool
-    ) -> any ChildActorRef
+    ) -> any ChildReactorRef
 
-    public init<Context: Sendable & Equatable, E: Eventable>(_ logic: StoreActorLogic<Context, E>) {
+    public init<Context: Sendable & Equatable, E: Eventable>(_ logic: StoreReactorLogic<Context, E>) {
         _spawn = { id, input, parent, systemId, syncSnapshot in
             StoreChildRef(
                 id: id,
@@ -35,19 +35,19 @@ public struct StoreActorLogicBox: Sendable {
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
+        parent: any ReactorParentRef,
         systemId: String?,
         syncSnapshot: Bool
-    ) -> any ChildActorRef {
+    ) -> any ChildReactorRef {
         _spawn(id, input, parent, systemId, syncSnapshot)
     }
 }
 
-final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildActorRef, @unchecked Sendable {
+final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildReactorRef, @unchecked Sendable {
     let id: String
     let systemId: String?
-    private weak var parent: (any ActorParentRef)?
-    private let logic: StoreActorLogic<Context, E>
+    private weak var parent: (any ReactorParentRef)?
+    private let logic: StoreReactorLogic<Context, E>
     private let input: SendableValue?
     private let syncSnapshot: Bool
     private let emitListeners = EmitListeners()
@@ -60,8 +60,8 @@ final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildAct
         id: String,
         systemId: String?,
         input: SendableValue?,
-        parent: any ActorParentRef,
-        logic: StoreActorLogic<Context, E>,
+        parent: any ReactorParentRef,
+        logic: StoreReactorLogic<Context, E>,
         syncSnapshot: Bool
     ) {
         self.id = id
@@ -105,9 +105,9 @@ final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildAct
     private func publishSnapshot() {
         guard syncSnapshot, let store else { return }
         parent?.enqueueFromChild(
-            SnapshotActorEvent(
+            SnapshotReactorEvent(
                 actorId: id,
-                snapshot: ChildActorSnapshot(
+                snapshot: ChildReactorSnapshot(
                     id: id,
                     status: .active,
                     value: String(describing: store.context)
@@ -117,11 +117,11 @@ final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildAct
     }
 }
 
-/// Returns store actor logic compatible with `createActor` / `spawnChild`.
+/// Returns store actor logic compatible with `createReactor` / `spawnChild`.
 public func fromStore<Context: Sendable & Equatable, E: Eventable>(
     _ logic: StoreLogic<Context, E>
-) -> ActorSource {
-    .store(StoreActorLogicBox(StoreActorLogic(logic)))
+) -> ReactorSource {
+    .store(StoreReactorLogicBox(StoreReactorLogic(logic)))
 }
 
 /// Convenience for inline store configs.
@@ -129,7 +129,7 @@ public func fromStore<Context: Sendable & Equatable, E: Eventable>(
     context: Context,
     on: [String: StoreMutator<Context, E>] = [:],
     assign: [String: StoreAssigner<Context, E>] = [:]
-) -> ActorSource {
+) -> ReactorSource {
     fromStore(createStoreLogic(context: context, on: on, assign: assign))
 }
 
@@ -138,6 +138,6 @@ public func fromStore<Context: Sendable & Equatable, E: Eventable>(
     context: @escaping @Sendable (SendableValue?) -> Context,
     on: [String: StoreMutator<Context, E>] = [:],
     assign: [String: StoreAssigner<Context, E>] = [:]
-) -> ActorSource {
+) -> ReactorSource {
     fromStore(createStoreLogic(context: context, on: on, assign: assign))
 }

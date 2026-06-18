@@ -169,7 +169,7 @@ private struct IPadSplitLayout: View {
             .frame(maxHeight: .infinity)
 
             if inspectorMode, let store {
-                InspectorActorsDrawer(store: store, expanded: $actorsExpanded)
+                InspectorReactorsDrawer(store: store, expanded: $actorsExpanded)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }

@@ -31,7 +31,7 @@ enum BoardInspectorGrid {
         for rank in (1...Board.size).reversed() {
             var cells: [String] = []
             for col in 0..<Board.size {
-                let coord = "\(BoardActorIds.file(col))\(rank)"
+                let coord = "\(BoardReactorIds.file(col))\(rank)"
                 let cell = occupants[coord].map(pieceSymbol(for:)) ?? "·"
                 cells.append(cell)
             }

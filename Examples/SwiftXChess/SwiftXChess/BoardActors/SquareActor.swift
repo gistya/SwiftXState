@@ -37,7 +37,7 @@ enum SquareEvent: Eventable, Equatable, Sendable {
     }
 }
 
-enum SquareActorMachine {
+enum SquareReactorMachine {
     static let id = "square"
 
     static let machine: StateMachine<SquareContext> = createMachine(

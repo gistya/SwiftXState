@@ -5,7 +5,7 @@ import SwiftXState
 /// A full-width bottom drawer of actors that scrolls left→right. Sits *under* the main
 /// view to make clear that the selected actor is what's being inspected. The "Actors" title
 /// bar is always visible; clicking it (or the top-bar button) collapses/expands the strip.
-struct InspectorActorBar: View {
+struct InspectorReactorBar: View {
     let store: InspectorStore
     @Binding var expanded: Bool
     @Environment(\.inspectorStyle) private var style
@@ -51,7 +51,7 @@ struct InspectorActorBar: View {
     }
 
     @ViewBuilder
-    private func chip(_ actor: ActorEntry) -> some View {
+    private func chip(_ actor:ReactorEntry) -> some View {
         let selected = store.selectedSessionID == actor.sessionID
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 5) {

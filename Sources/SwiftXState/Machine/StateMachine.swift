@@ -2,16 +2,16 @@ import Foundation
 
 /// Machine implementations provided at interpretation time (actions, guards).
 /// Registered actor logic for named `invoke` / `spawnChild` sources.
-public struct ActorLogicEntry: Sendable {
-    public var machine: MachineActorLogicBox?
-    public var task: TaskActorLogicBox?
-    public var callback: CallbackActorLogicBox?
-    public var taskGroup: TaskGroupActorLogicBox?
-    public var transition: TransitionActorLogicBox?
-    public var observable: ObservableActorLogicBox?
-    public var store: StoreActorLogicBox?
+public struct ReactorLogicEntry: Sendable {
+    public var machine: MachineReactorLogicBox?
+    public var task: TaskReactorLogicBox?
+    public var callback: CallbackReactorLogicBox?
+    public var taskGroup: TaskGroupReactorLogicBox?
+    public var transition: TransitionReactorLogicBox?
+    public var observable: ObservableReactorLogicBox?
+    public var store: StoreReactorLogicBox?
 
-    public init(machine: MachineActorLogicBox) {
+    public init(machine: MachineReactorLogicBox) {
         self.machine = machine
         self.task = nil
         self.callback = nil
@@ -21,7 +21,7 @@ public struct ActorLogicEntry: Sendable {
         self.store = nil
     }
 
-    public init(task: TaskActorLogicBox) {
+    public init(task: TaskReactorLogicBox) {
         self.machine = nil
         self.task = task
         self.callback = nil
@@ -31,7 +31,7 @@ public struct ActorLogicEntry: Sendable {
         self.store = nil
     }
 
-    public init(callback: CallbackActorLogicBox) {
+    public init(callback: CallbackReactorLogicBox) {
         self.machine = nil
         self.task = nil
         self.callback = callback
@@ -41,7 +41,7 @@ public struct ActorLogicEntry: Sendable {
         self.store = nil
     }
 
-    public init(taskGroup: TaskGroupActorLogicBox) {
+    public init(taskGroup: TaskGroupReactorLogicBox) {
         self.machine = nil
         self.task = nil
         self.callback = nil
@@ -51,7 +51,7 @@ public struct ActorLogicEntry: Sendable {
         self.store = nil
     }
 
-    public init(transition: TransitionActorLogicBox) {
+    public init(transition: TransitionReactorLogicBox) {
         self.machine = nil
         self.task = nil
         self.callback = nil
@@ -61,7 +61,7 @@ public struct ActorLogicEntry: Sendable {
         self.store = nil
     }
 
-    public init(observable: ObservableActorLogicBox) {
+    public init(observable: ObservableReactorLogicBox) {
         self.machine = nil
         self.task = nil
         self.callback = nil
@@ -71,7 +71,7 @@ public struct ActorLogicEntry: Sendable {
         self.store = nil
     }
 
-    public init(store: StoreActorLogicBox) {
+    public init(store: StoreReactorLogicBox) {
         self.machine = nil
         self.task = nil
         self.callback = nil
@@ -81,7 +81,7 @@ public struct ActorLogicEntry: Sendable {
         self.store = store
     }
 
-    public init(_ source: ActorSource) {
+    public init(_ source: ReactorSource) {
         switch source {
         case let .machine(machine):
             self.machine = machine
@@ -140,7 +140,7 @@ public struct ActorLogicEntry: Sendable {
             self.observable = nil
             self.store = store
         case .named:
-            fatalError("Cannot create ActorLogicEntry from .named source")
+            fatalError("Cannot create ReactorLogicEntry from .named source")
         }
     }
 }
@@ -156,13 +156,13 @@ public struct MachineImplementations<Context: Sendable>: Sendable {
     /// Named delays (milliseconds), resolved for `after:` transitions referenced by name.
     public var delays: [String: @Sendable (ActionArgs<Context>) -> Int]
     /// Named actor logic for `invoke`/`spawn` (`fromTask`, `fromCallback`, child machines, …).
-    public var actors: [String: ActorLogicEntry]
+    public var actors: [String: ReactorLogicEntry]
 
     public init(
         actions: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Void] = [:],
         guards: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Bool] = [:],
         delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-        actors: [String: ActorLogicEntry] = [:]
+        actors: [String: ReactorLogicEntry] = [:]
     ) {
         self.actions = actions
         self.guards = guards
@@ -175,7 +175,7 @@ public struct MachineImplementations<Context: Sendable>: Sendable {
         actions legacyActions: [String: @Sendable (ActionArgs<Context>) -> Void] = [:],
         guards legacyGuards: [String: @Sendable (ActionArgs<Context>) -> Bool] = [:],
         delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-        actors: [String: ActorLogicEntry] = [:]
+        actors: [String: ReactorLogicEntry] = [:]
     ) -> MachineImplementations<Context> {
         MachineImplementations(
             actions: wrapLegacyActions(legacyActions),
@@ -187,7 +187,7 @@ public struct MachineImplementations<Context: Sendable>: Sendable {
 }
 
 /// A state machine definition — the pure, reusable logic of a statechart. Created with
-/// `createMachine(_:)` and run by `createActor(_:)`. Stateless and `Sendable`: one machine can
+/// `createMachine(_:)` and run by `createReactor(_:)`. Stateless and `Sendable`: one machine can
 /// back many actors. Use `provide(_:)` to swap in implementations.
 public final class StateMachine<Context: Sendable>: @unchecked Sendable {
     /// The machine id (root state node name); `"(machine)"` if none was set.

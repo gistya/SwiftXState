@@ -1,9 +1,9 @@
 import Foundation
 
-/// Configuration for invoking a child actor when entering a state.
+/// Configuration for invoking a child reactor when entering a state.
 public struct InvokeConfig<Context: Sendable>: Sendable {
     public var id: String
-    public var src: ActorSource
+    public var src: ReactorSource
     public var systemId: String?
     public var input: (@Sendable (ActionArgs<Context>) -> SendableValue?)?
     public var onDone: TransitionInput<Context>?
@@ -18,7 +18,7 @@ public struct InvokeConfig<Context: Sendable>: Sendable {
 
     public init(
         id: String,
-        src: ActorSource,
+        src: ReactorSource,
         systemId: String? = nil,
         input: (@Sendable (ActionArgs<Context>) -> SendableValue?)? = nil,
         onDone: TransitionInput<Context>? = nil,
@@ -40,7 +40,7 @@ public struct InvokeConfig<Context: Sendable>: Sendable {
 }
 
 public struct SpawnRef<Context: Sendable>: Sendable {
-    public var src: ActorSource
+    public var src: ReactorSource
     public var id: String?
     public var systemId: String?
     public var input: (@Sendable (ActionArgs<Context>) -> SendableValue?)?
@@ -50,7 +50,7 @@ public struct SpawnRef<Context: Sendable>: Sendable {
     public var opaqueRestorePolicy: OpaqueInvokeRestorePolicy
 
     public init(
-        src: ActorSource,
+        src: ReactorSource,
         id: String? = nil,
         systemId: String? = nil,
         input: (@Sendable (ActionArgs<Context>) -> SendableValue?)? = nil,
@@ -85,7 +85,7 @@ func processInvokeConfig<Context: Sendable>(
 ) {
     for config in invoke {
         if let onDone = config.onDone {
-            let eventType = createDoneActorEventType(config.id)
+            let eventType = createDoneReactorEventType(config.id)
             let transitions = resolveTransitionConfigs(onDone)
             stateNode.transitions[eventType, default: []].append(
                 contentsOf: transitions.map { ResolvedTransition(config: $0, source: stateNode) }
@@ -93,7 +93,7 @@ func processInvokeConfig<Context: Sendable>(
         }
 
         if let onError = config.onError {
-            let eventType = createErrorActorEventType(config.id)
+            let eventType = createErrorReactorEventType(config.id)
             let transitions = resolveTransitionConfigs(onError)
             stateNode.transitions[eventType, default: []].append(
                 contentsOf: transitions.map { ResolvedTransition(config: $0, source: stateNode) }
@@ -101,7 +101,7 @@ func processInvokeConfig<Context: Sendable>(
         }
 
         if let onSnapshot = config.onSnapshot {
-            let eventType = createSnapshotActorEventType(config.id)
+            let eventType = createSnapshotReactorEventType(config.id)
             let transitions = resolveTransitionConfigs(onSnapshot)
             stateNode.transitions[eventType, default: []].append(
                 contentsOf: transitions.map { ResolvedTransition(config: $0, source: stateNode) }
@@ -110,27 +110,27 @@ func processInvokeConfig<Context: Sendable>(
     }
 }
 
-struct ResolvedActorSource {
-    var machine: MachineActorLogicBox?
-    var task: TaskActorLogicBox?
-    var callback: CallbackActorLogicBox?
-    var taskGroup: TaskGroupActorLogicBox?
-    var transition: TransitionActorLogicBox?
-    var observable: ObservableActorLogicBox?
-    var store: StoreActorLogicBox?
+struct ResolvedReactorSource {
+    var machine: MachineReactorLogicBox?
+    var task: TaskReactorLogicBox?
+    var callback: CallbackReactorLogicBox?
+    var taskGroup: TaskGroupReactorLogicBox?
+    var transition: TransitionReactorLogicBox?
+    var observable: ObservableReactorLogicBox?
+    var store: StoreReactorLogicBox?
     var named: String?
 }
 
-func resolveActorSource<Context: Sendable>(
-    _ source: ActorSource,
+func resolveReactorSource<Context: Sendable>(
+    _ source: ReactorSource,
     implementations: MachineImplementations<Context>
-) -> ResolvedActorSource {
+) -> ResolvedReactorSource {
     switch source {
     case let .named(name):
         guard let logic = implementations.actors[name] else {
-            return ResolvedActorSource(named: name)
+            return ResolvedReactorSource(named: name)
         }
-        return ResolvedActorSource(
+        return ResolvedReactorSource(
             machine: logic.machine,
             task: logic.task,
             callback: logic.callback,
@@ -140,37 +140,37 @@ func resolveActorSource<Context: Sendable>(
             store: logic.store
         )
     case let .machine(box):
-        return ResolvedActorSource(machine: box)
+        return ResolvedReactorSource(machine: box)
     case let .task(box):
-        return ResolvedActorSource(task: box)
+        return ResolvedReactorSource(task: box)
     case let .callback(box):
-        return ResolvedActorSource(callback: box)
+        return ResolvedReactorSource(callback: box)
     case let .taskGroup(box):
-        return ResolvedActorSource(taskGroup: box)
+        return ResolvedReactorSource(taskGroup: box)
     case let .transition(box):
-        return ResolvedActorSource(transition: box)
+        return ResolvedReactorSource(transition: box)
     case let .observable(box):
-        return ResolvedActorSource(observable: box)
+        return ResolvedReactorSource(observable: box)
     case let .store(box):
-        return ResolvedActorSource(store: box)
+        return ResolvedReactorSource(store: box)
     }
 }
 
 func spawnChild<Context: Sendable>(
-    from source: ActorSource,
+    from source: ReactorSource,
     id: String,
     systemId: String?,
     input: SendableValue?,
     syncSnapshot: Bool,
     inspectable: Bool,
-    parent: any ActorParentRef,
+    parent: any ReactorParentRef,
     implementations: MachineImplementations<Context>,
-    options: ActorOptions,
+    options: ReactorOptions,
     persistedChild: PersistedChildSnapshot? = nil,
     opaqueRestorePolicy: OpaqueInvokeRestorePolicy = .restart,
-    children: inout [String: any ChildActorRef]
+    children: inout [String: any ChildReactorRef]
 ) {
-    let resolved = resolveActorSource(source, implementations: implementations)
+    let resolved = resolveReactorSource(source, implementations: implementations)
     var childOptions = options
     childOptions.systemId = systemId ?? id
     childOptions.inspectable = inspectable
@@ -301,7 +301,7 @@ func spawnChild<Context: Sendable>(
 /// machine, or a `.named` registered actor). `input` seeds the child's context; `syncSnapshot`
 /// streams the child's snapshots back to the parent. XState's `spawnChild`.
 public func spawnChild<Context: Sendable>(
-    _ src: ActorSource,
+    _ src: ReactorSource,
     id: String? = nil,
     systemId: String? = nil,
     input: (@Sendable (ActionArgs<Context>) -> SendableValue?)? = nil,

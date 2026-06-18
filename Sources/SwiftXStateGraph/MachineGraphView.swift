@@ -391,7 +391,7 @@ struct GraphRenderView: View {
 /// The root SwiftUI view for rendering a live state-machine graph from a typed actor.
 ///
 /// ```swift
-/// MachineGraphView(actor: myActor, machine: MyMachine.machine)
+/// MachineGraphView(actor: myReactor, machine: MyMachine.machine)
 ///     .graphStyle(.dark)
 ///     .frame(minWidth: 800, minHeight: 600)
 /// ```
@@ -402,10 +402,10 @@ struct GraphRenderView: View {
 public struct MachineGraphView<Context: Sendable>: View {
     @State private var render: GraphRenderModel
     @State private var subscription = SubscriptionBox()
-    private let actor: Actor<Context>?
+    private let actor: Reactor<Context>?
 
     /// Live graph driven by an actor.
-    public init(actor: Actor<Context>, machine: StateMachine<Context>) {
+    public init(actor: Reactor<Context>, machine: StateMachine<Context>) {
         self.actor = actor
         let model = GraphModelBuilder.build(from: machine)
         let render = GraphRenderModel(model: model)

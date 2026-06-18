@@ -22,9 +22,9 @@ struct GameWatcherTests {
             ),
         ])
 
-        let watcher = createActor(
+        let watcher = createReactor(
             GameWatcherMachine.make(),
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
         let treeSession = try OpeningTreeSession()
         treeSession.attachInspect(collector.observe())
@@ -97,9 +97,9 @@ struct GameWatcherTests {
     @Test("board children do not emit inspection events")
     func boardChildrenHiddenFromInspect() async {
         let collector = InspectionCollector()
-        let actor = createActor(
+        let actor = createReactor(
             GameWatcherMachine.make(),
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
         try? await Task.sleep(for: .milliseconds(150))
 
@@ -120,7 +120,7 @@ struct GameWatcherTests {
 
     @Test("spawns square and piece children on boot")
     func spawnsChildren() async {
-        let actor = createActor(GameWatcherMachine.make()).start()
+        let actor = createReactor(GameWatcherMachine.make()).start()
         try? await Task.sleep(for: .milliseconds(100))
 
         #expect(actor.snapshot.matches("game.active.turn.idle"))
@@ -132,8 +132,8 @@ struct GameWatcherTests {
     }
 
     @Test("TAP e2 then e4 moves pawn and updates distributed actors")
-    func tapMoveUpdatesActors() async {
-        let actor = createActor(GameWatcherMachine.make()).start()
+    func tapMoveUpdatesReactors() async {
+        let actor = createReactor(GameWatcherMachine.make()).start()
         try? await Task.sleep(for: .milliseconds(100))
 
         actor.send(Event("TAP.1.4"))
@@ -162,9 +162,9 @@ struct GameWatcherTests {
     @Test("inspector snapshots expose board facade but not square or piece actors")
     func inspectorSnapshotsExposeBoardFacadeOnly() async {
         let collector = InspectionCollector()
-        let actor = createActor(
+        let actor = createReactor(
             GameWatcherMachine.make(),
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
         try? await Task.sleep(for: .milliseconds(100))
 
@@ -178,10 +178,10 @@ struct GameWatcherTests {
         }
         #expect(!watcherSnapshots.isEmpty)
 
-        let inspectorActor = collector.recordedEvents().contains {
+        let inspectorReactor = collector.recordedEvents().contains {
             $0.kind == .actor && $0.actor.machineId == BoardInspectorMachine.id(.occupancy)
         }
-        #expect(inspectorActor)
+        #expect(inspectorReactor)
 
         let latest = watcherSnapshots.last?.snapshot
         #expect(latest?.childCount == 2) // both board views; squares/pieces are off-inspector
@@ -197,9 +197,9 @@ struct GameWatcherTests {
         let inspect: @Sendable (InspectionEvent) -> Void = { event in
             gate.observe(recorder)(event)
         }
-        let actor = createActor(
+        let actor = createReactor(
             GameWatcherMachine.make(),
-            options: ActorOptions(inspect: inspect)
+            options: ReactorOptions(inspect: inspect)
         ).start()
         try? await Task.sleep(for: .milliseconds(100))
 
@@ -214,9 +214,9 @@ struct GameWatcherTests {
     @Test("inspection root id stays game-watcher after board spawns")
     func inspectionRootIdIsWatcher() async {
         let collector = InspectionCollector()
-        let actor = createActor(
+        let actor = createReactor(
             GameWatcherMachine.make(),
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
         try? await Task.sleep(for: .milliseconds(100))
 
@@ -228,9 +228,9 @@ struct GameWatcherTests {
     @Test("replay scrub restores game-watcher board from recorded inspection")
     func replayScrubRestoresBoard() async {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = createReactor(
             GameWatcherMachine.make(),
-            options: ActorOptions(inspect: recorder.observe())
+            options: ReactorOptions(inspect: recorder.observe())
         ).start()
         try? await Task.sleep(for: .milliseconds(100))
 
@@ -262,7 +262,7 @@ struct GameWatcherTests {
 
     @Test("opening line e4 e5 Nf3 produces expected SAN sequence")
     func openingLine() async {
-        let actor = createActor(GameWatcherMachine.make()).start()
+        let actor = createReactor(GameWatcherMachine.make()).start()
         try? await Task.sleep(for: .milliseconds(100))
 
         await tap(actor, row: 1, col: 4)
@@ -278,27 +278,27 @@ struct GameWatcherTests {
         #expect(actor.snapshot.context.plyCount == 3)
     }
 
-    private func tap(_ actor: Actor<GameWatcherContext>, row: Int, col: Int) async {
+    private func tap(_ actor:Reactor<GameWatcherContext>, row: Int, col: Int) async {
         actor.send(Event("TAP.\(row).\(col)"))
         try? await Task.sleep(for: .milliseconds(30))
     }
 
-    private func squareContext(_ actor: Actor<GameWatcherContext>, coord: String) -> SquareContext? {
-        guard let child = actor.childActor(id: BoardActorIds.square(coord)) as? MachineChildRef<SquareContext> else {
+    private func squareContext(_ actor:Reactor<GameWatcherContext>, coord: String) -> SquareContext? {
+        guard let child = actor.childReactor(id: BoardReactorIds.square(coord)) as? MachineChildRef<SquareContext> else {
             return nil
         }
         return child.actor.snapshot.context
     }
 
-    private func pieceContext(_ actor: Actor<GameWatcherContext>, id: String) -> PieceContext? {
-        guard let child = actor.childActor(id: BoardActorIds.piece(id: id)) as? MachineChildRef<PieceContext> else {
+    private func pieceContext(_ actor:Reactor<GameWatcherContext>, id: String) -> PieceContext? {
+        guard let child = actor.childReactor(id: BoardReactorIds.piece(id: id)) as? MachineChildRef<PieceContext> else {
             return nil
         }
         return child.actor.snapshot.context
     }
 
-    private func squareState(_ actor: Actor<GameWatcherContext>, coord: String) -> String? {
-        guard let child = actor.childActor(id: BoardActorIds.square(coord)) as? MachineChildRef<SquareContext> else {
+    private func squareState(_ actor:Reactor<GameWatcherContext>, coord: String) -> String? {
+        guard let child = actor.childReactor(id: BoardReactorIds.square(coord)) as? MachineChildRef<SquareContext> else {
             return nil
         }
         return child.actor.snapshot.value.description

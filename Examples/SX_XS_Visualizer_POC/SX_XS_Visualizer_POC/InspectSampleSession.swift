@@ -124,7 +124,7 @@ private final class ToggleRuntime: DemoRuntime {
     private let machine: StateMachine<EmptyContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<EmptyContext>?
+    private var actor:Reactor<EmptyContext>?
     private var bridge: InspectBridge?
     private(set) var stateLine = "inactive"
     private(set) var contextLine = "—"
@@ -144,7 +144,7 @@ private final class ToggleRuntime: DemoRuntime {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
-            let actor = createActor(machine, inspect: inspect)
+            let actor = createReactor(machine, inspect: inspect)
             self.actor = actor
             _ = actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
@@ -186,7 +186,7 @@ private final class CounterRuntime: DemoRuntime {
     private let machine: StateMachine<CounterContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<CounterContext>?
+    private var actor:Reactor<CounterContext>?
     private var bridge: InspectBridge?
     private(set) var stateLine = "ready"
     private(set) var contextLine = "count: 0"
@@ -206,7 +206,7 @@ private final class CounterRuntime: DemoRuntime {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
-            let actor = createActor(machine, inspect: inspect)
+            let actor = createReactor(machine, inspect: inspect)
             self.actor = actor
             _ = actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
@@ -249,7 +249,7 @@ private final class FeedbackRuntime: DemoRuntime {
     private let machine: StateMachine<FeedbackContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<FeedbackContext>?
+    private var actor:Reactor<FeedbackContext>?
     private var bridge: InspectBridge?
     private var draftFeedback = ""
     private(set) var stateLine = "prompt"
@@ -270,7 +270,7 @@ private final class FeedbackRuntime: DemoRuntime {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
-            let actor = createActor(machine, inspect: inspect)
+            let actor = createReactor(machine, inspect: inspect)
             self.actor = actor
             _ = actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
@@ -344,7 +344,7 @@ private final class TrafficLightRuntime: DemoRuntime {
     private let machine: StateMachine<EmptyContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<EmptyContext>?
+    private var actor:Reactor<EmptyContext>?
     private var bridge: InspectBridge?
     private(set) var stateLine = "green"
     private(set) var contextLine = "Nested pedestrian states under red"
@@ -364,7 +364,7 @@ private final class TrafficLightRuntime: DemoRuntime {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
-            let actor = createActor(machine, inspect: inspect)
+            let actor = createReactor(machine, inspect: inspect)
             self.actor = actor
             _ = actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
@@ -414,7 +414,7 @@ private final class CheckoutRuntime: DemoRuntime {
     private let machine: StateMachine<CheckoutContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<CheckoutContext>?
+    private var actor:Reactor<CheckoutContext>?
     private var bridge: InspectBridge?
     private(set) var stateLine = "idle"
     private(set) var contextLine = "order ORD-1001 · $149.99"
@@ -431,7 +431,7 @@ private final class CheckoutRuntime: DemoRuntime {
     }
 
     func start() {
-        bootActor()
+        bootReactor()
     }
 
     func stop() {
@@ -446,7 +446,7 @@ private final class CheckoutRuntime: DemoRuntime {
         bridge = nil
     }
 
-    private func bootActor() {
+    private func bootReactor() {
         actor?.stop()
         actor = nil
         do {
@@ -462,7 +462,7 @@ private final class CheckoutRuntime: DemoRuntime {
                 bridge = newBridge
                 inspect = newInspect
             }
-            let actor = createActor(machine, inspect: inspect)
+            let actor = createReactor(machine, inspect: inspect)
             self.actor = actor
             _ = actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
@@ -496,7 +496,7 @@ private final class CheckoutRuntime: DemoRuntime {
 
         var buttons: [DemoEventButton] = [
             DemoEventButton(id: "restart", label: "Restart") { [weak self] in
-                self?.bootActor()
+                self?.bootReactor()
             },
         ]
 

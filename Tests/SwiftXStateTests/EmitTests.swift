@@ -58,7 +58,7 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         _ = actor.on("notification") { collector.append($0) }
 
         actor.send(Event("GO"))
@@ -85,7 +85,7 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         _ = actor.on("*") { collector.append($0) }
 
         actor.send(Event("GO"))
@@ -114,7 +114,7 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         _ = actor.on("notification") { collector.append($0) }
 
         actor.send(Event("GO"))
@@ -135,7 +135,7 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         let subscription = actor.on("ping") { collector.append($0) }
 
         actor.send(Event("GO"))
@@ -170,8 +170,8 @@ struct EmitTests {
 
         let collector = EmittedEventCollector()
         let received = TestSignal()
-        let actor = createActor(parentMachine).start()
-        _ = actor.childActor(id: "worker")?.on("progress") {
+        let actor = createReactor(parentMachine).start()
+        _ = actor.childReactor(id: "worker")?.on("progress") {
             collector.append($0)
             received.fire()
         }
@@ -207,13 +207,13 @@ struct EmitTests {
 
         let collector = EmittedEventCollector()
         let received = TestSignal()
-        let actor = createActor(parentMachine).start()
-        _ = actor.childActor(id: "listener")?.on("armed") {
+        let actor = createReactor(parentMachine).start()
+        _ = actor.childReactor(id: "listener")?.on("armed") {
             collector.append($0)
             received.fire()
         }
 
-        actor.childActor(id: "listener")?.send(Event("ARM"))
+        actor.childReactor(id: "listener")?.send(Event("ARM"))
         await received.wait()
 
         #expect(collector.recorded().map(\.type) == ["armed"])
@@ -247,8 +247,8 @@ struct EmitTests {
 
         let collector = EmittedEventCollector()
         let received = TestSignal()
-        let actor = createActor(parentMachine).start()
-        _ = actor.childActor(id: "group")?.on("progress") {
+        let actor = createReactor(parentMachine).start()
+        _ = actor.childReactor(id: "group")?.on("progress") {
             collector.append($0)
             received.fire()
         }
@@ -271,7 +271,7 @@ struct EmitTests {
             ]
         ))
 
-        createActor(machine, options: ActorOptions(inspect: collector.observe())).start().send(Event("GO"))
+        createReactor(machine, options: ReactorOptions(inspect: collector.observe())).start().send(Event("GO"))
 
         #expect(collector.recordedEvents().contains { $0.kind == .action && $0.actionType == "xstate.emit" })
     }

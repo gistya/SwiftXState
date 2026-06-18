@@ -181,12 +181,12 @@ struct InspectorSendTests {
         """)
         #expect(store.isSimulatable("lights"))
         #expect(store.availableEvents(for: "lights") == ["NEXT"])
-        #expect(store.selectedActor?.stateValue == .atomic("green"))
+        #expect(store.selectedReactor?.stateValue == .atomic("green"))
 
         let feedBefore = store.feed.count
         store.send("NEXT", to: "lights")
-        #expect(store.selectedActor?.stateValue == .atomic("yellow"))
-        #expect(store.selectedActor?.lastEventType == "NEXT")
+        #expect(store.selectedReactor?.stateValue == .atomic("yellow"))
+        #expect(store.selectedReactor?.lastEventType == "NEXT")
         #expect(store.feed.count == feedBefore + 2) // event + snapshot rows
     }
 
@@ -194,7 +194,7 @@ struct InspectorSendTests {
     @MainActor
     func liveNotSimulatable() {
         let store = InspectorStore()
-        let ref = InspectionActorRef(sessionId: "live", machineId: "live")
+        let ref = InspectionReactorRef(sessionId: "live", machineId: "live")
         store.ingest(InspectionEvent(kind: .actor, rootId: "live", actor: ref))
         #expect(!store.isSimulatable("live"))
         #expect(store.availableEvents(for: "live").isEmpty)

@@ -64,7 +64,7 @@ final class TestSignal: @unchecked Sendable {
     }
 }
 
-extension Actor {
+extension Reactor {
     /// Awaits the first snapshot satisfying `predicate`, subscribing to the
     /// actor's snapshot stream so it resolves the instant the transition lands —
     /// no fixed delay. Returns the matching snapshot, or `nil` on timeout.

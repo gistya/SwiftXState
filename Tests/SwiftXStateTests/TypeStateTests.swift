@@ -103,7 +103,7 @@ private func makePlayer() -> StateMachine<PlayerContext> {
 struct TypeStateTests {
     @Test("TypedSnapshot matches StateID paths")
     func typedSnapshotMatches() {
-        let actor = createActor(makePlayer()).start()
+        let actor = createReactor(makePlayer()).start()
         let typed = actor.snapshot.typed(as: Mode.self)
 
         #expect(typed.inState(.playing))
@@ -112,9 +112,9 @@ struct TypeStateTests {
         #expect(!typed.inState(.stopped))
     }
 
-    @Test("TypedActor send returns branded snapshot")
-    func typedActorSend() {
-        let player = createActor(makePlayer()).typed(as: Mode.self)
+    @Test("TypedReactor send returns branded snapshot")
+    func typedReactorSend() {
+        let player = createReactor(makePlayer()).typed(as: Mode.self)
 
         #expect(player.start().inState(Mode.playing))
 
@@ -125,14 +125,14 @@ struct TypeStateTests {
 
     @Test("MachineSnapshot matches StateID overload")
     func snapshotStateIDOverload() {
-        let snapshot = createActor(makePlayer()).start().snapshot
+        let snapshot = createReactor(makePlayer()).start().snapshot
         #expect(snapshot.matches(Mode.playing))
         #expect(!snapshot.matches(Mode.stopped))
     }
 
     @Test("narrowed returns nil when state does not match")
     func narrowedFiltering() {
-        let typed = createActor(makePlayer()).start().snapshot.typed(as: Mode.self)
+        let typed = createReactor(makePlayer()).start().snapshot.typed(as: Mode.self)
 
         #expect(typed.narrowed(to: .playing) != nil)
         #expect(typed.narrowed(to: .stopped) == nil)
@@ -140,7 +140,7 @@ struct TypeStateTests {
 
     @Test("parallel region starts with all controls off")
     func controlsInitialState() {
-        let controls = createActor(makePlayer()).start().snapshot.typed(as: Controls.self)
+        let controls = createReactor(makePlayer()).start().snapshot.typed(as: Controls.self)
 
         #expect(controls.inState(.region))
         for control in Control.allCases {
@@ -152,7 +152,7 @@ struct TypeStateTests {
 
     @Test("toggling one control leaves the sibling parallel region untouched")
     func controlsToggleIndependently() {
-        let actor = createActor(makePlayer()).start()
+        let actor = createReactor(makePlayer()).start()
         actor.send(Event("SHUFFLE"))
 
         let controls = actor.snapshot.typed(as: Controls.self)
@@ -164,7 +164,7 @@ struct TypeStateTests {
 
     @Test("domain value reconstructs from StateValue via typed paths")
     func controlStatesFromStateValue() {
-        let actor = createActor(makePlayer()).start()
+        let actor = createReactor(makePlayer()).start()
         #expect(ControlStates(stateValue: actor.snapshot.value) == .allOff)
 
         actor.send(Event("REPEAT"))

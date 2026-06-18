@@ -3,19 +3,19 @@ import Testing
 @testable import SwiftXChess
 
 @Suite("Board actor primitives")
-struct BoardActorTests {
+struct BoardReactorTests {
     @Test("square ids use coord suffix")
     func squareIds() {
-        #expect(BoardActorIds.square("e4") == "square.e4")
-        #expect(BoardActorIds.square(Square(row: 1, col: 4)) == "square.e2")
-        #expect(BoardActorIds.coord(Square(row: 4, col: 4)) == "e5")
+        #expect(BoardReactorIds.square("e4") == "square.e4")
+        #expect(BoardReactorIds.square(Square(row: 1, col: 4)) == "square.e2")
+        #expect(BoardReactorIds.coord(Square(row: 4, col: 4)) == "e5")
     }
 
     @Test("piece ids use stable home notation")
     func pieceIds() {
         let id = PieceInstanceId.make(color: .white, kind: .pawn, home: Square(row: 1, col: 4))
         #expect(id.token == "wPe2")
-        #expect(BoardActorIds.piece(id: id.token) == "piece.wPe2")
+        #expect(BoardReactorIds.piece(id: id.token) == "piece.wPe2")
     }
 
     @Test("standard layout seeds 64 squares and 32 pieces")
@@ -29,7 +29,7 @@ struct BoardActorTests {
 
     @Test("square OCCUPY and CLEAR")
     func squareOccupyClear() async {
-        let actor = createActor(SquareActorMachine.machine)
+        let actor = createReactor(SquareReactorMachine.machine)
             .start(context: SquareContext(coord: "e4", occupantId: nil))
 
         #expect(actor.snapshot.matches("empty"))
@@ -47,7 +47,7 @@ struct BoardActorTests {
 
     @Test("piece MOVE_TO and CAPTURED")
     func pieceMoveCaptured() async {
-        let actor = createActor(PieceActorMachine.machine)
+        let actor = createReactor(PieceReactorMachine.machine)
             .start(context: PieceContext(pieceId: "wPe2", kind: .pawn, color: .white, square: "e2"))
 
         #expect(actor.snapshot.matches("alive"))

@@ -46,7 +46,7 @@ struct DoneStateTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("NEXT"))
         actor.send(Event("DONE"))
 
@@ -86,7 +86,7 @@ struct DoneStateTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("FOO_DONE"))
         #expect(actor.snapshot.matches("work"))
         #expect(actor.snapshot.status == .active)
@@ -110,7 +110,7 @@ struct DoneStateTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("FINISH"))
 
         #expect(actor.snapshot.status == .done)
@@ -133,7 +133,7 @@ struct DoneStateTests {
             }
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("FINISH"))
 
         #expect(actor.snapshot.status == .done)

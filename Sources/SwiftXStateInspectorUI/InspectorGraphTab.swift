@@ -6,7 +6,7 @@ import SwiftXStateGraph
 /// Graphs the selected actor by parsing its `definitionJSON` and highlighting its live
 /// `stateValue` — no typed `StateMachine`/`Actor` needed.
 struct InspectorGraphTab: View {
-    let actor: ActorEntry?
+    let actor:ReactorEntry?
     var graphStyle: GraphStyle = .dark
 
     var body: some View {

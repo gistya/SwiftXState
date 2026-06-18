@@ -25,7 +25,7 @@ public struct TypedSnapshot<Context: Sendable, Brand: StateID>: Sendable {
     public var value: StateValue { raw.value }
     public var tags: Set<String> { raw.tags }
     public var status: SnapshotStatus { raw.status }
-    public var children: [String: ChildActorSnapshot] { raw.children }
+    public var children: [String: ChildReactorSnapshot] { raw.children }
 
     public func getMeta() -> [String: [String: SendableValue]] {
         raw.getMeta()
@@ -49,10 +49,10 @@ public struct TypedSnapshot<Context: Sendable, Brand: StateID>: Sendable {
 }
 
 /// Phantom-branded wrapper around `Actor` sharing the same state brand as `TypedSnapshot`.
-public struct TypedActor<Context: Sendable, Brand: StateID>: Sendable {
-    public let actor: Actor<Context>
+public struct TypedReactor<Context: Sendable, Brand: StateID>: Sendable {
+    public let actor: Reactor<Context>
 
-    public init(_ actor: Actor<Context>) {
+    public init(_ actor: Reactor<Context>) {
         self.actor = actor
     }
 
@@ -83,9 +83,9 @@ public extension MachineSnapshot {
     }
 }
 
-public extension Actor {
-    func typed<Brand: StateID>(as _: Brand.Type = Brand.self) -> TypedActor<Context, Brand> {
-        TypedActor(self)
+public extension Reactor {
+    func typed<Brand: StateID>(as _: Brand.Type = Brand.self) -> TypedReactor<Context, Brand> {
+        TypedReactor(self)
     }
 }
 

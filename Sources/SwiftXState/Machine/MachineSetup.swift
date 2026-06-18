@@ -10,13 +10,13 @@ public struct MachineSetup<Context: Sendable> {
     /// Named delays (ms) for `after:` transitions referenced by name.
     public var delays: [String: @Sendable (ActionArgs<Context>) -> Int]
     /// Named actor logic for `invoke`/`spawn`.
-    public var actors: [String: ActorLogicEntry]
+    public var actors: [String: ReactorLogicEntry]
 
     public init(
         actions: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Void] = [:],
         guards: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Bool] = [:],
         delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-        actors: [String: ActorLogicEntry] = [:]
+        actors: [String: ReactorLogicEntry] = [:]
     ) {
         self.actions = actions
         self.guards = guards
@@ -29,7 +29,7 @@ public struct MachineSetup<Context: Sendable> {
         actions legacyActions: [String: @Sendable (ActionArgs<Context>) -> Void] = [:],
         guards legacyGuards: [String: @Sendable (ActionArgs<Context>) -> Bool] = [:],
         delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-        actors: [String: ActorLogicEntry] = [:]
+        actors: [String: ReactorLogicEntry] = [:]
     ) {
         self.actions = wrapLegacyActions(legacyActions)
         self.guards = wrapLegacyGuards(legacyGuards)
@@ -76,7 +76,7 @@ public func setup<Context: Sendable>(
     actions legacyActions: [String: @Sendable (ActionArgs<Context>) -> Void] = [:],
     guards legacyGuards: [String: @Sendable (ActionArgs<Context>) -> Bool] = [:],
     delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-    actors: [String: ActorLogicEntry] = [:]
+    actors: [String: ReactorLogicEntry] = [:]
 ) -> MachineSetup<Context> {
     MachineSetup(
         actions: legacyActions,

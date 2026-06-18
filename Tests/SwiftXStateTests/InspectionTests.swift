@@ -15,9 +15,9 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
 
         let kinds = collector.recordedEvents().map(\.kind)
@@ -43,7 +43,7 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(machine, options: ActorOptions(inspect: collector.observe())).start()
+        let actor = createReactor(machine, options: ReactorOptions(inspect: collector.observe())).start()
 
         let registration = collector.recordedEvents().first {
             $0.kind == .actor && $0.actor.sessionId == actor.id
@@ -68,9 +68,9 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
         collector.reset()
 
@@ -95,9 +95,9 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = createReactor(
             machine,
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
         collector.reset()
 
@@ -130,24 +130,24 @@ struct InspectionTests {
                     invoke: [
                         InvokeConfig(
                             id: "pay",
-                            src: .machine(MachineActorLogicBox(childMachine) { _ in EmptyContext() })
+                            src: .machine(MachineReactorLogicBox(childMachine) { _ in EmptyContext() })
                         ),
                     ]
                 ),
             ]
         ))
 
-        _ = createActor(
+        _ = createReactor(
             machine,
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
 
         let actorEvents = collector.recordedEvents().filter { $0.kind == .actor }
         #expect(actorEvents.contains { $0.actor.sessionId == "pay" && $0.actor.machineId == "payment" })
 
-        let paymentActor = actorEvents.first { $0.actor.sessionId == "pay" }
-        #expect(paymentActor?.definitionJSON != nil)
-        #expect(paymentActor?.definitionJSON?.contains("payment") == true)
+        let paymentReactor = actorEvents.first { $0.actor.sessionId == "pay" }
+        #expect(paymentReactor?.definitionJSON != nil)
+        #expect(paymentReactor?.definitionJSON?.contains("payment") == true)
     }
 
     @Test("emits actor event when spawning invoked child")
@@ -172,9 +172,9 @@ struct InspectionTests {
             ]
         ))
 
-        _ = createActor(
+        _ = createReactor(
             machine,
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
 
         let actorEvents = collector.recordedEvents().filter { $0.kind == .actor }
@@ -216,9 +216,9 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = createReactor(
             parentMachine,
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
 
         let events = collector.recordedEvents()
@@ -263,9 +263,9 @@ struct InspectionTests {
             ]
         ))
 
-        _ = createActor(
+        _ = createReactor(
             parentMachine,
-            options: ActorOptions(inspect: collector.observe())
+            options: ReactorOptions(inspect: collector.observe())
         ).start()
 
         let hiddenEvents = collector.recordedEvents().filter { $0.actor.sessionId == "hidden" }
@@ -289,7 +289,7 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         _ = actor.actorSystem.inspect(collector.observe())
         collector.reset()
 
@@ -302,7 +302,7 @@ struct InspectionTests {
     func consoleLine() {
         let event = InspectionEvent.transition(
             rootId: "root",
-            actor: InspectionActorRef(sessionId: "root", machineId: "app"),
+            actor: InspectionReactorRef(sessionId: "root", machineId: "app"),
             triggeringEvent: Event("GO"),
             machineSnapshot: MachineSnapshot(
                 machine: createMachine(MachineConfig(initial: "done", context: EmptyContext(), states: ["done": StateNodeConfig()])),

@@ -374,8 +374,8 @@ private struct ChessMoveListCard: View {
     }
 
     private func moveDescription(_ move: ChessMove) -> String {
-        let from = BoardActorIds.coord(move.from)
-        let to = BoardActorIds.coord(move.to)
+        let from = BoardReactorIds.coord(move.from)
+        let to = BoardReactorIds.coord(move.to)
         return "\(from)→\(to)"
     }
 }

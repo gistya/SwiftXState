@@ -21,7 +21,7 @@ public final class InspectBridge: Sendable {
         )
     }
 
-    /// Returns an observer suitable for `ActorOptions.inspect` or `ActorSystem.inspect`.
+    /// Returns an observer suitable for `ReactorOptions.inspect` or `Reactor.System.inspect`.
     public func observe() -> @Sendable (InspectionEvent) -> Void {
         { [state, configuration] event in
             guard configuration.isEnabled else { return }

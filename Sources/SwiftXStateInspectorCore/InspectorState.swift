@@ -12,8 +12,8 @@ import SwiftXState
 ///
 /// Keeping the logic here means the native and web inspectors can never drift apart.
 public struct InspectorState {
-    /// Actors in registration order.
-    public private(set) var actors: [ActorEntry] = []
+    ///Reactors in registration order.
+    public private(set) var actors: [ReactorEntry] = []
     /// Chronological event feed (oldest first), capped at `feedCap`.
     public private(set) var feed: [FeedEntry] = []
     /// Currently selected actor (drives the State/Events/Graph tabs).
@@ -34,7 +34,7 @@ public struct InspectorState {
 
     /// Ingest a single inspection event.
     public mutating func ingest(_ event: InspectionEvent) {
-        upsertActor(from: event)
+        upsertReactor(from: event)
 
         seq += 1
         feed.append(FeedEntry(id: seq, event: event))
@@ -57,14 +57,14 @@ public struct InspectorState {
         registrationOrder = 0
     }
 
-    private mutating func upsertActor(from event: InspectionEvent) {
+    private mutating func upsertReactor(from event: InspectionEvent) {
         let ref = event.actor
-        var entry: ActorEntry
+        var entry:ReactorEntry
         if let idx = actorIndex[ref.sessionID] {
             entry = actors[idx]
         } else {
             registrationOrder += 1
-            entry = ActorEntry(sessionID: ref.sessionID, order: registrationOrder)
+            entry = ReactorEntry(sessionID: ref.sessionID, order: registrationOrder)
         }
 
         if let machineID = ref.machineID { entry.machineID = machineID }
@@ -116,7 +116,7 @@ public struct InspectorState {
               let current = entry.stateValue,
               let next = simulator.step(from: current, event: event) else { return }
 
-        let ref = InspectionActorRef(sessionId: entry.sessionID, systemId: entry.systemID, machineId: entry.machineID)
+        let ref = InspectionReactorRef(sessionId: entry.sessionID, systemId: entry.systemID, machineId: entry.machineID)
         ingest(InspectionEvent(
             kind: .event, rootId: entry.sessionID, actor: ref,
             event: InspectionEventDescription(type: event)
@@ -147,11 +147,11 @@ public struct InspectorState {
 
     // MARK: Lookups
 
-    public func actor(_ sessionID: String) -> ActorEntry? {
+    public func actor(_ sessionID: String) ->ReactorEntry? {
         actorIndex[sessionID].map { actors[$0] }
     }
 
-    public var selectedActor: ActorEntry? {
+    public var selectedReactor:ReactorEntry? {
         selectedSessionID.flatMap(actor)
     }
 
@@ -162,12 +162,12 @@ public struct InspectorState {
     }
 
     /// Direct children of an actor, in registration order.
-    public func children(of sessionID: String) -> [ActorEntry] {
+    public func children(of sessionID: String) -> [ReactorEntry] {
         actors.filter { $0.parentSessionID == sessionID }
     }
 
     /// Root actors (no known parent in the registry).
-    public var rootActors: [ActorEntry] {
+    public var rootReactors: [ReactorEntry] {
         actors.filter { entry in
             guard let parent = entry.parentSessionID else { return true }
             return actorIndex[parent] == nil
@@ -175,15 +175,15 @@ public struct InspectorState {
     }
 
     /// Flattened parent→child ordering with indentation depth, for the sidebar list.
-    public func actorTree() -> [(actor: ActorEntry, depth: Int)] {
-        var out: [(ActorEntry, Int)] = []
-        func visit(_ entry: ActorEntry, depth: Int) {
+    public func actorTree() -> [(actor:ReactorEntry, depth: Int)] {
+        var out: [(ReactorEntry, Int)] = []
+        func visit(_ entry:ReactorEntry, depth: Int) {
             out.append((entry, depth))
             for child in children(of: entry.sessionID) {
                 visit(child, depth: depth + 1)
             }
         }
-        for root in rootActors { visit(root, depth: 0) }
+        for root in rootReactors { visit(root, depth: 0) }
         return out
     }
 }

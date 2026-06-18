@@ -4,7 +4,7 @@ import SwiftData
 
 /// SwiftData model storing a persisted actor snapshot blob.
 @Model
-public final class ActorSnapshotRecord {
+public final class ReactorSnapshotRecord {
     @Attribute(.unique) public var key: String
     public var machineId: String
     public var snapshotData: Data

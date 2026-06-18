@@ -4,7 +4,7 @@ import SwiftXState
 
 /// The actor selector sidebar: a hierarchical list of every actor on the stream, each
 /// with a state pill and status dot. Tapping selects it (drives the Graph/State tabs).
-struct InspectorActorListView: View {
+struct InspectorReactorListView: View {
     let store: InspectorStore
     @Environment(\.inspectorStyle) private var style
 
@@ -41,7 +41,7 @@ struct InspectorActorListView: View {
     }
 
     @ViewBuilder
-    private func row(_ actor: ActorEntry, depth: Int) -> some View {
+    private func row(_ actor:ReactorEntry, depth: Int) -> some View {
         let selected = store.selectedSessionID == actor.sessionID
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {

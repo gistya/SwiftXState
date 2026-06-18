@@ -20,7 +20,7 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("anything"))
 
         #expect(actor.snapshot.matches("awake"))
@@ -41,7 +41,7 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("GO"))
 
         #expect(actor.snapshot.matches("handled"))
@@ -65,7 +65,7 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("GO"))
 
         #expect(actor.snapshot.matches("caught"))
@@ -84,7 +84,7 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("feedback.good"))
 
         #expect(actor.snapshot.matches("form"))
@@ -103,7 +103,7 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("feedback"))
 
         #expect(actor.snapshot.matches("form"))
@@ -122,7 +122,7 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = createReactor(machine).start()
         actor.send(Event("other"))
 
         #expect(actor.snapshot.matches("prompt"))

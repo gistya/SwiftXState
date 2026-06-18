@@ -28,7 +28,7 @@ struct PersistenceTests {
     @Test("getPersistedSnapshot round-trips through restoreSnapshot")
     func roundTrip() throws {
         let machine = counterMachine
-        let actor = createActor(machine).start(context: PersistCounterContext(count: 0))
+        let actor = createReactor(machine).start(context: PersistCounterContext(count: 0))
         actor.send(Event("INC"))
         actor.send(Event("INC"))
 
@@ -44,62 +44,62 @@ struct PersistenceTests {
     @Test("actor starts from persisted snapshot and continues transitioning")
     func startFromPersisted() throws {
         let machine = counterMachine
-        let original = createActor(machine).start(context: PersistCounterContext(count: 0))
+        let original = createReactor(machine).start(context: PersistCounterContext(count: 0))
         original.send(Event("INC"))
         let persisted = try original.getPersistedSnapshot()
 
-        let restoredActor = createActor(machine).start(from: persisted)
+        let restoredReactor = createReactor(machine).start(from: persisted)
 
-        #expect(restoredActor.snapshot.context.count == 1)
-        #expect(restoredActor.snapshot.matches("idle"))
+        #expect(restoredReactor.snapshot.context.count == 1)
+        #expect(restoredReactor.snapshot.matches("idle"))
 
-        restoredActor.send(Event("INC"))
-        restoredActor.send(Event("DONE"))
+        restoredReactor.send(Event("INC"))
+        restoredReactor.send(Event("DONE"))
 
-        #expect(restoredActor.snapshot.matches("finished"))
-        #expect(restoredActor.snapshot.context.count == 2)
-        #expect(restoredActor.snapshot.status == .done)
+        #expect(restoredReactor.snapshot.matches("finished"))
+        #expect(restoredReactor.snapshot.context.count == 2)
+        #expect(restoredReactor.snapshot.status == .done)
     }
 
-    @Test("createActor with snapshot hydrates in one step")
-    func createActorWithSnapshot() throws {
+    @Test("createReactor with snapshot hydrates in one step")
+    func createReactorWithSnapshot() throws {
         let machine = counterMachine
-        let original = createActor(machine).start(context: PersistCounterContext(count: 0))
+        let original = createReactor(machine).start(context: PersistCounterContext(count: 0))
         original.send(Event("INC"))
         original.send(Event("INC"))
         let persisted = try original.getPersistedSnapshot()
 
-        let restoredActor = createActor(machine, snapshot: persisted)
+        let restoredReactor = createReactor(machine, snapshot: persisted)
 
-        #expect(restoredActor.snapshot.context.count == 2)
-        #expect(restoredActor.snapshot.matches("idle"))
-        #expect(restoredActor.snapshot.status == .active)
+        #expect(restoredReactor.snapshot.context.count == 2)
+        #expect(restoredReactor.snapshot.matches("idle"))
+        #expect(restoredReactor.snapshot.status == .active)
 
-        restoredActor.send(Event("DONE"))
-        #expect(restoredActor.snapshot.matches("finished"))
-        #expect(restoredActor.snapshot.status == .done)
+        restoredReactor.send(Event("DONE"))
+        #expect(restoredReactor.snapshot.matches("finished"))
+        #expect(restoredReactor.snapshot.status == .done)
     }
 
-    @Test("createActor with snapshot accepts context override")
-    func createActorWithSnapshotContextOverride() throws {
+    @Test("createReactor with snapshot accepts context override")
+    func createReactorWithSnapshotContextOverride() throws {
         let machine = counterMachine
-        let original = createActor(machine).start(context: PersistCounterContext(count: 0))
+        let original = createReactor(machine).start(context: PersistCounterContext(count: 0))
         original.send(Event("INC"))
         let persisted = try original.getPersistedSnapshot()
 
-        let restoredActor = createActor(
+        let restoredReactor = createReactor(
             machine,
             snapshot: persisted,
             context: PersistCounterContext(count: 99)
         )
 
-        #expect(restoredActor.snapshot.context.count == 99)
-        #expect(restoredActor.snapshot.matches("idle"))
+        #expect(restoredReactor.snapshot.context.count == 99)
+        #expect(restoredReactor.snapshot.matches("idle"))
     }
 
     @Test("persisted JSON survives encode and decode")
     func jsonRoundTrip() throws {
-        let actor = createActor(counterMachine).start(context: PersistCounterContext(count: 3))
+        let actor = createReactor(counterMachine).start(context: PersistCounterContext(count: 3))
         actor.send(Event("INC"))
 
         let persisted = try actor.getPersistedSnapshot()
@@ -143,17 +143,17 @@ struct PersistenceTests {
                     invoke: [
                         InvokeConfig(
                             id: "worker",
-                            src: .machine(MachineActorLogicBox(childMachine))
+                            src: .machine(MachineReactorLogicBox(childMachine))
                         ),
                     ]
                 ),
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("GO"))
-        actor.childActor(id: "worker")?.send(Event("INC"))
-        actor.childActor(id: "worker")?.send(Event("INC"))
+        actor.childReactor(id: "worker")?.send(Event("INC"))
+        actor.childReactor(id: "worker")?.send(Event("INC"))
 
         let persisted = try actor.getPersistedSnapshot()
         #expect(persisted.children["worker"] != nil)
@@ -167,8 +167,8 @@ struct PersistenceTests {
             Issue.record("Expected machine child snapshot")
         }
 
-        let restored = createActor(parentMachine).start(from: persisted)
-        guard let child = restored.childActor(id: "worker") as? MachineChildRef<WorkerContext> else {
+        let restored = createReactor(parentMachine).start(from: persisted)
+        guard let child = restored.childReactor(id: "worker") as? MachineChildRef<WorkerContext> else {
             Issue.record("Expected restored machine child")
             return
         }
@@ -179,7 +179,7 @@ struct PersistenceTests {
 
     @Test("backward compatible persisted JSON without children field")
     func legacyPersistedJSON() throws {
-        let actor = createActor(counterMachine).start(context: PersistCounterContext(count: 1))
+        let actor = createReactor(counterMachine).start(context: PersistCounterContext(count: 1))
         let persisted = try actor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
 
@@ -230,7 +230,7 @@ struct PersistenceTests {
                     invoke: [
                         InvokeConfig(
                             id: "leaf",
-                            src: .machine(MachineActorLogicBox(leafMachine))
+                            src: .machine(MachineReactorLogicBox(leafMachine))
                         ),
                     ]
                 ),
@@ -247,23 +247,23 @@ struct PersistenceTests {
                     invoke: [
                         InvokeConfig(
                             id: "mid",
-                            src: .machine(MachineActorLogicBox(midMachine))
+                            src: .machine(MachineReactorLogicBox(midMachine))
                         ),
                     ]
                 ),
             ]
         ))
 
-        let actor = createActor(rootMachine).start()
+        let actor = createReactor(rootMachine).start()
         actor.send(Event("GO"))
-        guard let midChild = actor.childActor(id: "mid") as? MachineChildRef<MidContext> else {
+        guard let midChild = actor.childReactor(id: "mid") as? MachineChildRef<MidContext> else {
             Issue.record("Expected mid child actor")
             return
         }
         midChild.send(Event("GO"))
-        midChild.actor.childActor(id: "leaf")?.send(Event("INC"))
-        midChild.actor.childActor(id: "leaf")?.send(Event("INC"))
-        midChild.actor.childActor(id: "leaf")?.send(Event("INC"))
+        midChild.actor.childReactor(id: "leaf")?.send(Event("INC"))
+        midChild.actor.childReactor(id: "leaf")?.send(Event("INC"))
+        midChild.actor.childReactor(id: "leaf")?.send(Event("INC"))
 
         let persisted = try actor.getPersistedSnapshot()
         if case let .machine(midPersisted) = persisted.children["mid"],
@@ -277,9 +277,9 @@ struct PersistenceTests {
             Issue.record("Expected nested machine child snapshots")
         }
 
-        let restored = createActor(rootMachine).start(from: persisted)
-        guard let mid = restored.childActor(id: "mid") as? MachineChildRef<MidContext>,
-              let leaf = mid.actor.childActor(id: "leaf") as? MachineChildRef<LeafContext> else {
+        let restored = createReactor(rootMachine).start(from: persisted)
+        guard let mid = restored.childReactor(id: "mid") as? MachineChildRef<MidContext>,
+              let leaf = mid.actor.childReactor(id: "leaf") as? MachineChildRef<LeafContext> else {
             Issue.record("Expected restored nested machine children")
             return
         }
@@ -333,7 +333,7 @@ struct PersistenceTests {
                     invoke: [
                         InvokeConfig(
                             id: "workerA",
-                            src: .machine(MachineActorLogicBox(workerAMachine))
+                            src: .machine(MachineReactorLogicBox(workerAMachine))
                         ),
                     ]
                 ),
@@ -341,7 +341,7 @@ struct PersistenceTests {
                     invoke: [
                         InvokeConfig(
                             id: "workerB",
-                            src: .machine(MachineActorLogicBox(workerBMachine))
+                            src: .machine(MachineReactorLogicBox(workerBMachine))
                         ),
                     ]
                 ),
@@ -349,16 +349,16 @@ struct PersistenceTests {
             type: .parallel
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "workerA")?.send(Event("INC"))
-        actor.childActor(id: "workerB")?.send(Event("INC"))
-        actor.childActor(id: "workerB")?.send(Event("INC"))
+        let actor = createReactor(parentMachine).start()
+        actor.childReactor(id: "workerA")?.send(Event("INC"))
+        actor.childReactor(id: "workerB")?.send(Event("INC"))
+        actor.childReactor(id: "workerB")?.send(Event("INC"))
 
         let persisted = try actor.getPersistedSnapshot()
-        let restored = createActor(parentMachine).start(from: persisted)
+        let restored = createReactor(parentMachine).start(from: persisted)
 
-        guard let workerA = restored.childActor(id: "workerA") as? MachineChildRef<WorkerContext>,
-              let workerB = restored.childActor(id: "workerB") as? MachineChildRef<WorkerContext> else {
+        guard let workerA = restored.childReactor(id: "workerA") as? MachineChildRef<WorkerContext>,
+              let workerB = restored.childReactor(id: "workerB") as? MachineChildRef<WorkerContext> else {
             Issue.record("Expected restored parallel machine children")
             return
         }
@@ -398,7 +398,7 @@ struct PersistenceTests {
                 "idle": StateNodeConfig(
                     entry: [
                         .spawn(SpawnRef(
-                            src: .machine(MachineActorLogicBox(childMachine)),
+                            src: .machine(MachineReactorLogicBox(childMachine)),
                             id: "spawnedWorker"
                         )),
                     ]
@@ -406,14 +406,14 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "spawnedWorker")?.send(Event("INC"))
-        actor.childActor(id: "spawnedWorker")?.send(Event("INC"))
+        let actor = createReactor(parentMachine).start()
+        actor.childReactor(id: "spawnedWorker")?.send(Event("INC"))
+        actor.childReactor(id: "spawnedWorker")?.send(Event("INC"))
 
         let persisted = try actor.getPersistedSnapshot()
-        let restored = createActor(parentMachine).start(from: persisted)
+        let restored = createReactor(parentMachine).start(from: persisted)
 
-        guard let child = restored.childActor(id: "spawnedWorker") as? MachineChildRef<ChildContext> else {
+        guard let child = restored.childReactor(id: "spawnedWorker") as? MachineChildRef<ChildContext> else {
             Issue.record("Expected restored spawned machine child")
             return
         }
@@ -421,7 +421,7 @@ struct PersistenceTests {
         #expect(child.actor.snapshot.context.count == 2)
     }
 
-    @Test("restoring done child does not re-emit DoneActorEvent")
+    @Test("restoring done child does not re-emit DoneReactorEvent")
     func restoredDoneChildDoesNotReemit() throws {
         struct ChildContext: Sendable, Equatable, Codable {
             var value: String
@@ -448,26 +448,26 @@ struct PersistenceTests {
                 "idle": StateNodeConfig(on: ["GO": .to("working")]),
                 "working": StateNodeConfig(
                     on: [
-                        createDoneActorEventType("worker"): .single(TransitionConfig(
+                        createDoneReactorEventType("worker"): .single(TransitionConfig(
                             actions: [assign { ctx, _ in ctx.doneCount += 1 }]
                         )),
                     ],
                     invoke: [
                         InvokeConfig(
                             id: "worker",
-                            src: .machine(MachineActorLogicBox(childMachine))
+                            src: .machine(MachineReactorLogicBox(childMachine))
                         ),
                     ]
                 ),
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("GO"))
         #expect(actor.snapshot.context.doneCount == 1)
 
         let persisted = try actor.getPersistedSnapshot()
-        let restored = createActor(parentMachine).start(from: persisted)
+        let restored = createReactor(parentMachine).start(from: persisted)
 
         #expect(restored.snapshot.context.doneCount == 1)
         #expect(restored.snapshot.matches("working"))
@@ -499,7 +499,7 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = createReactor(parentMachine).start()
         actor.send(Event("GO"))
 
         let activePersisted = try actor.getPersistedSnapshot()
@@ -519,7 +519,7 @@ struct PersistenceTests {
             states: ["idle": StateNodeConfig()]
         ))
 
-        let actor = createActor(counterMachine).start()
+        let actor = createReactor(counterMachine).start()
         let persisted = try actor.getPersistedSnapshot()
 
         #expect(throws: PersistenceError.machineMismatch(expected: "counter", actual: "other")) {

@@ -2,7 +2,7 @@ import Foundation
 import SwiftXState
 
 /// A tracked actor, accumulated from the inspection stream. One per `sessionId`.
-public struct ActorEntry: Identifiable, Sendable {
+public struct ReactorEntry: Identifiable, Sendable {
     public let sessionID: String
     public var machineID: String?
     public var systemID: String?
@@ -51,7 +51,7 @@ public struct FeedEntry: Identifiable, Sendable {
     public var snapshot: InspectionSnapshot? { event.snapshot }
 }
 
-public extension InspectionActorRef {
+public extension InspectionReactorRef {
     var sessionID: String { sessionId }
     var machineID: String? { machineId }
     var systemID: String? { systemId }
