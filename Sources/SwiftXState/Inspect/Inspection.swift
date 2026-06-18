@@ -2,7 +2,7 @@ import Foundation
 
 /// Inspection event kinds, aligned with XState's `@xstate.*` protocol.
 public enum InspectionEventKind: String, Sendable, Equatable, Codable {
-    case actor = "@xstate.actor"
+    case reactor = "@xstate.reactor"
     case event = "@xstate.event"
     case snapshot = "@xstate.snapshot"
     case transition = "@xstate.transition"
@@ -10,7 +10,7 @@ public enum InspectionEventKind: String, Sendable, Equatable, Codable {
     case action = "@xstate.action"
 }
 
-/// A stable reference to an actor within an inspection stream.
+/// A stable reference to an reactor within an inspection stream.
 public struct InspectionReactorRef: Sendable, Equatable, Hashable, Codable {
     public let sessionId: String
     public let systemId: String?
@@ -114,7 +114,7 @@ public struct InspectionTransitionInfo: Sendable, Equatable, Codable {
 
 /// Serializable snapshot description for inspection transports.
 public struct InspectionSnapshot: Sendable, Equatable, Codable {
-    public let actor: InspectionReactorRef
+    public let reactor: InspectionReactorRef
     public let status: SnapshotStatus
     public let value: String
     public let stateValue: StateValue
@@ -127,7 +127,7 @@ public struct InspectionSnapshot: Sendable, Equatable, Codable {
     public let error: JSONValue?
 
     public init(
-        actor: InspectionReactorRef,
+        reactor: InspectionReactorRef,
         status: SnapshotStatus,
         value: String,
         stateValue: StateValue,
@@ -139,7 +139,7 @@ public struct InspectionSnapshot: Sendable, Equatable, Codable {
         output: JSONValue? = nil,
         error: JSONValue? = nil
     ) {
-        self.actor = actor
+        self.reactor = reactor
         self.status = status
         self.value = value
         self.stateValue = stateValue
@@ -154,10 +154,10 @@ public struct InspectionSnapshot: Sendable, Equatable, Codable {
 
     public static func from<Context>(
         _ snapshot: MachineSnapshot<Context>,
-        actor: InspectionReactorRef
+        reactor: InspectionReactorRef
     ) -> InspectionSnapshot {
         InspectionSnapshot(
-            actor: actor,
+            reactor: reactor,
             status: snapshot.status,
             value: snapshot.value.description,
             stateValue: snapshot.value,
@@ -176,7 +176,7 @@ public struct InspectionSnapshot: Sendable, Equatable, Codable {
 public struct InspectionEvent: Sendable, Equatable, Codable {
     public let kind: InspectionEventKind
     public let rootId: String
-    public let actor: InspectionReactorRef
+    public let reactor: InspectionReactorRef
     public let source: InspectionReactorRef?
     public let event: InspectionEventDescription?
     public let snapshot: InspectionSnapshot?
@@ -189,7 +189,7 @@ public struct InspectionEvent: Sendable, Equatable, Codable {
     public init(
         kind: InspectionEventKind,
         rootId: String,
-        actor: InspectionReactorRef,
+        reactor: InspectionReactorRef,
         source: InspectionReactorRef? = nil,
         event: InspectionEventDescription? = nil,
         snapshot: InspectionSnapshot? = nil,
@@ -201,7 +201,7 @@ public struct InspectionEvent: Sendable, Equatable, Codable {
     ) {
         self.kind = kind
         self.rootId = rootId
-        self.actor = actor
+        self.reactor = reactor
         self.source = source
         self.event = event
         self.snapshot = snapshot
@@ -216,17 +216,17 @@ public struct InspectionEvent: Sendable, Equatable, Codable {
 // MARK: - Factories
 
 extension InspectionEvent {
-    public static func actor(
+    public static func reactor(
         rootId: String,
-        actor: InspectionReactorRef,
+        reactor: InspectionReactorRef,
         parentSessionId: String? = nil,
         registrationSnapshot: InspectionSnapshot? = nil,
         definitionJSON: String? = nil
     ) -> InspectionEvent {
         InspectionEvent(
-            kind: .actor,
+            kind: .reactor,
             rootId: rootId,
-            actor: actor,
+            reactor: reactor,
             snapshot: registrationSnapshot,
             parentSessionId: parentSessionId,
             definitionJSON: definitionJSON
@@ -235,14 +235,14 @@ extension InspectionEvent {
 
     public static func event(
         rootId: String,
-        actor: InspectionReactorRef,
+        reactor: InspectionReactorRef,
         source: InspectionReactorRef?,
         event: any Eventable
     ) -> InspectionEvent {
         InspectionEvent(
             kind: .event,
             rootId: rootId,
-            actor: actor,
+            reactor: reactor,
             source: source,
             event: .describe(event)
         )
@@ -250,44 +250,44 @@ extension InspectionEvent {
 
     public static func snapshot<Context>(
         rootId: String,
-        actor: InspectionReactorRef,
+        reactor: InspectionReactorRef,
         triggeringEvent: any Eventable,
         machineSnapshot: MachineSnapshot<Context>
     ) -> InspectionEvent {
         InspectionEvent(
             kind: .snapshot,
             rootId: rootId,
-            actor: actor,
+            reactor: reactor,
             event: .describe(triggeringEvent),
-            snapshot: .from(machineSnapshot, actor: actor)
+            snapshot: .from(machineSnapshot, reactor: reactor)
         )
     }
 
     public static func transition<Context>(
         rootId: String,
-        actor: InspectionReactorRef,
+        reactor: InspectionReactorRef,
         triggeringEvent: any Eventable,
         machineSnapshot: MachineSnapshot<Context>
     ) -> InspectionEvent {
         InspectionEvent(
             kind: .transition,
             rootId: rootId,
-            actor: actor,
+            reactor: reactor,
             event: .describe(triggeringEvent),
-            snapshot: .from(machineSnapshot, actor: actor)
+            snapshot: .from(machineSnapshot, reactor: reactor)
         )
     }
 
     public static func action(
         rootId: String,
-        actor: InspectionReactorRef,
+        reactor: InspectionReactorRef,
         actionType: String,
         triggeringEvent: any Eventable
     ) -> InspectionEvent {
         InspectionEvent(
             kind: .action,
             rootId: rootId,
-            actor: actor,
+            reactor: reactor,
             event: .describe(triggeringEvent),
             actionType: actionType
         )
@@ -295,7 +295,7 @@ extension InspectionEvent {
 
     public static func microstep<Context>(
         rootId: String,
-        actor: InspectionReactorRef,
+        reactor: InspectionReactorRef,
         triggeringEvent: InspectionEventDescription,
         machineSnapshot: MachineSnapshot<Context>,
         transitions: [ResolvedTransition<Context>]
@@ -303,9 +303,9 @@ extension InspectionEvent {
         InspectionEvent(
             kind: .microstep,
             rootId: rootId,
-            actor: actor,
+            reactor: reactor,
             event: triggeringEvent,
-            snapshot: .from(machineSnapshot, actor: actor),
+            snapshot: .from(machineSnapshot, reactor: reactor),
             transitions: InspectionTransitionInfo.from(transitions)
         )
     }
@@ -336,11 +336,11 @@ public struct ConsoleInspector: Sendable {
 
 extension InspectionEvent {
     public var consoleLine: String {
-        var parts = ["\(kind.rawValue)", "root=\(rootId)", "actor=\(actor.sessionId)"]
-        if let systemId = actor.systemId {
+        var parts = ["\(kind.rawValue)", "root=\(rootId)", "reactor=\(reactor.sessionId)"]
+        if let systemId = reactor.systemId {
             parts.append("systemId=\(systemId)")
         }
-        if let machineId = actor.machineId {
+        if let machineId = reactor.machineId {
             parts.append("machine=\(machineId)")
         }
         if let source {

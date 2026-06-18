@@ -1,6 +1,6 @@
 import Foundation
 
-/// Stable actor child ids for Stately (`square.e4`, `piece.wPe2`, …).
+/// Stable reactor child ids for Stately (`square.e4`, `piece.wPe2`, …).
 enum BoardReactorIds {
     static func square(row: Int, col: Int) -> String {
         "square.\(file(col))\(row + 1)"

@@ -33,14 +33,14 @@ struct StatelyWireTests {
         #expect(on?["NEXT"] as? String == "yellow")
     }
 
-    @Test("stately converter uses inline definitionJSON on actor events")
-    func actorEventWithInlineDefinition() throws {
+    @Test("stately converter uses inline definitionJSON on reactor events")
+    func reactorEventWithInlineDefinition() throws {
         let definition = try trafficMachine.definitionJSON()
         let converter = StatelyWireConverter()
 
-        let event = InspectionEvent.actor(
+        let event = InspectionEvent.reactor(
             rootId: "trafficLight",
-            actor: InspectionReactorRef(sessionId: "child", machineId: "trafficLight"),
+            reactor: InspectionReactorRef(sessionId: "child", machineId: "trafficLight"),
             definitionJSON: definition
         )
 
@@ -48,20 +48,20 @@ struct StatelyWireTests {
         #expect(wire.definition == definition)
     }
 
-    @Test("stately converter emits actor event with machine definition")
-    func actorEventWithDefinition() throws {
+    @Test("stately converter emits reactor event with machine definition")
+    func reactorEventWithDefinition() throws {
         let definition = try trafficMachine.definitionJSON()
         let converter = StatelyWireConverter(machineDefinitions: [
             InspectMachineRegistration(machineId: "trafficLight", definitionJSON: definition),
         ])
 
-        let event = InspectionEvent.actor(
+        let event = InspectionEvent.reactor(
             rootId: "trafficLight",
-            actor: InspectionReactorRef(sessionId: "trafficLight", machineId: "trafficLight")
+            reactor: InspectionReactorRef(sessionId: "trafficLight", machineId: "trafficLight")
         )
 
         let wire = try #require(converter.statelyEvent(for: event))
-        #expect(wire.type == "@xstate.actor")
+        #expect(wire.type == "@xstate.reactor")
         #expect(wire.name == "trafficLight")
         #expect(wire.sessionId == "trafficLight")
         #expect(wire.definition == definition)
@@ -72,7 +72,7 @@ struct StatelyWireTests {
     func transitionWireEvent() throws {
         let converter = StatelyWireConverter()
         let snapshot = InspectionSnapshot(
-            actor: InspectionReactorRef(sessionId: "a"),
+            reactor: InspectionReactorRef(sessionId: "a"),
             status: .active,
             value: "yellow",
             stateValue: .atomic("yellow"),
@@ -83,7 +83,7 @@ struct StatelyWireTests {
         let transition = InspectionEvent(
             kind: .transition,
             rootId: "a",
-            actor: InspectionReactorRef(sessionId: "a"),
+            reactor: InspectionReactorRef(sessionId: "a"),
             event: InspectionEventDescription(type: "NEXT"),
             snapshot: snapshot
         )
@@ -99,7 +99,7 @@ struct StatelyWireTests {
         let converter = StatelyWireConverter()
         let action = InspectionEvent.action(
             rootId: "a",
-            actor: InspectionReactorRef(sessionId: "a"),
+            reactor: InspectionReactorRef(sessionId: "a"),
             actionType: "xstate.assign",
             triggeringEvent: Event("NEXT")
         )
@@ -119,7 +119,7 @@ struct StatelyWireTests {
 
         let event = InspectionEvent.microstep(
             rootId: "trafficLight",
-            actor: InspectionReactorRef(sessionId: "trafficLight", machineId: "trafficLight"),
+            reactor: InspectionReactorRef(sessionId: "trafficLight", machineId: "trafficLight"),
             triggeringEvent: step.event,
             machineSnapshot: next,
             transitions: step.transitions
@@ -135,8 +135,8 @@ struct StatelyWireTests {
         #expect((object?["snapshot"] as? [String: Any])?["value"] as? String == "yellow")
     }
 
-    @Test("actor start registers before init event on the wire")
-    func actorStartInspectionOrder() async throws {
+    @Test("reactor start registers before init event on the wire")
+    func reactorStartInspectionOrder() async throws {
         let transport = MockInspectTransport(policy: .localhostOnly())
         let definition = try trafficMachine.definitionJSON()
         let bridge = InspectBridge(
@@ -155,7 +155,7 @@ struct StatelyWireTests {
 
         _ = createReactor(trafficMachine, inspect: bridge.observe()).start()
 
-        // Wait until the actor registration and the resulting snapshot have both
+        // Wait until the reactor registration and the resulting snapshot have both
         // been published, rather than guessing a fixed delay.
         await waitUntil {
             let recorded = await transport.recordedMessages()
@@ -163,7 +163,7 @@ struct StatelyWireTests {
                 guard let data = message.statelyPayload else { return nil }
                 return try? JSONDecoder().decode(StatelyWireEvent.self, from: data).type
             }
-            return kinds.contains("@xstate.actor") && kinds.contains("@xstate.snapshot")
+            return kinds.contains("@xstate.reactor") && kinds.contains("@xstate.snapshot")
         }
 
         let messages = await transport.recordedMessages()
@@ -172,12 +172,12 @@ struct StatelyWireTests {
             return try JSONDecoder().decode(StatelyWireEvent.self, from: data).type
         }
 
-        let actorIndex = try #require(types.firstIndex(of: "@xstate.actor"))
+        let reactorIndex = try #require(types.firstIndex(of: "@xstate.reactor"))
         if let eventIndex = types.firstIndex(of: "@xstate.event") {
-            #expect(actorIndex < eventIndex)
+            #expect(reactorIndex < eventIndex)
         }
         if let snapshotIndex = types.firstIndex(of: "@xstate.snapshot") {
-            #expect(actorIndex < snapshotIndex)
+            #expect(reactorIndex < snapshotIndex)
         }
 
         await bridge.stop()
@@ -202,7 +202,7 @@ struct StatelyWireTests {
         bridge.start()
 
         let collector = InspectionCollector()
-        let actor = createReactor(
+        let reactor = createReactor(
             trafficMachine,
             inspect: { event in
                 collector.observe()(event)
@@ -210,9 +210,9 @@ struct StatelyWireTests {
             }
         ).start()
 
-        actor.send(Event("NEXT"))
+        reactor.send(Event("NEXT"))
 
-        // Wait until the actor, transition/microstep, and snapshot events have
+        // Wait until the reactor, transition/microstep, and snapshot events have
         // all been published over the transport.
         await waitUntil {
             let recorded = await transport.recordedMessages()
@@ -220,7 +220,7 @@ struct StatelyWireTests {
                 guard let data = message.statelyPayload else { return nil }
                 return try? JSONDecoder().decode(StatelyWireEvent.self, from: data).type
             })
-            return kinds.contains("@xstate.actor")
+            return kinds.contains("@xstate.reactor")
                 && (kinds.contains("@xstate.transition") || kinds.contains("@xstate.microstep"))
                 && kinds.contains("@xstate.snapshot")
         }
@@ -233,7 +233,7 @@ struct StatelyWireTests {
             try JSONDecoder().decode(StatelyWireEvent.self, from: $0)
         }
         let types = Set(payloads.map(\.type))
-        #expect(types.contains("@xstate.actor"))
+        #expect(types.contains("@xstate.reactor"))
         #expect(types.contains("@xstate.transition") || types.contains("@xstate.microstep"))
         #expect(types.contains("@xstate.snapshot"))
 
@@ -244,7 +244,7 @@ struct StatelyWireTests {
     func snapshotValueEncoding() throws {
         let converter = StatelyWireConverter()
         let snapshot = InspectionSnapshot(
-            actor: InspectionReactorRef(sessionId: "light"),
+            reactor: InspectionReactorRef(sessionId: "light"),
             status: .active,
             value: "red, wait",
             stateValue: .compound(["red": .atomic("wait")]),
@@ -254,7 +254,7 @@ struct StatelyWireTests {
         let event = InspectionEvent(
             kind: .snapshot,
             rootId: "light",
-            actor: InspectionReactorRef(sessionId: "light"),
+            reactor: InspectionReactorRef(sessionId: "light"),
             event: InspectionEventDescription(type: "NEXT"),
             snapshot: snapshot
         )
@@ -278,7 +278,7 @@ struct StatelyWireTests {
     func snapshotWireShape() throws {
         let converter = StatelyWireConverter()
         let snapshot = InspectionSnapshot(
-            actor: InspectionReactorRef(sessionId: "counter"),
+            reactor: InspectionReactorRef(sessionId: "counter"),
             status: .active,
             value: "ready",
             stateValue: .atomic("ready"),
@@ -289,7 +289,7 @@ struct StatelyWireTests {
         let event = InspectionEvent(
             kind: .snapshot,
             rootId: "counter",
-            actor: InspectionReactorRef(sessionId: "counter"),
+            reactor: InspectionReactorRef(sessionId: "counter"),
             event: InspectionEventDescription(type: "increase"),
             snapshot: snapshot
         )

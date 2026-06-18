@@ -95,7 +95,7 @@ The pure-Swift library is memory-safe by construction. The one place raw pointer
 `SwiftXStateWinBridge` (the optional Windows C ABI consumed from C#). Its design:
 
 - **Opaque integer handles, not pointers.** C# holds an `Int64` that indexes a lock-guarded registry
-  (`BridgeRegistry` in `ActorBridge.swift`, `FlowRegistry` in `FlowMachineBridge.swift`). A forged or
+  (`BridgeRegistry` in `ReactorBridge.swift`, `FlowRegistry` in `FlowMachineBridge.swift`). A forged or
   stale handle simply misses the dictionary and returns nil/`0` — there is no pointer to forge and no
   way to reach freed memory by guessing a handle.
 - **ARC, no GC.** When an actor handle is released, its memory is reclaimed deterministically; there
@@ -115,7 +115,7 @@ callback is a raw `@convention(c)` pointer the host owns. `actorRelease` clears 
 dropping the actor (narrowing the window), but an event already mid-dispatch on the actor's thread
 can still be invoking the old pointer as release returns. The host must keep the delegate alive until
 after `actorRelease`, and must not swap the callback concurrently with release. See the contract on
-`actorSetSnapshotCallback` / `actorRelease` in `Sources/SwiftXStateWinBridge/ActorBridge.swift`.
+`actorSetSnapshotCallback` / `actorRelease` in `Sources/SwiftXStateWinBridge/ReactorBridge.swift`.
 
 ## Native library loading
 

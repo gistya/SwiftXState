@@ -9,7 +9,7 @@ import SwiftXStateSwiftUI
 @Observable
 final class ChessSession {
     private(set) var snapshot: MachineSnapshot<ChessContext>
-    let actor:Reactor<ChessContext>
+    let reactor:Reactor<ChessContext>
     private let typedReactor: TypedReactor<ChessContext, ChessGameState>
     let recorder = InspectionRecorder()
 
@@ -64,7 +64,7 @@ final class ChessSession {
             runtime: InspectRuntimeContext(isDebugBuild: true)
         )
 
-        let actor:Reactor<ChessContext>
+        let reactor:Reactor<ChessContext>
         do {
             let (bridge, statelyInspect) = try Self.makeInspectBridge(
                 machine: machine,
@@ -73,13 +73,13 @@ final class ChessSession {
             )
             self.bridge = bridge
             let inspect = Self.combineInspect(recordingGate.observe(recorder), statelyInspect)
-            actor = createReactor(
+            reactor = createReactor(
                 machine,
                 options: ReactorOptions(inspect: inspect)
             )
             connectionStatus = "Connected → Stately Inspector"
         } catch {
-            actor = createReactor(
+            reactor = createReactor(
                 machine,
                 options: ReactorOptions(inspect: recordingGate.observe(recorder))
             )
@@ -87,8 +87,8 @@ final class ChessSession {
             inspectorEndpoint = String(describing: error)
         }
 
-        self.actor = actor
-        typedReactor = actor.typed(as: ChessGameState.self)
+        self.reactor = reactor
+        typedReactor = reactor.typed(as: ChessGameState.self)
         snapshot = typedReactor.start(context: ChessContext.initial()).raw
     }
 

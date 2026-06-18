@@ -64,10 +64,10 @@ The machine itself is **pure and stateless** — it's just the rules. Nothing is
 
 ## Run it: create an actor
 
-To actually use a machine, create an ``Actor`` from it and `start()` it:
+To actually use a machine, create an ``Reactor`` from it and `start()` it:
 
 ```swift
-let actor = createActor(toggle).start()
+let actor = createReactor(toggle).start()
 ```
 
 Now you can **send events** and **read snapshots**:
@@ -82,9 +82,9 @@ actor.send(Event("TOGGLE"))
 actor.snapshot.matches("inactive")   // true
 ```
 
-- ``Actor/send(_:)`` delivers an event. It's **synchronous** — by the time it returns, the
+- ``Reactor/send(_:)`` delivers an event. It's **synchronous** — by the time it returns, the
   transition has fully settled.
-- ``Actor/snapshot`` is the current ``MachineSnapshot``: a value you read after each event.
+- ``Reactor/snapshot`` is the current ``MachineSnapshot``: a value you read after each event.
 - ``MachineSnapshot/matches(_:)-(String)`` asks "am I in this state?"
 
 Events can be the built-in ``Event`` (a string-typed event, like XState's `{ type: 'TOGGLE' }`)
@@ -117,7 +117,7 @@ The handler fires immediately with the current snapshot, then again after every 
 |---|---|---|
 | Config | ``MachineConfig`` / ``StateNodeConfig`` | Declares states + transitions |
 | Machine | ``StateMachine`` | The pure, reusable definition |
-| Actor | ``Actor`` | A running instance you `send` events to |
+| Actor | ``Reactor`` | A running instance you `send` events to |
 | Snapshot | ``MachineSnapshot`` | The state + data, read after each event |
 
 ## Beta notes & limitations
@@ -143,5 +143,5 @@ should be loadable straight from data:
 - <doc:CoreConcepts> — add data (context), conditional transitions (guards), and side effects
   (actions).
 - <doc:TypeSafeGettingStarted> — the same journey with compile-time guarantees.
-- <doc:RunningActors> — the full actor lifecycle, subscriptions, `waitFor`, and child actors.
+- <doc:RunningReactors> — the full actor lifecycle, subscriptions, `waitFor`, and child actors.
 - <doc:AsyncWork> — call an API and transition on the result.

@@ -15,7 +15,7 @@ public final class WebInspectorStore {
 
     public init() {}
 
-    /// An inspect sink for `ActorOptions(inspect:)`. Hops to the main actor and ingests.
+    /// An inspect sink for `ReactorOptions(inspect:)`. Hops to the main reactor and ingests.
     public func observe() -> @Sendable (InspectionEvent) -> Void {
         { [weak self] event in
             Task { @MainActor in self?.ingest(event) }

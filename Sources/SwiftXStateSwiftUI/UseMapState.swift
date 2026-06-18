@@ -21,12 +21,12 @@ public final class MapStateDriver<Context: Sendable, T: Sendable & Equatable> {
     @ObservationIgnored private var subscription: Subscription?
 
     public init(
-        actor: Reactor<Context>,
+        reactor: Reactor<Context>,
         mapper: StateMap<Context, T>
     ) {
         self.mapper = mapper
-        self.value = mapStateFirst(actor.snapshot, mapper: mapper)
-        self.subscription = actor.subscribe { [weak self] snapshot in
+        self.value = mapStateFirst(reactor.snapshot, mapper: mapper)
+        self.subscription = reactor.subscribe { [weak self] snapshot in
             guard let self else { return }
             let next = mapStateFirst(snapshot, mapper: mapper)
             if self.value != next {
@@ -44,9 +44,9 @@ public final class MapStateDriver<Context: Sendable, T: Sendable & Equatable> {
 
 @MainActor
 public func useMapState<Context: Sendable, T: Sendable & Equatable>(
-    _ actor: Reactor<Context>,
+    _ reactor: Reactor<Context>,
     _ mapper: StateMap<Context, T>
 ) -> T? {
-    MapStateDriver(actor: actor, mapper: mapper).value
+    MapStateDriver(reactor: reactor, mapper: mapper).value
 }
 #endif

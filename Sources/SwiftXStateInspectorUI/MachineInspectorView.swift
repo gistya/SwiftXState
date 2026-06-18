@@ -16,16 +16,16 @@ public enum InspectorTab: String, CaseIterable, Sendable {
 /// A native, Stately-Inspector-style view over an `InspectorStore`.
 ///
 /// Three real regions (no overlapping panes):
-/// - a **bottom drawer** of actors (full width, scrolls left→right) — the selected actor is
+/// - a **bottom drawer** of reactors (full width, scrolls left→right) — the selected reactor is
 ///   what everything else inspects;
 /// - a resizable left **sidebar** with a panel selector (State / Events / Sequence) and the
 ///   selected panel's content;
-/// - the live **graph** for the selected actor as the main canvas.
+/// - the live **graph** for the selected reactor as the main canvas.
 ///
 /// The top bar offers show/hide sidebar, **Maximize** / **Minimize** sidebar, and a toggle for
-/// the actors drawer.
+/// the reactors drawer.
 ///
-/// Wire `store.observe()` into your actors' `ReactorOptions(inspect:)`; this view renders
+/// Wire `store.observe()` into your reactors' `ReactorOptions(inspect:)`; this view renders
 /// whatever the store has accumulated.
 @MainActor
 public struct MachineInspectorView: View {
@@ -35,7 +35,7 @@ public struct MachineInspectorView: View {
 
     @State private var tab: InspectorTab = .state
     @State private var showSidebar = true
-    @State private var actorsExpanded = true
+    @State private var reactorsExpanded = true
     @State private var sidebarWidth: CGFloat = 360
     @State private var dragStartWidth: CGFloat?
 
@@ -59,13 +59,13 @@ public struct MachineInspectorView: View {
                             .frame(width: clampedSidebarWidth(total: geo.size.width))
                         resizeHandle(total: geo.size.width)
                     }
-                    InspectorGraphTab(actor: store.selectedReactor, graphStyle: graphStyle)
+                    InspectorGraphTab(reactor: store.selectedReactor, graphStyle: graphStyle)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxHeight: .infinity)
 
-                // Bottom drawer: actors across the full width.
-                InspectorReactorBar(store: store, expanded: $actorsExpanded)
+                // Bottom drawer: reactors across the full width.
+                InspectorReactorBar(store: store, expanded: $reactorsExpanded)
             }
         }
         .background(style.background)
@@ -95,13 +95,13 @@ public struct MachineInspectorView: View {
             } label: { Label("Minimize", systemImage: "arrow.down.right.and.arrow.up.left") }
                 .help("Minimize sidebar")
 
-            Toggle(isOn: $actorsExpanded) { Label("Actors", systemImage: "rectangle.bottomthird.inset.filled") }
+            Toggle(isOn: $reactorsExpanded) { Label("Reactors", systemImage: "rectangle.bottomthird.inset.filled") }
                 .toggleStyle(.button)
-                .help("Show/hide the actors drawer")
+                .help("Show/hide the reactors drawer")
 
             Spacer()
 
-            Text("\(store.actors.count) actors · \(store.feed.count) events")
+            Text("\(store.reactors.count) reactors · \(store.feed.count) events")
                 .font(.caption)
                 .foregroundStyle(style.secondaryText)
         }

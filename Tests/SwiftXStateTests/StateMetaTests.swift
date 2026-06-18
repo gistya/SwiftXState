@@ -16,8 +16,8 @@ struct StateMetaTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        let meta = actor.snapshot.getMeta()
+        let reactor = createReactor(machine).start()
+        let meta = reactor.snapshot.getMeta()
 
         #expect(meta.count == 1)
         #expect(meta["traffic.green"]?["color"]?.get(String.self) == "green")
@@ -38,10 +38,10 @@ struct StateMetaTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("NEXT"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("NEXT"))
 
-        let meta = actor.snapshot.getMeta()
+        let meta = reactor.snapshot.getMeta()
         #expect(meta.count == 1)
         #expect(meta["traffic.yellow"]?["color"]?.get(String.self) == "yellow")
     }
@@ -58,8 +58,8 @@ struct StateMetaTests {
             type: .parallel
         ))
 
-        let actor = createReactor(machine).start()
-        let meta = actor.snapshot.getMeta()
+        let reactor = createReactor(machine).start()
+        let meta = reactor.snapshot.getMeta()
 
         #expect(meta.count == 2)
         #expect(meta["app.walk"]?["signal"]?.get(String.self) == "walk")
@@ -84,8 +84,8 @@ struct StateMetaTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        let meta = actor.snapshot.getMeta()
+        let reactor = createReactor(machine).start()
+        let meta = reactor.snapshot.getMeta()
 
         #expect(meta.count == 2)
         #expect(meta["traffic.light"]?["scope"]?.get(String.self) == "light")

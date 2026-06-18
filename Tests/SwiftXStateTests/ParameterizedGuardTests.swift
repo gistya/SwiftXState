@@ -93,9 +93,9 @@ struct ParameterizedGuardTests {
             ]
         ))
 
-        let actor = createReactor(machine).start(context: ThresholdContext(value: 12))
-        actor.send(Event("CHECK"))
-        #expect(actor.snapshot.matches("approved"))
+        let reactor = createReactor(machine).start(context: ThresholdContext(value: 12))
+        reactor.send(Event("CHECK"))
+        #expect(reactor.snapshot.matches("approved"))
     }
 
     @Test("registerAction runs with typed params")
@@ -123,10 +123,10 @@ struct ParameterizedGuardTests {
                 ]
             ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("GO"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("GO"))
         #expect(box.labels == ["ok"])
-        #expect(actor.snapshot.matches("done"))
+        #expect(reactor.snapshot.matches("done"))
     }
 
     @Test("composite guards compose with parameterized refs")
@@ -152,9 +152,9 @@ struct ParameterizedGuardTests {
                 ]
             ))
 
-        let actor = createReactor(machine).start(context: ThresholdContext(value: 12))
-        actor.send(Event("CHECK"))
-        #expect(actor.snapshot.matches("approved"))
+        let reactor = createReactor(machine).start(context: ThresholdContext(value: 12))
+        reactor.send(Event("CHECK"))
+        #expect(reactor.snapshot.matches("approved"))
     }
 
     @Test("definition JSON exports parameterized guard shape")

@@ -24,7 +24,7 @@ public final class EnqueueActionsBuilder<Context: Sendable>: @unchecked Sendable
         actions.append(action)
     }
 
-    /// Enqueue an event to be sent to the child actor with the given id.
+    /// Enqueue an event to be sent to the child reactor with the given id.
     public func sendTo(_ childId: String, _ event: Event) {
         enqueue(.sendTo(SendToAction(target: .fixed(childId), event: .fixed(event))))
     }

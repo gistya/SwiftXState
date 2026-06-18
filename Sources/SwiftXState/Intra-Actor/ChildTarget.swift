@@ -1,6 +1,6 @@
 import Foundation
 
-/// Identifies a child actor by id or runtime expression.
+/// Identifies a child reactor by id or runtime expression.
 public enum ChildTarget<Context: Sendable>: Sendable {
     case fixed(String)
     case expression(@Sendable (ActionArgs<Context>) -> String)

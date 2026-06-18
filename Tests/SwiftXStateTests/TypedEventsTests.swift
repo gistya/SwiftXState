@@ -35,16 +35,16 @@ struct TypedEventsTests {
 
     @Test("typed action narrows the event and updates context")
     func typedActionNarrows() {
-        let actor = createReactor(machine()).start()
-        actor.send(Focus())
-        #expect(actor.snapshot.matches("active"))
+        let reactor = createReactor(machine()).start()
+        reactor.send(Focus())
+        #expect(reactor.snapshot.matches("active"))
 
-        actor.send(InputChange(searchInput: "be"))
-        #expect(actor.snapshot.context.searchInput == "be")   // narrowed payload applied
+        reactor.send(InputChange(searchInput: "be"))
+        #expect(reactor.snapshot.context.searchInput == "be")   // narrowed payload applied
 
-        actor.send(ItemClick(itemId: 1))
-        #expect(actor.snapshot.context.picked == "beta")      // c.items[e.itemId]
-        #expect(actor.snapshot.matches("inactive"))
+        reactor.send(ItemClick(itemId: 1))
+        #expect(reactor.snapshot.context.picked == "beta")      // c.items[e.itemId]
+        #expect(reactor.snapshot.matches("inactive"))
     }
 
     @Test("typed guard narrows the event to decide the branch")
@@ -60,18 +60,18 @@ struct TypedEventsTests {
                 "picked": StateNodeConfig(),
             ]
         ))
-        let actor = createReactor(m).start()
-        actor.send(ItemClick(itemId: 99))     // out of range -> guard false -> no transition
-        #expect(actor.snapshot.matches("idle"))
-        actor.send(ItemClick(itemId: 0))      // valid -> transition
-        #expect(actor.snapshot.matches("picked"))
+        let reactor = createReactor(m).start()
+        reactor.send(ItemClick(itemId: 99))     // out of range -> guard false -> no transition
+        #expect(reactor.snapshot.matches("idle"))
+        reactor.send(ItemClick(itemId: 0))      // valid -> transition
+        #expect(reactor.snapshot.matches("picked"))
     }
 
     @Test("typed send only accepts StateEvents but works exactly like Tier 1")
     func typedSend() {
-        let actor = createReactor(machine()).start()
-        actor.send(Focus())                    // typed value; send<E: Eventable> accepts it directly
-        #expect(actor.snapshot.matches("active"))
+        let reactor = createReactor(machine()).start()
+        reactor.send(Focus())                    // typed value; send<E: Eventable> accepts it directly
+        #expect(reactor.snapshot.matches("active"))
     }
 
     @Test("Tier 2 compiles down to the same definition JSON as Tier 1")

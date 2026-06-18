@@ -37,7 +37,7 @@ output, and a thrown error routes to `onError`:
             onDone: .single(TransitionConfig(
                 target: "ready",
                 actions: [assign { ctx, args in
-                    if let e = args.event as? DoneActorEvent {
+                    if let e = args.event as? DoneReactorEvent {
                         ctx.profile = e.output?.get(Profile.self)
                     }
                 }]
@@ -48,13 +48,13 @@ output, and a thrown error routes to `onError`:
 )
 ```
 
-The result arrives as a ``DoneActorEvent``; pull the typed value out with
+The result arrives as a ``DoneReactorEvent``; pull the typed value out with
 `event.output?.get(Type.self)`. The output type must be `Sendable & Equatable`.
 
-> Note: **On the type-safe path**, framework events like ``DoneActorEvent`` are ``Eventable`` but
+> Note: **On the type-safe path**, framework events like ``DoneReactorEvent`` are ``Eventable`` but
 > *not* ``StateEvent``, so the narrowed `assign`/`guarded` helpers from <doc:TypeSafeCoreConcepts>
 > don't apply to them — handle `onDone`/`onError` with the standard form shown above
-> (`args.event as? DoneActorEvent`). The typed helpers are for *your* `StateEvent` types.
+> (`args.event as? DoneReactorEvent`). The typed helpers are for *your* `StateEvent` types.
 
 Pass data *into* the task with `input:` (resolved from context/event at invoke time) and read it
 from the task scope. Cancellation is automatic on state exit; supply an `onCancel:` closure for
@@ -100,7 +100,7 @@ an **array**:
             onDone: .single(TransitionConfig(
                 target: "done",
                 actions: [assign { ctx, args in
-                    if let e = args.event as? DoneActorEvent,
+                    if let e = args.event as? DoneReactorEvent,
                        let results = e.output?.get([Int].self) {
                         ctx.total = results.reduce(0, +)
                     }
@@ -138,4 +138,4 @@ instead of a lifecycle headache.
 
 - <doc:NamedImplementations> — register these actors by name so configs stay declarative and
   the inspector can label them.
-- <doc:RunningActors> — how parents observe and message their children.
+- <doc:RunningReactors> — how parents observe and message their children.

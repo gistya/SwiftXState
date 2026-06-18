@@ -30,8 +30,8 @@ struct MachineImportTests {
 
         // Event synthesis.
         let event = try MachineDefinitionImporter.makeEvent(fromJSON: json)
-        #expect(event.kind == .actor)
-        #expect(event.actor.machineId == "traffic")
+        #expect(event.kind == .reactor)
+        #expect(event.reactor.machineId == "traffic")
         #expect(event.definitionJSON != nil)
 
         // Initial state value: root initial is the atomic "green".
@@ -85,7 +85,7 @@ struct MachineImportTests {
     func fallbackID() throws {
         let json = #"{ "initial": "idle", "states": { "idle": {} } }"#
         let event = try MachineDefinitionImporter.makeEvent(fromJSON: json, fallbackID: "anon")
-        #expect(event.actor.sessionID == "anon")
+        #expect(event.reactor.sessionID == "anon")
     }
 
     @Test("surfaces errors for empty and malformed input")
@@ -101,14 +101,14 @@ struct MachineImportTests {
         }
     }
 
-    @Test("loadDefinition registers and selects the actor in the store")
+    @Test("loadDefinition registers and selects the reactor in the store")
     @MainActor
     func storeLoad() throws {
         let store = InspectorStore()
         let json = #"{ "id": "lights", "initial": "off", "states": { "off": {}, "on": {} } }"#
         let id = try store.loadDefinition(json: json)
         #expect(id == "lights")
-        #expect(store.actors.count == 1)
+        #expect(store.reactors.count == 1)
         #expect(store.selectedSessionID == "lights")
         #expect(store.selectedReactor?.stateValue == .atomic("off"))
         #expect(store.selectedReactor?.definitionJSON != nil)
@@ -116,7 +116,7 @@ struct MachineImportTests {
         // Loading again replaces the previous definition.
         let json2 = #"{ "id": "door", "initial": "closed", "states": { "closed": {}, "open": {} } }"#
         _ = try store.loadDefinition(json: json2)
-        #expect(store.actors.count == 1)
+        #expect(store.reactors.count == 1)
         #expect(store.selectedSessionID == "door")
     }
 }

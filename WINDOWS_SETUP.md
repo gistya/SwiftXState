@@ -54,7 +54,7 @@ Or from powershell:
 llvm-objdump -p SwiftXStateWinBridge.dll
 ```
 
-You want to see `ActorCreate`, `AddNumbers`, `ActorSend`, etc. (plain names — x64 cdecl isn't decorated). If they're present, you're good: point C# at the DLL (or drop it next to the app / in `runtimes\win-x64\native\`) and it should work exactly like the macOS run.
+You want to see `ReactorCreate`, `AddNumbers`, `ReactorSend`, etc. (plain names — x64 cdecl isn't decorated). If they're present, you're good: point C# at the DLL (or drop it next to the app / in `runtimes\win-x64\native\`) and it should work exactly like the macOS run.
 
 **3. NuGet**
 

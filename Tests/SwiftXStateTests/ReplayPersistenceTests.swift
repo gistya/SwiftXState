@@ -26,13 +26,13 @@ struct ReplayPersistenceTests {
 
     private func recordSession() -> ReplaySession {
         let recorder = InspectionRecorder()
-        let actor = createReactor(
+        let reactor = createReactor(
             counterMachine,
             options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayPersistContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        reactor.send(Event("INC"))
+        reactor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             fatalError("Expected recorded session")

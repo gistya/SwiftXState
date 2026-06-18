@@ -9,7 +9,7 @@ public struct StoreReactorLogic<Context: Sendable & Equatable, E: Eventable>: Se
     }
 }
 
-/// Type-erased store actor logic.
+/// Type-erased store reactor logic.
 public struct StoreReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
@@ -106,7 +106,7 @@ final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildRea
         guard syncSnapshot, let store else { return }
         parent?.enqueueFromChild(
             SnapshotReactorEvent(
-                actorId: id,
+                reactorId: id,
                 snapshot: ChildReactorSnapshot(
                     id: id,
                     status: .active,
@@ -117,7 +117,7 @@ final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildRea
     }
 }
 
-/// Returns store actor logic compatible with `createReactor` / `spawnChild`.
+/// Returns store reactor logic compatible with `createReactor` / `spawnChild`.
 public func fromStore<Context: Sendable & Equatable, E: Eventable>(
     _ logic: StoreLogic<Context, E>
 ) -> ReactorSource {

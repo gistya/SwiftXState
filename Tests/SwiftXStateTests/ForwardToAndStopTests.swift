@@ -39,11 +39,11 @@ struct ForwardToAndStopTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.send(Event("PING"))
-        await actor.waitForSnapshot { $0.context.gotPong }
+        let reactor = createReactor(parentMachine).start()
+        reactor.send(Event("PING"))
+        await reactor.waitForSnapshot { $0.context.gotPong }
 
-        #expect(actor.snapshot.context.gotPong)
+        #expect(reactor.snapshot.context.gotPong)
     }
 
     @Test("forwardTo resolves child id from context")
@@ -78,11 +78,11 @@ struct ForwardToAndStopTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.send(Event("PING"))
-        await actor.waitForSnapshot { $0.context.gotPong }
+        let reactor = createReactor(parentMachine).start()
+        reactor.send(Event("PING"))
+        await reactor.waitForSnapshot { $0.context.gotPong }
 
-        #expect(actor.snapshot.context.gotPong)
+        #expect(reactor.snapshot.context.gotPong)
     }
 
     @Test("forwardTo records xstate.forwardTo in transition actions")
@@ -129,17 +129,17 @@ struct ForwardToAndStopTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
+        let reactor = createReactor(parentMachine).start()
         let didStart = await started.wait()
-        await actor.waitForSnapshot { $0.children["worker"]?.status == .active }
+        await reactor.waitForSnapshot { $0.children["worker"]?.status == .active }
         #expect(didStart)
-        #expect(actor.snapshot.children["worker"]?.status == .active)
+        #expect(reactor.snapshot.children["worker"]?.status == .active)
 
-        actor.send(Event("STOP"))
-        await actor.waitForSnapshot { $0.children["worker"] == nil }
+        reactor.send(Event("STOP"))
+        await reactor.waitForSnapshot { $0.children["worker"] == nil }
 
-        #expect(actor.snapshot.children["worker"] == nil)
-        #expect(actor.snapshot.matches("withChild"))
+        #expect(reactor.snapshot.children["worker"] == nil)
+        #expect(reactor.snapshot.matches("withChild"))
     }
 
     @Test("stopChild expression resolves child id")
@@ -167,13 +167,13 @@ struct ForwardToAndStopTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        await actor.waitForSnapshot { $0.children["worker"]?.status == .active }
-        #expect(actor.snapshot.children["worker"]?.status == .active)
+        let reactor = createReactor(parentMachine).start()
+        await reactor.waitForSnapshot { $0.children["worker"]?.status == .active }
+        #expect(reactor.snapshot.children["worker"]?.status == .active)
 
-        actor.send(Event("STOP"))
-        await actor.waitForSnapshot { $0.children["worker"] == nil }
+        reactor.send(Event("STOP"))
+        await reactor.waitForSnapshot { $0.children["worker"] == nil }
 
-        #expect(actor.snapshot.children["worker"] == nil)
+        #expect(reactor.snapshot.children["worker"] == nil)
     }
 }

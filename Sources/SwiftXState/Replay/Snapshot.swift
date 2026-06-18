@@ -12,7 +12,7 @@ public enum SnapshotStatus: Sendable, Equatable, Codable {
     case stopped
 }
 
-/// A lightweight snapshot of a child actor tracked by a parent machine.
+/// A lightweight snapshot of a child reactor tracked by a parent machine.
 public struct ChildReactorSnapshot: Sendable, Equatable {
     public let id: String
     public let status: SnapshotStatus
@@ -28,7 +28,7 @@ public struct ChildReactorSnapshot: Sendable, Equatable {
 }
 
 /// A point-in-time snapshot of a running machine — the value you read after each transition
-/// (`actor.snapshot`). Test it with `matches(_:)` / `hasTag(_:)` / `can(_:)` and read `context`.
+/// (`reactor.snapshot`). Test it with `matches(_:)` / `hasTag(_:)` / `can(_:)` and read `context`.
 public struct MachineSnapshot<Context: Sendable>: Sendable {
     /// The machine this snapshot belongs to.
     public let machine: StateMachine<Context>
@@ -44,7 +44,7 @@ public struct MachineSnapshot<Context: Sendable>: Sendable {
     public let output: SendableValue?
     /// Error that stopped the machine (`status == .error`).
     public let error: SendableValue?
-    /// Snapshots of invoked/spawned child actors, keyed by id.
+    /// Snapshots of invoked/spawned child reactors, keyed by id.
     public let children: [String: ChildReactorSnapshot]
     let _nodes: [StateNode<Context>]
     let historyValue: HistoryValue<Context>

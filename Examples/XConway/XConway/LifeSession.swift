@@ -6,17 +6,17 @@ import SwiftData
 import SwiftXStateSwiftData
 import Combine
 
-/// The bridge between SwiftUI and the SwiftXState actor.
-/// Uses MachineDriver from SwiftXStateSwiftUI for observation + direct actor access for persistence.
+/// The bridge between SwiftUI and the SwiftXState reactor.
+/// Uses MachineDriver from SwiftXStateSwiftUI for observation + direct reactor access for persistence.
 @MainActor
 @Observable
 public final class LifeSession {
     public private(set) var snapshot: MachineSnapshot<LifeContext>
-    public let actor: Reactor<LifeContext>
+    public let reactor: Reactor<LifeContext>
     private let persistence: ReactorPersistenceStore?
     // Bump this when the default grid shape changes — a persisted snapshot bakes in its own
     // width/height, so an old save would otherwise override the new LifeContext.empty() default.
-    private let persistenceKey = "xconway.life.actor.v3"
+    private let persistenceKey = "xconway.life.reactor.v3"
     public var rulesJSON: String = LifeRules.conway.jsonString
     private var lastStepTime: Date = .distantPast
     public private(set) var history: [GridSnapshot] = []
@@ -47,20 +47,20 @@ public final class LifeSession {
             let store = ReactorPersistenceStore(modelContext: mc)
             self.persistence = store
             if let restored = try? store.createReactor(machine, key: persistenceKey) {
-                self.actor = restored
-                self.snapshot = actor.snapshot
+                self.reactor = restored
+                self.snapshot = reactor.snapshot
                 let c = snapshot.context
                 self.history = [GridSnapshot(generation: c.generation, cells: c.cells)]
             } else {
-                self.actor = createReactor(machine)
-                self.snapshot = actor.start(context: LifeContext.empty()).snapshot
+                self.reactor = createReactor(machine)
+                self.snapshot = reactor.start(context: LifeContext.empty()).snapshot
                 let c = snapshot.context
                 self.history = [GridSnapshot(generation: c.generation, cells: c.cells)]
             }
         } else {
             self.persistence = nil
-            self.actor = createReactor(machine)
-            self.snapshot = actor.start(context: LifeContext.empty()).snapshot
+            self.reactor = createReactor(machine)
+            self.snapshot = reactor.start(context: LifeContext.empty()).snapshot
             let c = snapshot.context
             self.history = [GridSnapshot(generation: c.generation, cells: c.cells)]
         }
@@ -69,7 +69,7 @@ public final class LifeSession {
         rulesJSON = snapshot.context.rules.jsonString
 
         // Subscribe for live updates (from driver style or manual)
-        _ = actor.subscribe { [weak self] newSnap in
+        _ = reactor.subscribe { [weak self] newSnap in
             Task { @MainActor in
                 guard let self else { return }
                 self.snapshot = newSnap
@@ -88,8 +88,8 @@ public final class LifeSession {
     // MARK: - Send helpers (called from UI)
 
     public func send(_ event: LifeEvent) {
-        actor.send(event)
-        snapshot = actor.snapshot
+        reactor.send(event)
+        snapshot = reactor.snapshot
         
         if case .step = event {
             // Record the step into the replay timeline (capped in appendToHistory), then skip the
@@ -115,8 +115,8 @@ public final class LifeSession {
             self.interval = 1/speed
         }
 
-        // We intentionally do NOT save to SwiftData here (or in the actor subscription).
-        // Auto-persisting the full actor snapshot (which includes the entire grid) after every step
+        // We intentionally do NOT save to SwiftData here (or in the reactor subscription).
+        // Auto-persisting the full reactor snapshot (which includes the entire grid) after every step
         // was the primary cause of the slowness. Persistence is now explicit via the "Save Snapshot"
         // button (and a minimal save when the user changes rules via the JSON editor).
     }
@@ -251,15 +251,15 @@ public final class LifeSession {
     private func saveIfNeeded() {
         guard let p = persistence else { return }
         // Persist opportunistically; errors are non-fatal for a toy app
-        try? p.save(actor, key: persistenceKey)
+        try? p.save(reactor, key: persistenceKey)
     }
 
     public func forceSave() {
         guard let p = persistence else { return }
-        try? p.save(actor, key: persistenceKey)
+        try? p.save(reactor, key: persistenceKey)
     }
 
-    /// Explicitly persists the current actor snapshot (the full grid, rules, generation, playback state, etc.)
+    /// Explicitly persists the current reactor snapshot (the full grid, rules, generation, playback state, etc.)
     /// to the SwiftData store using ReactorPersistenceStore. This is the "last snapshot only" write
     /// the user requested — no automatic per-step persistence happens anymore.
     public func saveSnapshot() {

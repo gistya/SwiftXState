@@ -20,10 +20,10 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("anything"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("anything"))
 
-        #expect(actor.snapshot.matches("awake"))
+        #expect(reactor.snapshot.matches("awake"))
     }
 
     @Test("exact transition takes priority over full wildcard")
@@ -41,10 +41,10 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("GO"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("GO"))
 
-        #expect(actor.snapshot.matches("handled"))
+        #expect(reactor.snapshot.matches("handled"))
     }
 
     @Test("full wildcard used when exact guard fails")
@@ -65,10 +65,10 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("GO"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("GO"))
 
-        #expect(actor.snapshot.matches("caught"))
+        #expect(reactor.snapshot.matches("caught"))
     }
 
     @Test("partial wildcard matches event prefix")
@@ -84,10 +84,10 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("feedback.good"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("feedback.good"))
 
-        #expect(actor.snapshot.matches("form"))
+        #expect(reactor.snapshot.matches("form"))
     }
 
     @Test("partial wildcard matches base event without suffix")
@@ -103,10 +103,10 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("feedback"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("feedback"))
 
-        #expect(actor.snapshot.matches("form"))
+        #expect(reactor.snapshot.matches("form"))
     }
 
     @Test("partial wildcard does not match unrelated events")
@@ -122,10 +122,10 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("other"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("other"))
 
-        #expect(actor.snapshot.matches("prompt"))
+        #expect(reactor.snapshot.matches("prompt"))
     }
 
     @Test("wildcard descriptors are excluded from machine.events")

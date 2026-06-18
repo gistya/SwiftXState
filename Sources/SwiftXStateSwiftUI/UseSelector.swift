@@ -12,12 +12,12 @@ public final class SelectorDriver<Context: Sendable, T: Sendable & Equatable> {
     @ObservationIgnored private var subscription: Subscription?
 
     public init(
-        actor: Reactor<Context>,
+        reactor: Reactor<Context>,
         selector: @escaping (MachineSnapshot<Context>) -> T
     ) {
         self.selector = selector
-        self.value = selector(actor.snapshot)
-        self.subscription = actor.subscribe { [weak self] snapshot in
+        self.value = selector(reactor.snapshot)
+        self.subscription = reactor.subscribe { [weak self] snapshot in
             guard let self else { return }
             let next = self.selector(snapshot)
             if self.value != next {
@@ -35,9 +35,9 @@ public final class SelectorDriver<Context: Sendable, T: Sendable & Equatable> {
 
 @MainActor
 public func useSelector<Context: Sendable, T: Sendable & Equatable>(
-    _ actor: Reactor<Context>,
+    _ reactor: Reactor<Context>,
     _ selector: @escaping (MachineSnapshot<Context>) -> T
 ) -> T {
-    SelectorDriver(actor: actor, selector: selector).value
+    SelectorDriver(reactor: reactor, selector: selector).value
 }
 #endif

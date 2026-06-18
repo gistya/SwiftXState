@@ -1,7 +1,7 @@
 import Foundation
 
 /// Machine implementations provided at interpretation time (actions, guards).
-/// Registered actor logic for named `invoke` / `spawnChild` sources.
+/// Registered reactor logic for named `invoke` / `spawnChild` sources.
 public struct ReactorLogicEntry: Sendable {
     public var machine: MachineReactorLogicBox?
     public var task: TaskReactorLogicBox?
@@ -146,7 +146,7 @@ public struct ReactorLogicEntry: Sendable {
 }
 
 /// The concrete behavior behind the string names referenced in a `MachineConfig` —
-/// the named `actions`, `guards`, `delays`, and `actors` (invoked logic). Pass these to
+/// the named `actions`, `guards`, `delays`, and `reactors` (invoked logic). Pass these to
 /// `createMachine(_:implementations:)`, `setup(...)`, or `machine.provide(_:)`.
 public struct MachineImplementations<Context: Sendable>: Sendable {
     /// Named actions, keyed by the name used in `.named("…")` / `actionRef`.
@@ -155,19 +155,19 @@ public struct MachineImplementations<Context: Sendable>: Sendable {
     public var guards: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Bool]
     /// Named delays (milliseconds), resolved for `after:` transitions referenced by name.
     public var delays: [String: @Sendable (ActionArgs<Context>) -> Int]
-    /// Named actor logic for `invoke`/`spawn` (`fromTask`, `fromCallback`, child machines, …).
-    public var actors: [String: ReactorLogicEntry]
+    /// Named reactor logic for `invoke`/`spawn` (`fromTask`, `fromCallback`, child machines, …).
+    public var reactors: [String: ReactorLogicEntry]
 
     public init(
         actions: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Void] = [:],
         guards: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Bool] = [:],
         delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-        actors: [String: ReactorLogicEntry] = [:]
+        reactors: [String: ReactorLogicEntry] = [:]
     ) {
         self.actions = actions
         self.guards = guards
         self.delays = delays
-        self.actors = actors
+        self.reactors = reactors
     }
 
     /// Backward-compatible factory for legacy non-parameterized implementations.
@@ -175,26 +175,26 @@ public struct MachineImplementations<Context: Sendable>: Sendable {
         actions legacyActions: [String: @Sendable (ActionArgs<Context>) -> Void] = [:],
         guards legacyGuards: [String: @Sendable (ActionArgs<Context>) -> Bool] = [:],
         delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-        actors: [String: ReactorLogicEntry] = [:]
+        reactors: [String: ReactorLogicEntry] = [:]
     ) -> MachineImplementations<Context> {
         MachineImplementations(
             actions: wrapLegacyActions(legacyActions),
             guards: wrapLegacyGuards(legacyGuards),
             delays: delays,
-            actors: actors
+            reactors: reactors
         )
     }
 }
 
 /// A state machine definition — the pure, reusable logic of a statechart. Created with
 /// `createMachine(_:)` and run by `createReactor(_:)`. Stateless and `Sendable`: one machine can
-/// back many actors. Use `provide(_:)` to swap in implementations.
+/// back many reactors. Use `provide(_:)` to swap in implementations.
 public final class StateMachine<Context: Sendable>: @unchecked Sendable {
     /// The machine id (root state node name); `"(machine)"` if none was set.
     public let id: String
     /// The configuration this machine was built from.
     public let config: MachineConfig<Context>
-    /// The named actions/guards/delays/actors backing this machine.
+    /// The named actions/guards/delays/reactors backing this machine.
     public var implementations: MachineImplementations<Context>
     /// The root state node of the resolved state tree.
     public let root: StateNode<Context>
@@ -223,7 +223,7 @@ public final class StateMachine<Context: Sendable>: @unchecked Sendable {
             actions: self.implementations.actions.merging(implementations.actions) { _, new in new },
             guards: self.implementations.guards.merging(implementations.guards) { _, new in new },
             delays: self.implementations.delays.merging(implementations.delays) { _, new in new },
-            actors: self.implementations.actors.merging(implementations.actors) { _, new in new }
+            reactors: self.implementations.reactors.merging(implementations.reactors) { _, new in new }
         )
         let machine = StateMachine(config: config, implementations: merged)
         return machine
@@ -329,7 +329,7 @@ private func rootConfig<Context: Sendable>(from config: MachineConfig<Context>) 
 }
 
 /// Creates a state machine from a configuration — the Swift equivalent of XState's
-/// `createMachine({ … })`. Optionally supply the `implementations` (named actions/guards/actors)
+/// `createMachine({ … })`. Optionally supply the `implementations` (named actions/guards/reactors)
 /// referenced by the config; you can also add them later with `provide(_:)` or up front via `setup`.
 ///
 /// ```swift

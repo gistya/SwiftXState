@@ -41,7 +41,7 @@ public final class InspectBridge: Sendable {
     }
 }
 
-actor InspectBridgeState {
+reactor InspectBridgeState {
     private let transport: any InspectTransport
     private let endpoint: InspectEndpoint
     private let wireFormat: InspectWireFormat
@@ -123,7 +123,7 @@ actor InspectBridgeState {
 
     private func publishNow(_ event: InspectionEvent) async {
         if let definitionJSON = event.definitionJSON,
-           let machineId = event.actor.machineId {
+           let machineId = event.reactor.machineId {
             registerDefinition(machineId: machineId, definitionJSON: definitionJSON)
         }
 

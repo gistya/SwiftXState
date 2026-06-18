@@ -36,24 +36,24 @@ public struct WaitForOptions: Sendable {
 /// Errors thrown by `waitFor`.
 public enum WaitForError: Error, Equatable, LocalizedError {
     case timeout(milliseconds: Int)
-    case actorTerminated
+    case reactorTerminated
 
     public var errorDescription: String? {
         switch self {
         case let .timeout(milliseconds):
             return "Timeout of \(milliseconds) ms exceeded"
-        case .actorTerminated:
-            return "Actor terminated without satisfying predicate"
+        case .reactorTerminated:
+            return "Reactor terminated without satisfying predicate"
         }
     }
 }
 
-/// Subscribes to an actor and waits until its snapshot satisfies a predicate.
+/// Subscribes to an reactor and waits until its snapshot satisfies a predicate.
 ///
 /// Checks the current snapshot first. Throws if the predicate is not satisfied
-/// before an optional timeout (default: no timeout) or if the actor stops.
+/// before an optional timeout (default: no timeout) or if the reactor stops.
 public func waitFor<Context: Sendable>(
-    _ actor: Reactor<Context>,
+    _ reactor: Reactor<Context>,
     predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool,
     options: WaitForOptions = WaitForOptions()
 ) async throws -> MachineSnapshot<Context> {
@@ -66,7 +66,7 @@ public func waitFor<Context: Sendable>(
 
     try Task.checkCancellation()
 
-    let initial = actor.snapshot
+    let initial = reactor.snapshot
     if predicate(initial) {
         return initial
     }
@@ -87,13 +87,13 @@ public func waitFor<Context: Sendable>(
                 } else if snapshot.status == .stopped {
                     state.finish {
                         state.dispose()
-                        continuation.resume(throwing: WaitForError.actorTerminated)
+                        continuation.resume(throwing: WaitForError.reactorTerminated)
                         state.continuation = nil
                     }
                 }
             }
 
-            state.subscription = actor.subscribe { snapshot in
+            state.subscription = reactor.subscribe { snapshot in
                 checkEmitted(snapshot)
             }
 

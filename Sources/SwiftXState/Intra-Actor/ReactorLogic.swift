@@ -1,9 +1,9 @@
 import Foundation
 
-/// Reference from a child actor back to its parent interpreter.
+/// Reference from a child reactor back to its parent interpreter.
 public protocol ReactorParentRef: AnyObject, Sendable {
     func enqueueFromChild(_ event: any Eventable)
-    var actorSystem: ReactorSystem { get }
+    var reactorSystem: ReactorSystem { get }
     func inspectSpawnedChild(_ child: any ChildReactorRef, machineId: String?)
     func persistedChildSnapshot(for id: String) -> PersistedChildSnapshot?
 }
@@ -14,7 +14,7 @@ extension ReactorParentRef {
     }
 }
 
-/// A running child actor managed by a parent state machine actor.
+/// A running child reactor managed by a parent state machine reactor.
 public protocol ChildReactorRef: ReactorSystemRef, AnyObject, Sendable {
     var id: String { get }
     var status: SnapshotStatus { get }
@@ -37,7 +37,7 @@ extension ChildReactorRef {
     public var inspectable: Bool { true }
 }
 
-/// Source logic for spawning a child actor.
+/// Source logic for spawning a child reactor.
 public enum ReactorSource: Sendable {
     case named(String)
     case machine(MachineReactorLogicBox)
@@ -49,7 +49,7 @@ public enum ReactorSource: Sendable {
     case store(StoreReactorLogicBox)
 }
 
-/// Scope passed to task-based actor logic (`fromTask`).
+/// Scope passed to task-based reactor logic (`fromTask`).
 public struct TaskReactorScope: Sendable {
     public let input: SendableValue?
     public let sendToParent: @Sendable (any Eventable) -> Void
@@ -66,7 +66,7 @@ public struct TaskReactorScope: Sendable {
     }
 }
 
-/// Scope passed to callback-based actor logic (`fromCallback`).
+/// Scope passed to callback-based reactor logic (`fromCallback`).
 public struct CallbackReactorScope: Sendable {
     public let input: SendableValue?
     public let sendToParent: @Sendable (any Eventable) -> Void
@@ -88,7 +88,7 @@ public struct CallbackReactorScope: Sendable {
         self.system = system
     }
 
-    /// Sends an event to the parent actor. Matches XState's `sendBack(event)`.
+    /// Sends an event to the parent reactor. Matches XState's `sendBack(event)`.
     ///
     /// Accepts any `Eventable`, including `Event("TYPE")` and string literals (`"TYPE"`).
     public var sendBack: @Sendable (any Eventable) -> Void {
@@ -171,7 +171,7 @@ public struct TaskGroupReactorLogic<Output: Sendable & Equatable>: Sendable {
     }
 }
 
-/// Type-erased machine actor logic for child state machines.
+/// Type-erased machine reactor logic for child state machines.
 public struct MachineReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
@@ -192,7 +192,7 @@ public struct MachineReactorLogicBox: Sendable {
                 machineId: machine.id
             )
             return MachineChildRef(
-                actor: Reactor(
+                reactor: Reactor(
                     machine,
                     id: id,
                     options: options,
@@ -210,7 +210,7 @@ public struct MachineReactorLogicBox: Sendable {
     /// Child snapshots can be persisted and restored when `ChildContext` is `Codable`.
     public init<ChildContext: Codable & Sendable>(_ machine: StateMachine<ChildContext>) {
         _spawn = { id, input, parent, options, syncSnapshot, persistedChild in
-            let actor = Reactor(
+            let reactor = Reactor(
                 machine,
                 id: id,
                 options: options,
@@ -223,12 +223,12 @@ public struct MachineReactorLogicBox: Sendable {
                 machineId: machine.id
             )
             return MachineChildRef(
-                actor: actor,
+                reactor: reactor,
                 parent: parent,
                 context: resolvedContext,
                 syncSnapshot: syncSnapshot,
                 persistedRestore: persistedRestore,
-                onRestore: { persisted in actor.start(from: persisted) }
+                onRestore: { persisted in reactor.start(from: persisted) }
             )
         }
     }
@@ -244,7 +244,7 @@ public struct MachineReactorLogicBox: Sendable {
                 machineId: machine.id
             )
             return MachineChildRef(
-                actor: Reactor(
+                reactor: Reactor(
                     machine,
                     id: id,
                     options: options,
@@ -263,7 +263,7 @@ public struct MachineReactorLogicBox: Sendable {
         context: @escaping @Sendable (SendableValue?) -> ChildContext
     ) {
         _spawn = { id, input, parent, options, syncSnapshot, persistedChild in
-            let actor = Reactor(
+            let reactor = Reactor(
                 machine,
                 id: id,
                 options: options,
@@ -275,12 +275,12 @@ public struct MachineReactorLogicBox: Sendable {
                 machineId: machine.id
             )
             return MachineChildRef(
-                actor: actor,
+                reactor: reactor,
                 parent: parent,
                 context: context(input),
                 syncSnapshot: syncSnapshot,
                 persistedRestore: persistedRestore,
-                onRestore: { persisted in actor.start(from: persisted) }
+                onRestore: { persisted in reactor.start(from: persisted) }
             )
         }
     }
@@ -317,7 +317,7 @@ private func machinePersistedRestore(
     return nil
 }
 
-/// Type-erased task actor logic.
+/// Type-erased task reactor logic.
 public struct TaskReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
@@ -342,7 +342,7 @@ public struct TaskReactorLogicBox: Sendable {
     }
 }
 
-/// Type-erased callback actor logic.
+/// Type-erased callback reactor logic.
 public struct CallbackReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
@@ -376,7 +376,7 @@ public struct CallbackReactorLogicBox: Sendable {
     }
 }
 
-/// Type-erased task group actor logic.
+/// Type-erased task group reactor logic.
 public struct TaskGroupReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,

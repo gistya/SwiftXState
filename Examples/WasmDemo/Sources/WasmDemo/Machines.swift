@@ -1,6 +1,6 @@
 import SwiftXState
 
-// MARK: - Type-erased session over a running actor
+// MARK: - Type-erased session over a running reactor
 //
 // Each sample machine has its own Context type, so we can't store them in one array directly.
 // `DemoSession` erases the context behind closures, exposing just what the UI needs: the event
@@ -31,20 +31,20 @@ final class DemoSession {
 
 /// Builds a `DemoSession` from any machine, generically rendering its context via `Mirror`.
 func session<C: Sendable & Equatable>(_ machine: StateMachine<C>) -> DemoSession {
-    let actor = createActor(machine).start()
+    let reactor = createReactor(machine).start()
     return DemoSession(
         events: machine.events,
-        send: { actor.send(Event($0)) },
-        state: { actor.snapshot.value.description },
+        send: { reactor.send(Event($0)) },
+        state: { reactor.snapshot.value.description },
         context: {
-            let fields = Mirror(reflecting: actor.snapshot.context).children.compactMap {
+            let fields = Mirror(reflecting: reactor.snapshot.context).children.compactMap {
                 child -> String? in
                 guard let label = child.label else { return nil }
                 return "\(label): \(child.value)"
             }
             return fields.isEmpty ? "—" : fields.joined(separator: "   ·   ")
         },
-        canSend: { actor.snapshot.can(Event($0)) }
+        canSend: { reactor.snapshot.can(Event($0)) }
     )
 }
 

@@ -1,7 +1,7 @@
 import Foundation
 
 /// A monotonically increasing logical clock (Lamport). Cheap and thread-safe, so the
-/// inspection-forwarding closure (which runs on a hosted actor's queue thread) can stamp events
+/// inspection-forwarding closure (which runs on a hosted reactor's queue thread) can stamp events
 /// without hopping isolation. `witness(_:)` advances past a clock observed on an inbound message,
 /// preserving happens-before across the async boundary.
 public final class LamportClock: @unchecked Sendable {

@@ -7,9 +7,9 @@ import Dispatch
 /// `snapshot` from. Create one with `createReactor(_:)`, then `start()` it. Thread-safe.
 ///
 /// ```swift
-/// let actor = createReactor(toggle).start()
-/// actor.send(Event("TOGGLE"))
-/// actor.snapshot.matches("on")   // true
+/// let reactor = createReactor(toggle).start()
+/// reactor.send(Event("TOGGLE"))
+/// reactor.snapshot.matches("on")   // true
 /// ```
 public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParentRef, ReactorSystemRef {
     private var _snapshot: MachineSnapshot<Context>?
@@ -26,13 +26,13 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
     private let system: ReactorSystem
     private let options: ReactorOptions
     private let inspectable: Bool
-    /// The machine this actor runs.
+    /// The machine this reactor runs.
     public let machine: StateMachine<Context>
-    /// This actor's session id (unique within its system).
+    /// This reactor's session id (unique within its system).
     public let id: String
 
-    /// The actor system this actor belongs to.
-    public var actorSystem: ReactorSystem { system }
+    /// The reactor system this reactor belongs to.
+    public var reactorSystem: ReactorSystem { system }
     /// Alias for `id` — the session id used in inspection and cross-actor references.
     public var sessionId: String { id }
     /// The optional stable system id set via `ReactorOptions.systemId`.
@@ -56,7 +56,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
         self.inspectable = options.inspectable
         self.clock = options.clock
         self.parent = parent
-        self.system = parent?.actorSystem ?? ReactorSystem()
+        self.system = parent?.reactorSystem ?? ReactorSystem()
         if parent == nil {
             system.setRootIdIfNeeded(self.id)
         }
@@ -99,12 +99,12 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
     }
 
     private func inspectReactorRegistration(snapshot: MachineSnapshot<Context>) {
-        emitInspection(.actor(
+        emitInspection(.reactor(
             rootId: inspectionRootId,
-            actor: inspectionReactorRef,
+            reactor: inspectionReactorRef,
             parentSessionId: (parent as? ReactorSystemRef)?.sessionId,
-            registrationSnapshot: .from(snapshotForInspection(snapshot), actor: inspectionReactorRef),
-            // Carry the machine's structure so inspectors can graph this actor without a typed
+            registrationSnapshot: .from(snapshotForInspection(snapshot), reactor: inspectionReactorRef),
+            // Carry the machine's structure so inspectors can graph this reactor without a typed
             // reference. Child spawns already include this (see inspectSpawnedChild). Only pay the
             // serialization cost when an inspector is actually listening.
             definitionJSON: (inspectable && system.hasInspectors) ? (try? machine.definitionJSON()) : nil
@@ -114,7 +114,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
     private func inspectIncomingEvent(_ event: any Eventable, source: InspectionReactorRef?) {
         emitInspection(.event(
             rootId: inspectionRootId,
-            actor: inspectionReactorRef,
+            reactor: inspectionReactorRef,
             source: source,
             event: event
         ))
@@ -123,7 +123,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
     private func inspectTransition(_ event: any Eventable, snapshot: MachineSnapshot<Context>) {
         emitInspection(.transition(
             rootId: inspectionRootId,
-            actor: inspectionReactorRef,
+            reactor: inspectionReactorRef,
             triggeringEvent: event,
             machineSnapshot: snapshotForInspection(snapshot)
         ))
@@ -136,7 +136,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
     ) {
         emitInspection(.microstep(
             rootId: inspectionRootId,
-            actor: inspectionReactorRef,
+            reactor: inspectionReactorRef,
             triggeringEvent: event,
             machineSnapshot: snapshotForInspection(snapshot),
             transitions: transitions
@@ -146,7 +146,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
     private func inspectSnapshot(_ event: any Eventable, snapshot: MachineSnapshot<Context>) {
         emitInspection(.snapshot(
             rootId: inspectionRootId,
-            actor: inspectionReactorRef,
+            reactor: inspectionReactorRef,
             triggeringEvent: event,
             machineSnapshot: snapshotForInspection(snapshot)
         ))
@@ -163,49 +163,49 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
         guard shouldInspectAction(action) else { return }
         emitInspection(.action(
             rootId: inspectionRootId,
-            actor: inspectionReactorRef,
+            reactor: inspectionReactorRef,
             actionType: action.type,
             triggeringEvent: event
         ))
     }
 
     private func inspectionSource(for event: any Eventable) -> InspectionReactorRef? {
-        let actorId: String?
+        let reactorId: String?
         if let done = event as? DoneReactorEvent {
-            actorId = done.actorId
+            reactorId = done.reactorId
         } else if let error = event as? ErrorReactorEvent {
-            actorId = error.actorId
+            reactorId = error.reactorId
         } else if let snapshot = event as? SnapshotReactorEvent {
-            actorId = snapshot.actorId
+            reactorId = snapshot.reactorId
         } else {
-            actorId = nil
+            reactorId = nil
         }
-        guard let actorId, let child = children[actorId] else { return nil }
+        guard let reactorId, let child = children[reactorId] else { return nil }
         return InspectionReactorRef.from(child)
     }
 
-    /// The current snapshot of the actor.
+    /// The current snapshot of the reactor.
     public var snapshot: MachineSnapshot<Context> {
         queue.sync {
             guard let snapshot = _snapshot else {
-                fatalError("Actor has not been started. Call start() first.")
+                fatalError("Reactor has not been started. Call start() first.")
             }
             return snapshot
         }
     }
 
-    /// Returns a persisted representation of the current actor state.
+    /// Returns a persisted representation of the current reactor state.
     public func getPersistedSnapshot() throws -> PersistedSnapshot where Context: Codable {
         try queue.sync {
             guard let snapshot = _snapshot else {
-                throw PersistenceError.actorNotStarted
+                throw PersistenceError.reactorNotStarted
             }
             let childSnapshots = try collectPersistedChildSnapshots(from: children)
             return try SwiftXState.getPersistedSnapshot(from: snapshot, children: childSnapshots)
         }
     }
 
-    /// Starts the actor by **restoring** a previously persisted snapshot (state + context +
+    /// Starts the reactor by **restoring** a previously persisted snapshot (state + context +
     /// children), rather than running the initial transition. Use for replay / resume.
     @discardableResult
     public func start(
@@ -254,7 +254,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
         return self
     }
 
-    /// Starts the actor and runs the initial transition (entering the initial state, running
+    /// Starts the reactor and runs the initial transition (entering the initial state, running
     /// entry actions, and spawning invoked children). Returns `self` so you can chain
     /// `createReactor(m).start()`. `input` feeds the machine's `contextFromInput`.
     @discardableResult
@@ -291,7 +291,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
         return self
     }
 
-    /// Stops the actor and all invoked children.
+    /// Stops the reactor and all invoked children.
     public func stop() {
         queue.sync {
             stopAllChildren()
@@ -315,7 +315,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
         }
     }
 
-    /// Sends an event to the actor.
+    /// Sends an event to the reactor.
     public func send(_ event: any Eventable) {
         queue.sync {
             inspectIncomingEvent(event, source: nil)
@@ -334,11 +334,11 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
     }
 
     /// Non-blocking delivery from the inter-actor plane (an ``Interactor``). Enqueues `event` on
-    /// this actor's serial queue and returns immediately — unlike ``send(_:)`` which blocks until
+    /// this reactor's serial queue and returns immediately — unlike ``send(_:)`` which blocks until
     /// the macrostep completes. Run-to-completion and FIFO ordering are preserved: the enqueued
     /// work is serialized after any in-flight macrostep on the same queue, so it can never
-    /// re-enter a macrostep mid-flight. This is what lets an `Interactor` (a Swift `actor`) route
-    /// a message to a hosted actor without blocking a cooperative-pool thread on `queue.sync`.
+    /// re-enter a macrostep mid-flight. This is what lets an `Interactor` (a Swift `reactor`) route
+    /// a message to a hosted reactor without blocking a cooperative-pool thread on `queue.sync`.
     public func post(_ event: any Eventable) {
         queue.async { [weak self] in
             guard let self else { return }
@@ -357,7 +357,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
 
     private func processEvent(_ event: any Eventable) {
         guard let current = _snapshot else {
-            fatalError("Actor has not been started. Call start() first.")
+            fatalError("Reactor has not been started. Call start() first.")
         }
         guard current.status == .active else { return }
 
@@ -594,7 +594,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
         if child.inspectable {
             emitInspection(.event(
                 rootId: inspectionRootId,
-                actor: InspectionReactorRef.from(child),
+                reactor: InspectionReactorRef.from(child),
                 source: inspectionReactorRef,
                 event: event
             ))
@@ -731,9 +731,9 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
     }
 
     public func inspectSpawnedChild(_ child: any  ChildReactorRef, machineId: String?) {
-        emitInspection(.actor(
+        emitInspection(.reactor(
             rootId: inspectionRootId,
-            actor: InspectionReactorRef.from(child, machineId: machineId),
+            reactor: InspectionReactorRef.from(child, machineId: machineId),
             parentSessionId: id,
             definitionJSON: child.definitionJSON
         ))
@@ -743,13 +743,13 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
         queue.sync { children[id] }
     }
     
-    /// Serializes access to an actor's mutable state. On platforms with Dispatch this is a serial
+    /// Serializes access to an reactor's mutable state. On platforms with Dispatch this is a serial
     /// `DispatchQueue`; on single-threaded platforms without Dispatch (e.g. WebAssembly / WASI) there
     /// is no concurrency to guard against, so the work runs inline. The call sites are identical either
     /// way (`queue.sync { … }` / `queue.async { … }`).
     struct Queue: Sendable {
         #if canImport(Dispatch)
-        private let queue = DispatchQueue(label: "SwiftXState.Actor")
+        private let queue = DispatchQueue(label: "SwiftXState.Reactor")
         func sync<T>(_ body: () throws -> T) rethrows -> T { try queue.sync(execute: body) }
         func async(_ body: @escaping @Sendable () -> Void) { queue.async(execute: body) }
         #else
@@ -759,7 +759,7 @@ public final class Reactor<Context: Sendable>: @unchecked Sendable, ReactorParen
     }
 }
 
-/// Creates an actor (a runnable instance) from a machine — the Swift equivalent of XState's
+/// Creates an reactor (a runnable instance) from a machine — the Swift equivalent of XState's
 /// `createReactor(machine)`. Call `.start()` on the result to run it. Pass `inspect:` to stream
 /// inspection events, or `input:` to seed the initial context via `contextFromInput`.
 public func createReactor<Context: Sendable>(
@@ -779,9 +779,9 @@ public func createReactor<Context: Sendable>(
     return Reactor(machine, id: id, options: resolvedOptions)
 }
 
-/// Creates an actor and hydrates it from a persisted snapshot in one step.
+/// Creates an reactor and hydrates it from a persisted snapshot in one step.
 ///
-/// The returned actor is already started — equivalent to
+/// The returned reactor is already started — equivalent to
 /// `createReactor(machine).start(from: snapshot)`, including child re-spawn and
 /// delayed-transition scheduling for restored state nodes.
 public func createReactor<Context: Codable & Sendable>(
@@ -796,12 +796,12 @@ public func createReactor<Context: Codable & Sendable>(
     if let inspect {
         resolvedOptions.inspect = inspect
     }
-    let actor = Reactor(machine, id: id, options: resolvedOptions)
-    actor.start(from: snapshot, context: context)
-    return actor
+    let reactor = Reactor(machine, id: id, options: resolvedOptions)
+    reactor.start(from: snapshot, context: context)
+    return reactor
 }
 
-/// Creates an actor with typed `input` (any `Sendable & Equatable`), wrapped into the machine's
+/// Creates an reactor with typed `input` (any `Sendable & Equatable`), wrapped into the machine's
 /// `contextFromInput`. Convenience over passing a `SendableValue`.
 public func createReactor<Context: Sendable, Input: Sendable & Equatable>(
     _ machine: StateMachine<Context>,

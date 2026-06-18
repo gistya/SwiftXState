@@ -95,7 +95,7 @@ private struct DistributedChessHeader: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("SwiftXState Chess")
                 .font(.title2.bold())
-            Text("`game-watcher` + `opening-move-tree` + `board-inspector` · 96 board actors off-inspector")
+            Text("`game-watcher` + `opening-move-tree` + `board-inspector` · 96 board reactors off-inspector")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -117,7 +117,7 @@ private struct DistributedMachineCard: View {
                     Text(session.statusLine)
                         .font(.caption)
                 }
-                LabeledContent("Board actors") {
+                LabeledContent("Board reactors") {
                     Text("\(session.snapshot.children.count) (runtime only)")
                         .font(.caption)
                 }
@@ -300,7 +300,7 @@ struct ChessGameView: View {
                 .padding()
 
                 MachineGraphView(
-                    actor: session.actor,
+                    reactor: session.reactor,
                     machine: ChessMachineFactory.machine
                 )
                 .graphStyle(.chessDefault)
@@ -328,7 +328,7 @@ private struct MachineStateCard: View {
     let session: ChessSession
 
     var body: some View {
-        let viewState = useMapState(session.actor, ChessViewStateMapper.mapper)
+        let viewState = useMapState(session.reactor, ChessViewStateMapper.mapper)
 
         GroupBox("Machine") {
             VStack(alignment: .leading, spacing: 8) {

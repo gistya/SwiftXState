@@ -1,6 +1,6 @@
 import Foundation
 
-/// Scope passed to transition-based actor logic (`fromTransition`).
+/// Scope passed to transition-based reactor logic (`fromTransition`).
 public struct TransitionReactorScope: Sendable {
     public let input: SendableValue?
     public let system: ReactorSystem
@@ -20,7 +20,7 @@ public struct TransitionReactorScope: Sendable {
     }
 }
 
-/// Reducer-style actor logic, mirroring XState's `fromTransition`.
+/// Reducer-style reactor logic, mirroring XState's `fromTransition`.
 public struct TransitionReactorLogic<Context: Sendable & Equatable>: Sendable {
     public let transition: @Sendable (Context, any Eventable, TransitionReactorScope) -> Context
     public let resolveInitialContext: @Sendable (SendableValue?) -> Context
@@ -34,7 +34,7 @@ public struct TransitionReactorLogic<Context: Sendable & Equatable>: Sendable {
     }
 }
 
-/// Type-erased transition actor logic.
+/// Type-erased transition reactor logic.
 public struct TransitionReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
@@ -113,7 +113,7 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildReactorRef, 
         if syncSnapshot {
             parent?.enqueueFromChild(
                 SnapshotReactorEvent(
-                    actorId: id,
+                    reactorId: id,
                     snapshot: ChildReactorSnapshot(
                         id: id,
                         status: .active,
@@ -140,7 +140,7 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildReactorRef, 
 
         let scope = TransitionReactorScope(
             input: input,
-            system: parent?.actorSystem ?? ReactorSystem(),
+            system: parent?.reactorSystem ?? ReactorSystem(),
             sendToParent: { [weak self] childEvent in
                 self?.parent?.enqueueFromChild(childEvent)
             },
@@ -155,7 +155,7 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildReactorRef, 
         if syncSnapshot {
             parent?.enqueueFromChild(
                 SnapshotReactorEvent(
-                    actorId: id,
+                    reactorId: id,
                     snapshot: ChildReactorSnapshot(
                         id: id,
                         status: .active,
@@ -174,7 +174,7 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildReactorRef, 
     }
 }
 
-/// Returns transition actor logic with a fixed initial context.
+/// Returns transition reactor logic with a fixed initial context.
 public func fromTransition<Context: Sendable & Equatable>(
     _ transition: @escaping @Sendable (Context, any Eventable, TransitionReactorScope) -> Context,
     initialContext: Context
@@ -185,7 +185,7 @@ public func fromTransition<Context: Sendable & Equatable>(
     )))
 }
 
-/// Returns transition actor logic with initial context derived from input.
+/// Returns transition reactor logic with initial context derived from input.
 public func fromTransition<Context: Sendable & Equatable>(
     _ transition: @escaping @Sendable (Context, any Eventable, TransitionReactorScope) -> Context,
     initialContext: @escaping @Sendable (SendableValue?) -> Context

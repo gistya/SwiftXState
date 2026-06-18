@@ -1,7 +1,7 @@
 #if SWIFTXSTATE_INSPECTOR_UI
 import SwiftUI
 
-/// "CSS for the inspector" — colors, fonts, and metrics for the actor list, JSON tree,
+/// "CSS for the inspector" — colors, fonts, and metrics for the reactor list, JSON tree,
 /// event feed, and sequence diagram. Inject with `.inspectorStyle(_:)`; presets `.dark`
 /// and `.light`. Mirrors the `GraphStyle` pattern used by the graph module.
 public struct InspectorStyle: Sendable {
@@ -35,7 +35,7 @@ public struct InspectorStyle: Sendable {
 
     // MARK: Accents / event kinds
     public var accent: Color
-    public var actorKindColor: Color
+    public var reactorKindColor: Color
     public var eventKindColor: Color
     public var snapshotKindColor: Color
     public var statusActive: Color
@@ -47,7 +47,7 @@ public struct InspectorStyle: Sendable {
         primaryText: Color, secondaryText: Color, keyColor: Color, stringColor: Color, numberColor: Color,
         boolColor: Color, nullColor: Color, punctuationColor: Color, summaryColor: Color,
         pillBackground: Color, pillText: Color, accent: Color,
-        actorKindColor: Color, eventKindColor: Color, snapshotKindColor: Color,
+        reactorKindColor: Color, eventKindColor: Color, snapshotKindColor: Color,
         statusActive: Color, statusDone: Color, statusError: Color
     ) {
         self.background = background; self.panelBackground = panelBackground
@@ -56,7 +56,7 @@ public struct InspectorStyle: Sendable {
         self.keyColor = keyColor; self.stringColor = stringColor; self.numberColor = numberColor
         self.boolColor = boolColor; self.nullColor = nullColor; self.punctuationColor = punctuationColor
         self.summaryColor = summaryColor; self.pillBackground = pillBackground; self.pillText = pillText
-        self.accent = accent; self.actorKindColor = actorKindColor; self.eventKindColor = eventKindColor
+        self.accent = accent; self.reactorKindColor = reactorKindColor; self.eventKindColor = eventKindColor
         self.snapshotKindColor = snapshotKindColor
         self.statusActive = statusActive; self.statusDone = statusDone; self.statusError = statusError
     }
@@ -82,7 +82,7 @@ public struct InspectorStyle: Sendable {
         pillBackground: Color(.sRGB, red: 0.16, green: 0.42, blue: 0.30, opacity: 0.55),
         pillText: Color(.sRGB, red: 0.70, green: 0.95, blue: 0.80, opacity: 1),
         accent: Color(.sRGB, red: 0.36, green: 0.62, blue: 0.99, opacity: 1),
-        actorKindColor: Color(.sRGB, red: 0.55, green: 0.80, blue: 0.98, opacity: 1),
+        reactorKindColor: Color(.sRGB, red: 0.55, green: 0.80, blue: 0.98, opacity: 1),
         eventKindColor: Color(.sRGB, red: 0.95, green: 0.72, blue: 0.40, opacity: 1),
         snapshotKindColor: Color(.sRGB, red: 0.55, green: 0.85, blue: 0.60, opacity: 1),
         statusActive: Color(.sRGB, red: 0.40, green: 0.80, blue: 0.55, opacity: 1),
@@ -109,7 +109,7 @@ public struct InspectorStyle: Sendable {
         pillBackground: Color(.sRGB, red: 0.80, green: 0.92, blue: 0.82, opacity: 1),
         pillText: Color(.sRGB, red: 0.10, green: 0.40, blue: 0.22, opacity: 1),
         accent: Color(.sRGB, red: 0.13, green: 0.45, blue: 0.92, opacity: 1),
-        actorKindColor: Color(.sRGB, red: 0.13, green: 0.45, blue: 0.78, opacity: 1),
+        reactorKindColor: Color(.sRGB, red: 0.13, green: 0.45, blue: 0.78, opacity: 1),
         eventKindColor: Color(.sRGB, red: 0.78, green: 0.50, blue: 0.10, opacity: 1),
         snapshotKindColor: Color(.sRGB, red: 0.20, green: 0.55, blue: 0.30, opacity: 1),
         statusActive: Color(.sRGB, red: 0.20, green: 0.60, blue: 0.35, opacity: 1),

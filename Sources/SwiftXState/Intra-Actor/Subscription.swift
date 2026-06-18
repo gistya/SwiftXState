@@ -6,7 +6,7 @@
 //
 
 
-/// A handle returned by `Actor.subscribe(_:)`. Call `cancel()` to stop receiving snapshots.
+/// A handle returned by `Reactor.subscribe(_:)`. Call `cancel()` to stop receiving snapshots.
 public struct Subscription: Sendable {
     private let unsubscribe: @Sendable () -> Void
 

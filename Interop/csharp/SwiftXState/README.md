@@ -7,16 +7,16 @@ stream.
 ```csharp
 using SwiftXStateWinBridgeInterop;
 
-long actor = SwiftXStateWinBridge.ActorCreate("counter");
+long actor = SwiftXStateWinBridge.ReactorCreate("counter");
 
-SwiftXStateWinBridge.ActorSetSnapshotCallback(actor, json =>
+SwiftXStateWinBridge.ReactorSetSnapshotCallback(actor, json =>
     Console.WriteLine(json));            // live @xstate.* events as JSON
 
-SwiftXStateWinBridge.ActorSend(actor, "INC");
-Console.WriteLine(SwiftXStateWinBridge.ActorState(actor));        // "running"
-Console.WriteLine(SwiftXStateWinBridge.ActorContextJSON(actor));  // {"count":"1"}
+SwiftXStateWinBridge.ReactorSend(actor, "INC");
+Console.WriteLine(SwiftXStateWinBridge.ReactorState(actor));        // "running"
+Console.WriteLine(SwiftXStateWinBridge.ReactorContextJSON(actor));  // {"count":"1"}
 
-SwiftXStateWinBridge.ActorRelease(actor);
+SwiftXStateWinBridge.ReactorRelease(actor);
 ```
 
 The native bridge is bundled per platform under `runtimes/<rid>/native`; the right one is loaded

@@ -2,7 +2,7 @@ import Foundation
 import SwiftXState
 
 /// The platform-neutral inspector reducer: a value type that consumes the in-process
-/// `InspectionEvent` stream and maintains everything an inspector UI shows — the live actor
+/// `InspectionEvent` stream and maintains everything an inspector UI shows — the live reactor
 /// registry, a capped chronological event feed, and the current selection — with no dependency on
 /// Observation, SwiftUI, or any rendering layer.
 ///
@@ -13,19 +13,19 @@ import SwiftXState
 /// Keeping the logic here means the native and web inspectors can never drift apart.
 public struct InspectorState {
     ///Reactors in registration order.
-    public private(set) var actors: [ReactorEntry] = []
+    public private(set) var reactors: [ReactorEntry] = []
     /// Chronological event feed (oldest first), capped at `feedCap`.
     public private(set) var feed: [FeedEntry] = []
-    /// Currently selected actor (drives the State/Events/Graph tabs).
+    /// Currently selected reactor (drives the State/Events/Graph tabs).
     public var selectedSessionID: String?
     /// Maximum feed length; older entries are dropped.
     public var feedCap: Int = 2000
 
-    private var actorIndex: [String: Int] = [:]
+    private var reactorIndex: [String: Int] = [:]
     private var seq = 0
     private var registrationOrder = 0
     /// Structural simulators for statically-loaded (pasted) machines, keyed by session id.
-    /// Live actors have no simulator (they're driven by their real runtime).
+    /// Live reactors have no simulator (they're driven by their real runtime).
     private var simulators: [String: MachineSimulator] = [:]
 
     public init() {}
@@ -43,14 +43,14 @@ public struct InspectorState {
         }
 
         if selectedSessionID == nil {
-            selectedSessionID = actors.first?.sessionID
+            selectedSessionID = reactors.first?.sessionID
         }
     }
 
     public mutating func reset() {
-        actors.removeAll()
+        reactors.removeAll()
         feed.removeAll()
-        actorIndex.removeAll()
+        reactorIndex.removeAll()
         simulators.removeAll()
         selectedSessionID = nil
         seq = 0
@@ -58,10 +58,10 @@ public struct InspectorState {
     }
 
     private mutating func upsertReactor(from event: InspectionEvent) {
-        let ref = event.actor
+        let ref = event.reactor
         var entry:ReactorEntry
-        if let idx = actorIndex[ref.sessionID] {
-            entry = actors[idx]
+        if let idx = reactorIndex[ref.sessionID] {
+            entry = reactors[idx]
         } else {
             registrationOrder += 1
             entry = ReactorEntry(sessionID: ref.sessionID, order: registrationOrder)
@@ -79,103 +79,103 @@ public struct InspectorState {
             entry.lastEventType = type
         }
 
-        if let idx = actorIndex[ref.sessionID] {
-            actors[idx] = entry
+        if let idx = reactorIndex[ref.sessionID] {
+            reactors[idx] = entry
         } else {
-            actorIndex[ref.sessionID] = actors.count
-            actors.append(entry)
+            reactorIndex[ref.sessionID] = reactors.count
+            reactors.append(entry)
         }
     }
 
     // MARK: Structural simulation (for pasted / static machines)
 
-    /// Attach a structural simulator to an actor so the UI can drive it.
+    /// Attach a structural simulator to an reactor so the UI can drive it.
     public mutating func registerSimulator(_ simulator: MachineSimulator, for sessionID: String) {
         simulators[sessionID] = simulator
     }
 
-    /// Whether the actor can be driven by structural simulation (i.e. was loaded statically).
+    /// Whether the reactor can be driven by structural simulation (i.e. was loaded statically).
     public func isSimulatable(_ sessionID: String?) -> Bool {
         guard let sessionID else { return false }
         return simulators[sessionID] != nil
     }
 
-    /// Events sendable from the actor's current state (empty for live, non-simulatable actors).
+    /// Events sendable from the reactor's current state (empty for live, non-simulatable reactors).
     public func availableEvents(for sessionID: String?) -> [String] {
         guard let sessionID, let simulator = simulators[sessionID],
-              let value = actor(sessionID)?.stateValue else { return [] }
+              let value = reactor(sessionID)?.stateValue else { return [] }
         return simulator.availableEvents(from: value)
     }
 
-    /// Send an event to a simulated actor: advances its state and appends synthetic event +
-    /// snapshot rows to the feed (so Events/Sequence light up). No-op for live actors or events
+    /// Send an event to a simulated reactor: advances its state and appends synthetic event +
+    /// snapshot rows to the feed (so Events/Sequence light up). No-op for live reactors or events
     /// the current state can't handle.
     public mutating func send(_ event: String, to sessionID: String) {
         guard let simulator = simulators[sessionID],
-              let entry = actor(sessionID),
+              let entry = reactor(sessionID),
               let current = entry.stateValue,
               let next = simulator.step(from: current, event: event) else { return }
 
         let ref = InspectionReactorRef(sessionId: entry.sessionID, systemId: entry.systemID, machineId: entry.machineID)
         ingest(InspectionEvent(
-            kind: .event, rootId: entry.sessionID, actor: ref,
+            kind: .event, rootId: entry.sessionID, reactor: ref,
             event: InspectionEventDescription(type: event)
         ))
         let snapshot = InspectionSnapshot(
-            actor: ref, status: .active, value: next.description,
+            reactor: ref, status: .active, value: next.description,
             stateValue: next, tags: [], childCount: 0,
             context: entry.contextJSON ?? .object([:])
         )
-        ingest(InspectionEvent(kind: .snapshot, rootId: entry.sessionID, actor: ref, snapshot: snapshot))
+        ingest(InspectionEvent(kind: .snapshot, rootId: entry.sessionID, reactor: ref, snapshot: snapshot))
     }
 
-    /// Parse a pasted XState machine definition and load it as a fresh actor, selecting it.
+    /// Parse a pasted XState machine definition and load it as a fresh reactor, selecting it.
     /// Replaces any previously loaded definition (resets first).
-    /// - Returns: the session id of the loaded actor.
+    /// - Returns: the session id of the loaded reactor.
     @discardableResult
     public mutating func loadDefinition(json: String, fallbackID: String = "pasted-machine") throws -> String {
         let event = try MachineDefinitionImporter.makeEvent(fromJSON: json, fallbackID: fallbackID)
         reset()
         ingest(event)
         if let definition = event.definitionJSON,
-           let simulator = MachineSimulator(definitionJSON: definition, machineID: event.actor.machineID ?? fallbackID) {
-            registerSimulator(simulator, for: event.actor.sessionID)
+           let simulator = MachineSimulator(definitionJSON: definition, machineID: event.reactor.machineID ?? fallbackID) {
+            registerSimulator(simulator, for: event.reactor.sessionID)
         }
-        selectedSessionID = event.actor.sessionID
-        return event.actor.sessionID
+        selectedSessionID = event.reactor.sessionID
+        return event.reactor.sessionID
     }
 
     // MARK: Lookups
 
-    public func actor(_ sessionID: String) ->ReactorEntry? {
-        actorIndex[sessionID].map { actors[$0] }
+    public func reactor(_ sessionID: String) ->ReactorEntry? {
+        reactorIndex[sessionID].map { reactors[$0] }
     }
 
     public var selectedReactor:ReactorEntry? {
-        selectedSessionID.flatMap(actor)
+        selectedSessionID.flatMap(reactor)
     }
 
-    /// Feed filtered to a single actor (or all if `nil`).
+    /// Feed filtered to a single reactor (or all if `nil`).
     public func feed(for sessionID: String?) -> [FeedEntry] {
         guard let sessionID else { return feed }
         return feed.filter { $0.sessionID == sessionID || $0.sourceSessionID == sessionID }
     }
 
-    /// Direct children of an actor, in registration order.
+    /// Direct children of an reactor, in registration order.
     public func children(of sessionID: String) -> [ReactorEntry] {
-        actors.filter { $0.parentSessionID == sessionID }
+        reactors.filter { $0.parentSessionID == sessionID }
     }
 
-    /// Root actors (no known parent in the registry).
+    /// Root reactors (no known parent in the registry).
     public var rootReactors: [ReactorEntry] {
-        actors.filter { entry in
+        reactors.filter { entry in
             guard let parent = entry.parentSessionID else { return true }
-            return actorIndex[parent] == nil
+            return reactorIndex[parent] == nil
         }
     }
 
     /// Flattened parent→child ordering with indentation depth, for the sidebar list.
-    public func actorTree() -> [(actor:ReactorEntry, depth: Int)] {
+    public func reactorTree() -> [(reactor:ReactorEntry, depth: Int)] {
         var out: [(ReactorEntry, Int)] = []
         func visit(_ entry:ReactorEntry, depth: Int) {
             out.append((entry, depth))

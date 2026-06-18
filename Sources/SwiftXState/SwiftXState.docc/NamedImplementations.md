@@ -106,4 +106,4 @@ would build on (see the README roadmap).
 ## Next steps
 
 - <doc:AsyncWork> — the actor logic (`fromTask` etc.) you'll register under `actors:`.
-- <doc:RunningActors> — running the machine you just set up.
+- <doc:RunningReactors> — running the machine you just set up.

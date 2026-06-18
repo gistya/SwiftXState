@@ -18,7 +18,7 @@ func collectPersistedChildSnapshots(
 }
 
 final class MachineChildRef<ChildContext: Sendable>: ChildReactorRef, @unchecked Sendable {
-    let actor: Reactor<ChildContext>
+    let reactor: Reactor<ChildContext>
     private weak var parent: (any ReactorParentRef)?
     private var subscription: Subscription?
     private var doneSent = false
@@ -27,26 +27,26 @@ final class MachineChildRef<ChildContext: Sendable>: ChildReactorRef, @unchecked
     private let persistedRestore: PersistedSnapshot?
     private let onRestore: (@Sendable (PersistedSnapshot) -> Void)?
 
-    var id: String { actor.id }
-    var systemId: String? { actor.systemId }
-    var inspectable: Bool { actor.isInspectable }
-    var machineId: String? { actor.machine.id }
-    var definitionJSON: String? { try? actor.machine.definitionJSON() }
-    var snapshotValue: String? { actor.snapshot.value.description }
+    var id: String { reactor.id }
+    var systemId: String? { reactor.systemId }
+    var inspectable: Bool { reactor.isInspectable }
+    var machineId: String? { reactor.machine.id }
+    var definitionJSON: String? { try? reactor.machine.definitionJSON() }
+    var snapshotValue: String? { reactor.snapshot.value.description }
 
     var status: SnapshotStatus {
-        actor.status
+        reactor.status
     }
 
     init(
-        actor: Reactor<ChildContext>,
+        reactor: Reactor<ChildContext>,
         parent: any ReactorParentRef,
         context: ChildContext,
         syncSnapshot: Bool = false,
         persistedRestore: PersistedSnapshot? = nil,
         onRestore: (@Sendable (PersistedSnapshot) -> Void)? = nil
     ) {
-        self.actor = actor
+        self.reactor = reactor
         self.parent = parent
         self.initialContext = context
         self.syncSnapshot = syncSnapshot
@@ -61,15 +61,15 @@ final class MachineChildRef<ChildContext: Sendable>: ChildReactorRef, @unchecked
                 doneSent = true
             }
         } else {
-            actor.start(context: initialContext)
+            reactor.start(context: initialContext)
         }
-        subscription = actor.subscribe { [weak self] snapshot in
+        subscription = reactor.subscribe { [weak self] snapshot in
             guard let self else { return }
 
             if syncSnapshot, snapshot.status == .active {
                 parent?.enqueueFromChild(
                     SnapshotReactorEvent(
-                        actorId: id,
+                        reactorId: id,
                         snapshot: ChildReactorSnapshot(
                             id: id,
                             status: snapshot.status,
@@ -83,7 +83,7 @@ final class MachineChildRef<ChildContext: Sendable>: ChildReactorRef, @unchecked
             doneSent = true
             parent?.enqueueFromChild(
                 DoneReactorEvent(
-                    actorId: id,
+                    reactorId: id,
                     output: snapshot.output
                 )
             )
@@ -93,24 +93,24 @@ final class MachineChildRef<ChildContext: Sendable>: ChildReactorRef, @unchecked
     func stop() {
         subscription?.cancel()
         subscription = nil
-        actor.stop()
+        reactor.stop()
     }
 
     func send(_ event: any Eventable) {
-        actor.send(event)
+        reactor.send(event)
     }
 
     func on(
         _ eventType: String,
         handler: @escaping @Sendable (EmittedEvent) -> Void
     ) -> Subscription {
-        actor.on(eventType, handler: handler)
+        reactor.on(eventType, handler: handler)
     }
 }
 
 extension MachineChildRef: PersistedChildSnapshotProviding where ChildContext: Codable {
     func makePersistedChildSnapshot() throws -> PersistedChildSnapshot? {
-        .machine(try actor.getPersistedSnapshot())
+        .machine(try reactor.getPersistedSnapshot())
     }
 }
 
@@ -163,7 +163,7 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildReactorRef, @unchec
                 guard !Task.isCancelled else { return }
                 status = .done
                 parent?.enqueueFromChild(
-                    DoneReactorEvent(actorId: id, output: SendableValue(output))
+                    DoneReactorEvent(reactorId: id, output: SendableValue(output))
                 )
             } catch is CancellationError {
                 return
@@ -173,7 +173,7 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildReactorRef, @unchec
                 status = .error
                 lastError = message
                 parent?.enqueueFromChild(
-                    ErrorReactorEvent(actorId: id, error: message)
+                    ErrorReactorEvent(reactorId: id, error: message)
                 )
             }
         }
@@ -356,7 +356,7 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildReactorRef, @u
                 guard !Task.isCancelled else { return }
                 status = .done
                 parent?.enqueueFromChild(
-                    DoneReactorEvent(actorId: id, output: SendableValue(outputs))
+                    DoneReactorEvent(reactorId: id, output: SendableValue(outputs))
                 )
             } catch is CancellationError {
                 return
@@ -366,7 +366,7 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildReactorRef, @u
                 status = .error
                 lastError = message
                 parent?.enqueueFromChild(
-                    ErrorReactorEvent(actorId: id, error: message)
+                    ErrorReactorEvent(reactorId: id, error: message)
                 )
             }
         }

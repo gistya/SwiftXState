@@ -20,7 +20,7 @@ private struct InputChildContext: Sendable, Equatable {
     var label: String
 }
 
-@Suite("Actor input and context initializer")
+@Suite("Reactor input and context initializer")
 struct InputAndContextTests {
     private func counterMachine(
         contextFromInput: @escaping @Sendable (SendableValue?) -> LabeledCounterContext
@@ -40,7 +40,7 @@ struct InputAndContextTests {
     }
 
     @Test("createReactor input builds context via contextFromInput")
-    func actorInputBuildsContext() {
+    func reactorInputBuildsContext() {
         let machine = counterMachine { input in
             LabeledCounterContext(
                 count: input?.get(CounterInput.self)?.startCount ?? 0,
@@ -48,13 +48,13 @@ struct InputAndContextTests {
             )
         }
 
-        let actor = createReactor(
+        let reactor = createReactor(
             machine,
             input: CounterInput(startCount: 5, label: "main")
         ).start()
 
-        #expect(actor.snapshot.context.count == 5)
-        #expect(actor.snapshot.context.label == "main")
+        #expect(reactor.snapshot.context.count == 5)
+        #expect(reactor.snapshot.context.label == "main")
     }
 
     @Test("start(input:) overrides ReactorOptions input")
@@ -66,12 +66,12 @@ struct InputAndContextTests {
             )
         }
 
-        let actor = createReactor(
+        let reactor = createReactor(
             machine,
             options: ReactorOptions(input: SendableValue(1))
         ).start(input: SendableValue(9))
 
-        #expect(actor.snapshot.context.count == 9)
+        #expect(reactor.snapshot.context.count == 9)
     }
 
     @Test("static context still works without input")
@@ -82,10 +82,10 @@ struct InputAndContextTests {
             states: ["idle": StateNodeConfig()]
         ))
 
-        let actor = createReactor(machine).start()
+        let reactor = createReactor(machine).start()
 
-        #expect(actor.snapshot.context.count == 3)
-        #expect(actor.snapshot.context.label == "static")
+        #expect(reactor.snapshot.context.count == 3)
+        #expect(reactor.snapshot.context.label == "static")
     }
 
     @Test("explicit start(context:) overrides contextFromInput")
@@ -97,11 +97,11 @@ struct InputAndContextTests {
             )
         }
 
-        let actor = createReactor(machine, input: 10)
+        let reactor = createReactor(machine, input: 10)
             .start(context: LabeledCounterContext(count: 99, label: "override"))
 
-        #expect(actor.snapshot.context.count == 99)
-        #expect(actor.snapshot.context.label == "override")
+        #expect(reactor.snapshot.context.count == 99)
+        #expect(reactor.snapshot.context.label == "override")
     }
 
     @Test("invoked child uses machine contextFromInput")
@@ -147,11 +147,11 @@ struct InputAndContextTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        await actor.waitForSnapshot { $0.matches("received") }
+        let reactor = createReactor(parentMachine).start()
+        await reactor.waitForSnapshot { $0.matches("received") }
 
-        #expect(actor.snapshot.matches("received"))
-        #expect(actor.snapshot.context.childLabel == "user-42")
+        #expect(reactor.snapshot.matches("received"))
+        #expect(reactor.snapshot.context.childLabel == "user-42")
     }
 
     @Test("fromMachine uses machine contextFromInput")
@@ -167,7 +167,7 @@ struct InputAndContextTests {
             states: ["done": StateNodeConfig(type: .final)]
         ))
 
-        let parentMachine = setup(actors: [
+        let parentMachine = setup(reactors: [
             "childReactor":ReactorLogicEntry(machine: MachineReactorLogicBox(childMachine)),
         ]).createMachine(MachineConfig(
             initial: "waiting",
@@ -185,10 +185,10 @@ struct InputAndContextTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        await actor.waitForSnapshot { $0.children["child"]?.status == .done }
+        let reactor = createReactor(parentMachine).start()
+        await reactor.waitForSnapshot { $0.children["child"]?.status == .done }
 
-        #expect(actor.snapshot.matches("waiting"))
-        #expect(actor.snapshot.children["child"]?.status == .done)
+        #expect(reactor.snapshot.matches("waiting"))
+        #expect(reactor.snapshot.children["child"]?.status == .done)
     }
 }

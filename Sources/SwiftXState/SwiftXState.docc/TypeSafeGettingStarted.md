@@ -68,10 +68,10 @@ Reading the new pieces:
 
 ## Run it
 
-Exactly like the Basic path — create an ``Actor``, `start()` it, then `send` typed events:
+Exactly like the Basic path — create an ``Reactor``, `start()` it, then `send` typed events:
 
 ```swift
-let actor = createActor(createMachine(ToggleMachine.config)).start()
+let actor = createReactor(createMachine(ToggleMachine.config)).start()
 
 actor.snapshot.matches("inactive")          // true
 
@@ -97,7 +97,7 @@ truth for those names, so reading state stays in sync with the declarations too.
 ## Next steps
 
 - <doc:TypeSafeCoreConcepts> — context, narrowed guards/actions, and branching in the typed API.
-- <doc:RunningActors> — actor lifecycle, subscriptions, `waitFor`, and child actors (same for both
+- <doc:RunningReactors> — actor lifecycle, subscriptions, `waitFor`, and child actors (same for both
   paths).
 - <doc:AsyncWork> — invoke async work and transition on the result.
 - Prefer the string form for a quick sketch? See <doc:GettingStarted>.

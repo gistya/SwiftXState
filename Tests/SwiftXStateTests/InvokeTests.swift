@@ -62,17 +62,17 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.send(Event("GO"))
+        let reactor = createReactor(parentMachine).start()
+        reactor.send(Event("GO"))
 
-        await actor.waitForSnapshot { $0.matches("received") }
+        await reactor.waitForSnapshot { $0.matches("received") }
 
-        #expect(actor.snapshot.matches("received"))
-        #expect(actor.snapshot.context.userName == "David")
-        #expect(actor.snapshot.status == .done)
+        #expect(reactor.snapshot.matches("received"))
+        #expect(reactor.snapshot.context.userName == "David")
+        #expect(reactor.snapshot.status == .done)
     }
 
-    @Test("named actor via setup invokes child machine")
+    @Test("named reactor via setup invokes child machine")
     func namedReactorInvoke() async {
         let childMachine = createMachine(MachineConfig(
             initial: "done",
@@ -83,7 +83,7 @@ struct InvokeTests {
         ))
 
         let parentMachine = setup(
-            actors: [
+            reactors: [
                 "child":ReactorLogicEntry(machine: MachineReactorLogicBox(childMachine) { _ in
                     EmptyContext()
                 }),
@@ -105,11 +105,11 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        await actor.waitForSnapshot { $0.matches("finished") }
+        let reactor = createReactor(parentMachine).start()
+        await reactor.waitForSnapshot { $0.matches("finished") }
 
-        #expect(actor.snapshot.matches("finished"))
-        #expect(actor.snapshot.status == .done)
+        #expect(reactor.snapshot.matches("finished"))
+        #expect(reactor.snapshot.status == .done)
     }
 
     @Test("fromTask invokes async work")
@@ -147,12 +147,12 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        await actor.waitForSnapshot { $0.matches("done") }
+        let reactor = createReactor(parentMachine).start()
+        await reactor.waitForSnapshot { $0.matches("done") }
 
-        #expect(actor.snapshot.context.count == 1)
-        #expect(actor.snapshot.matches("done"))
-        #expect(actor.snapshot.context.userName == "ok")
+        #expect(reactor.snapshot.context.count == 1)
+        #expect(reactor.snapshot.matches("done"))
+        #expect(reactor.snapshot.context.userName == "ok")
     }
 
     @Test("sendTo delivers events to invoked child")
@@ -170,7 +170,7 @@ struct InvokeTests {
         ))
 
         let parentMachine = setup(
-            actors: [
+            reactors: [
                 "child":ReactorLogicEntry(machine: MachineReactorLogicBox(childMachine) { _ in
                     ParentContext(count: 0, userName: nil)
                 }),
@@ -195,13 +195,13 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
+        let reactor = createReactor(parentMachine).start()
         for _ in 0..<3 {
-            actor.send(Event("FORWARD_DEC"))
+            reactor.send(Event("FORWARD_DEC"))
         }
-        await actor.waitForSnapshot { $0.context.count == -3 }
+        await reactor.waitForSnapshot { $0.context.count == -3 }
 
-        #expect(actor.snapshot.context.count == -3)
+        #expect(reactor.snapshot.context.count == -3)
     }
 
     @Test("stops invoked child when leaving state")
@@ -229,17 +229,17 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
+        let reactor = createReactor(parentMachine).start()
         let didStart = await started.wait()
-        await actor.waitForSnapshot { $0.children["worker"]?.status == .active }
+        await reactor.waitForSnapshot { $0.children["worker"]?.status == .active }
         #expect(didStart)
-        #expect(actor.snapshot.children["worker"]?.status == .active)
+        #expect(reactor.snapshot.children["worker"]?.status == .active)
 
-        actor.send(Event("LEAVE"))
-        await actor.waitForSnapshot { $0.matches("alone") && $0.children["worker"] == nil }
+        reactor.send(Event("LEAVE"))
+        await reactor.waitForSnapshot { $0.matches("alone") && $0.children["worker"] == nil }
 
-        #expect(actor.snapshot.children["worker"] == nil)
-        #expect(actor.snapshot.matches("alone"))
+        #expect(reactor.snapshot.children["worker"] == nil)
+        #expect(reactor.snapshot.matches("alone"))
     }
 
     @Test("fromCallback receives events and forwards to parent")
@@ -273,8 +273,8 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.childReactor(id: "listener")?.send(Event("PING"))
+        let reactor = createReactor(parentMachine).start()
+        reactor.childReactor(id: "listener")?.send(Event("PING"))
 
         #expect(await received.wait())
     }
@@ -315,10 +315,10 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
+        let reactor = createReactor(parentMachine).start()
         #expect(await resized.wait())
 
-        actor.childReactor(id: "listener")?.send(Event("FORWARD"))
+        reactor.childReactor(id: "listener")?.send(Event("FORWARD"))
         #expect(await forwarded.wait())
     }
 
@@ -356,15 +356,15 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.childReactor(id: "counter")?.send(Event("INC"))
-        await actor.waitForSnapshot { $0.context.count == 1 }
+        let reactor = createReactor(parentMachine).start()
+        reactor.childReactor(id: "counter")?.send(Event("INC"))
+        await reactor.waitForSnapshot { $0.context.count == 1 }
 
-        #expect(actor.snapshot.context.count == 1)
+        #expect(reactor.snapshot.context.count == 1)
     }
 
-    @Test("actor system registry resolves children by systemId")
-    func actorSystemRegistry() async {
+    @Test("reactor system registry resolves children by systemId")
+    func reactorSystemRegistry() async {
         let parentMachine = createMachine(MachineConfig(
             initial: "running",
             context: EmptyContext(),
@@ -384,10 +384,10 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        await actor.waitForSnapshot { $0.children["worker"] != nil }
+        let reactor = createReactor(parentMachine).start()
+        await reactor.waitForSnapshot { $0.children["worker"] != nil }
 
-        let registered = actor.actorSystem.get(systemId: "myWorker")
+        let registered = reactor.reactorSystem.get(systemId: "myWorker")
         #expect(registered != nil)
         #expect(registered?.systemId == "myWorker")
     }
@@ -430,11 +430,11 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        await actor.waitForSnapshot { $0.matches("done") }
+        let reactor = createReactor(parentMachine).start()
+        await reactor.waitForSnapshot { $0.matches("done") }
 
-        #expect(actor.snapshot.matches("done"))
-        #expect(actor.snapshot.context.count == 3)
+        #expect(reactor.snapshot.matches("done"))
+        #expect(reactor.snapshot.context.count == 3)
     }
 
     @Test("spawnChild action starts a child from entry")
@@ -464,10 +464,10 @@ struct InvokeTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
+        let reactor = createReactor(parentMachine).start()
         let fired = await done.wait()
 
         #expect(fired)
-        #expect(actor.snapshot.children["spawned"] != nil)
+        #expect(reactor.snapshot.children["spawned"] != nil)
     }
 }

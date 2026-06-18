@@ -9,19 +9,19 @@ public struct MachineSetup<Context: Sendable> {
     public var guards: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Bool]
     /// Named delays (ms) for `after:` transitions referenced by name.
     public var delays: [String: @Sendable (ActionArgs<Context>) -> Int]
-    /// Named actor logic for `invoke`/`spawn`.
-    public var actors: [String: ReactorLogicEntry]
+    /// Named reactor logic for `invoke`/`spawn`.
+    public var reactors: [String: ReactorLogicEntry]
 
     public init(
         actions: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Void] = [:],
         guards: [String: @Sendable (ActionArgs<Context>, ParamsBox?) -> Bool] = [:],
         delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-        actors: [String: ReactorLogicEntry] = [:]
+        reactors: [String: ReactorLogicEntry] = [:]
     ) {
         self.actions = actions
         self.guards = guards
         self.delays = delays
-        self.actors = actors
+        self.reactors = reactors
     }
 
     /// Legacy dictionary initializer (no per-invocation params).
@@ -29,12 +29,12 @@ public struct MachineSetup<Context: Sendable> {
         actions legacyActions: [String: @Sendable (ActionArgs<Context>) -> Void] = [:],
         guards legacyGuards: [String: @Sendable (ActionArgs<Context>) -> Bool] = [:],
         delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-        actors: [String: ReactorLogicEntry] = [:]
+        reactors: [String: ReactorLogicEntry] = [:]
     ) {
         self.actions = wrapLegacyActions(legacyActions)
         self.guards = wrapLegacyGuards(legacyGuards)
         self.delays = delays
-        self.actors = actors
+        self.reactors = reactors
     }
 
     /// Registers a typed guard spec with compile-time params.
@@ -65,7 +65,7 @@ public struct MachineSetup<Context: Sendable> {
                 actions: actions,
                 guards: guards,
                 delays: delays,
-                actors: actors
+                reactors: reactors
             )
         )
     }
@@ -76,12 +76,12 @@ public func setup<Context: Sendable>(
     actions legacyActions: [String: @Sendable (ActionArgs<Context>) -> Void] = [:],
     guards legacyGuards: [String: @Sendable (ActionArgs<Context>) -> Bool] = [:],
     delays: [String: @Sendable (ActionArgs<Context>) -> Int] = [:],
-    actors: [String: ReactorLogicEntry] = [:]
+    reactors: [String: ReactorLogicEntry] = [:]
 ) -> MachineSetup<Context> {
     MachineSetup(
         actions: legacyActions,
         guards: legacyGuards,
         delays: delays,
-        actors: actors
+        reactors: reactors
     )
 }

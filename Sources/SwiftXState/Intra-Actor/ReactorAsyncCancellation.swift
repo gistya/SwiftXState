@@ -90,7 +90,7 @@ func shouldSpawnOpaqueChild(
     }
 }
 
-/// Cancellation helpers for `fromTask` / `fromTaskGroup` actor logic.
+/// Cancellation helpers for `fromTask` / `fromTaskGroup` reactor logic.
 ///
 /// Use `checkCancellation()` or `isCancelled` inside long loops, and `withCancellationHandler`
 /// for scoped cleanup around sub-operations (wraps `withTaskCancellationHandler`).

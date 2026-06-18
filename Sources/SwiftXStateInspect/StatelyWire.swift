@@ -73,8 +73,8 @@ public struct StatelyWireConverter: Sendable {
 
     public func statelyEvent(for event: InspectionEvent) -> StatelyWireEvent? {
         switch event.kind {
-        case .actor:
-            return actorEvent(from: event)
+        case .reactor:
+            return reactorEvent(from: event)
         case .event:
             return eventEvent(from: event)
         case .snapshot:
@@ -95,7 +95,7 @@ public struct StatelyWireConverter: Sendable {
         StatelyWireEvent(
             type: type,
             rootId: event.rootId,
-            sessionId: event.actor.sessionId,
+            sessionId: event.reactor.sessionId,
             createdAt: createdAtMillis(event.timestamp),
             id: nil,
             version: Self.protocolVersion,
@@ -110,11 +110,11 @@ public struct StatelyWireConverter: Sendable {
         )
     }
 
-    private func actorEvent(from event: InspectionEvent) -> StatelyWireEvent {
-        let name = event.actor.machineId ?? event.actor.sessionId
-        let definition = event.definitionJSON ?? event.actor.machineId.flatMap { machineDefinitions[$0] }
+    private func reactorEvent(from event: InspectionEvent) -> StatelyWireEvent {
+        let name = event.reactor.machineId ?? event.reactor.sessionId
+        let definition = event.definitionJSON ?? event.reactor.machineId.flatMap { machineDefinitions[$0] }
         let snapshot = event.snapshot.map(snapshotObject(from:)) ?? .object(["status": .string("active")])
-        var wire = baseWireEvent(type: InspectionEventKind.actor.rawValue, from: event)
+        var wire = baseWireEvent(type: InspectionEventKind.reactor.rawValue, from: event)
         wire.name = name
         wire.parentId = event.parentSessionId
         wire.definition = definition
@@ -179,7 +179,7 @@ public struct StatelyWireConverter: Sendable {
     }
 
     private func snapshotObject(from snapshot: InspectionSnapshot) -> JSONValue {
-        let wireValue = wireStateValues[snapshot.actor.machineId ?? ""]
+        let wireValue = wireStateValues[snapshot.reactor.machineId ?? ""]
             .map { JSONValue.string($0) }
             ?? snapshot.stateValue.toJSONValue()
         var object: [String: JSONValue] = [
@@ -196,7 +196,7 @@ public struct StatelyWireConverter: Sendable {
     }
 
     private func usesInspectorWireFacade(for event: InspectionEvent) -> Bool {
-        wireStateValues[event.actor.machineId ?? ""] != nil
+        wireStateValues[event.reactor.machineId ?? ""] != nil
     }
 
     private func transitionsArray(from transitions: [InspectionTransitionInfo]) -> JSONValue {

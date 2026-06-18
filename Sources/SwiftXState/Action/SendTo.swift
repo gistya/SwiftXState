@@ -74,12 +74,12 @@ func resolveSendTo<Context: Sendable>(
     )
 }
 
-/// Sends an event to a child actor, mirroring XState's `sendTo`.
+/// Sends an event to a child reactor, mirroring XState's `sendTo`.
 public func sendTo<Context: Sendable>(_ childId: String, _ event: Event) -> ActionRef<Context> {
     .sendTo(SendToAction(target: .fixed(childId), event: .fixed(event)))
 }
 
-/// Sends a dynamically resolved event to a child actor.
+/// Sends a dynamically resolved event to a child reactor.
 public func sendTo<Context: Sendable>(
     _ childId: String,
     _ expression: @escaping @Sendable (ActionArgs<Context>) -> Event
@@ -103,7 +103,7 @@ public func sendTo<Context: Sendable>(
     .sendTo(SendToAction(target: .expression(target), event: .expression(expression)))
 }
 
-/// Sends an event to a child actor after a delay in milliseconds.
+/// Sends an event to a child reactor after a delay in milliseconds.
 public func sendTo<Context: Sendable>(
     _ childId: String,
     _ event: Event,
@@ -118,7 +118,7 @@ public func sendTo<Context: Sendable>(
     ))
 }
 
-/// Sends an event to a child actor after a named delay from `setup(delays:)`.
+/// Sends an event to a child reactor after a named delay from `setup(delays:)`.
 public func sendTo<Context: Sendable>(
     _ childId: String,
     _ event: Event,

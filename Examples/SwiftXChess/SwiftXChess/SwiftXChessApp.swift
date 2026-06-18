@@ -5,7 +5,7 @@ import SwiftXStateInspectorUI
 
 @main
 struct SwiftXChessApp: App {
-    /// One shared inspector store, fed by the shared session's actors. The main window's
+    /// One shared inspector store, fed by the shared session's reactors. The main window's
     /// board drives the session; the Inspector window observes the same stream live.
     @State private var store: InspectorStore
     /// One shared session for the whole app.

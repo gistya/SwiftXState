@@ -103,8 +103,8 @@ private func makePlayer() -> StateMachine<PlayerContext> {
 struct TypeStateTests {
     @Test("TypedSnapshot matches StateID paths")
     func typedSnapshotMatches() {
-        let actor = createReactor(makePlayer()).start()
-        let typed = actor.snapshot.typed(as: Mode.self)
+        let reactor = createReactor(makePlayer()).start()
+        let typed = reactor.snapshot.typed(as: Mode.self)
 
         #expect(typed.inState(.playing))
         #expect(typed.matches(Mode.playing))
@@ -152,10 +152,10 @@ struct TypeStateTests {
 
     @Test("toggling one control leaves the sibling parallel region untouched")
     func controlsToggleIndependently() {
-        let actor = createReactor(makePlayer()).start()
-        actor.send(Event("SHUFFLE"))
+        let reactor = createReactor(makePlayer()).start()
+        reactor.send(Event("SHUFFLE"))
 
-        let controls = actor.snapshot.typed(as: Controls.self)
+        let controls = reactor.snapshot.typed(as: Controls.self)
         #expect(controls.value(for: .shuffle) == .on)
         #expect(controls.value(for: .repeatMode) == .off)
         #expect(controls.inState(.control(.shuffle, .on)))
@@ -164,10 +164,10 @@ struct TypeStateTests {
 
     @Test("domain value reconstructs from StateValue via typed paths")
     func controlStatesFromStateValue() {
-        let actor = createReactor(makePlayer()).start()
-        #expect(ControlStates(stateValue: actor.snapshot.value) == .allOff)
+        let reactor = createReactor(makePlayer()).start()
+        #expect(ControlStates(stateValue: reactor.snapshot.value) == .allOff)
 
-        actor.send(Event("REPEAT"))
-        #expect(ControlStates(stateValue: actor.snapshot.value) == ControlStates(shuffle: false, repeatOn: true))
+        reactor.send(Event("REPEAT"))
+        #expect(ControlStates(stateValue: reactor.snapshot.value) == ControlStates(shuffle: false, repeatOn: true))
     }
 }

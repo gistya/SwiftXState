@@ -27,7 +27,7 @@ concurrency behave differently under WebAssembly — see the Clock note in the m
 
 ## What it demonstrates (verified in-browser)
 
-- `createMachine` / `createActor` / `send` / `snapshot` running in the browser
+- `createMachine` / `createReactor` / `send` / `snapshot` running in the browser
 - State transitions reflected live in the UI
 - `assign` actions mutating `context` (e.g. vending credits, traffic-light cycles)
 - **Guard evaluation** driving button enable/disable via `snapshot.can(_:)`

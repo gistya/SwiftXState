@@ -39,13 +39,13 @@ struct ReplaySwiftDataTests {
 
     private func recordSession() -> (InspectionRecorder, ReplaySession) {
         let recorder = InspectionRecorder()
-        let actor = createReactor(
+        let reactor = createReactor(
             counterMachine,
             options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayPersistContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        reactor.send(Event("INC"))
+        reactor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             fatalError("Expected recorded session")
@@ -79,22 +79,22 @@ struct ReplaySwiftDataTests {
         #expect(loaded?.steps.count == 3)
     }
 
-    @Test("loaded session replays on live actor")
+    @Test("loaded session replays on live reactor")
     func replayAfterLoad() throws {
         let store = try makeStore()
         let (_, session) = recordSession()
         try store.save(session, key: "run-3")
 
         let loaded = try store.load(key: "run-3")!
-        let (actor, verifications) = replayReactor(
+        let (reactor, verifications) = replayReactor(
             counterMachine,
             context: ReplayPersistContext(count: 0),
             session: loaded
         )
 
         #expect(verifications.filter { !$0.matches }.isEmpty)
-        #expect(actor.snapshot.matches("done"))
-        #expect(actor.snapshot.context.count == 1)
+        #expect(reactor.snapshot.matches("done"))
+        #expect(reactor.snapshot.context.count == 1)
     }
 
     @Test("delete removes stored replay session")

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Forwards the triggering event to a child actor, mirroring XState's `forwardTo`.
+/// Forwards the triggering event to a child reactor, mirroring XState's `forwardTo`.
 public func forwardTo<Context: Sendable>(_ childId: String) -> ActionRef<Context> {
     .forwardTo(.fixed(childId))
 }

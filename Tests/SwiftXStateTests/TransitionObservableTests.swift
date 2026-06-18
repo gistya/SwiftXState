@@ -47,15 +47,15 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.send(Event("TICK"))
-        actor.send(Event("TICK"))
+        let reactor = createReactor(parentMachine).start()
+        reactor.send(Event("TICK"))
+        reactor.send(Event("TICK"))
 
-        let child = actor.childReactor(id: "counter")
+        let child = reactor.childReactor(id: "counter")
         child?.send(Event("INCREMENT"))
 
         #expect(child != nil)
-        #expect(actor.snapshot.matches("running"))
+        #expect(reactor.snapshot.matches("running"))
     }
 
     @Test("fromTransition onSnapshot syncs child context")
@@ -92,15 +92,15 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
+        let reactor = createReactor(parentMachine).start()
 
         for _ in 0..<3 {
-            actor.childReactor(id: "counter")?.send(Event("INCREMENT"))
+            reactor.childReactor(id: "counter")?.send(Event("INCREMENT"))
         }
 
-        await actor.waitForSnapshot { $0.context.count == 3 }
+        await reactor.waitForSnapshot { $0.context.count == 3 }
 
-        #expect(actor.snapshot.context.count == 3)
+        #expect(reactor.snapshot.context.count == 3)
     }
 
     @Test("fromObservable emits values and completes with onDone")
@@ -132,12 +132,12 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        await actor.waitForSnapshot { $0.matches("finished") }
+        let reactor = createReactor(parentMachine).start()
+        await reactor.waitForSnapshot { $0.matches("finished") }
 
-        #expect(actor.snapshot.matches("finished"))
-        #expect(actor.snapshot.context.count == 3)
-        #expect(actor.snapshot.status == .done)
+        #expect(reactor.snapshot.matches("finished"))
+        #expect(reactor.snapshot.context.count == 3)
+        #expect(reactor.snapshot.status == .done)
     }
 
     @Test("fromObservable reports errors with onError")
@@ -171,11 +171,11 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        await actor.waitForSnapshot { $0.matches("failed") }
+        let reactor = createReactor(parentMachine).start()
+        await reactor.waitForSnapshot { $0.matches("failed") }
 
-        #expect(actor.snapshot.matches("failed"))
-        #expect(actor.snapshot.context.step == "stream failed".count)
+        #expect(reactor.snapshot.matches("failed"))
+        #expect(reactor.snapshot.context.step == "stream failed".count)
     }
 
     @Test("fromObservable ignores sent events")
@@ -199,17 +199,17 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.childReactor(id: "stream")?.send(Event("IGNORED"))
-        await actor.waitForSnapshot { $0.matches("finished") }
+        let reactor = createReactor(parentMachine).start()
+        reactor.childReactor(id: "stream")?.send(Event("IGNORED"))
+        await reactor.waitForSnapshot { $0.matches("finished") }
 
-        #expect(actor.snapshot.matches("finished"))
+        #expect(reactor.snapshot.matches("finished"))
     }
 
     @Test("named fromTransition via setup")
     func namedTransitionReactor() async {
         let parentMachine = setup(
-            actors: [
+            reactors: [
                 "counter":ReactorLogicEntry(transition: TransitionReactorLogicBox(
                     TransitionReactorLogic(
                         transition: { state, event, _ in
@@ -248,12 +248,12 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.childReactor(id: "counter")?.send(Event("INCREMENT"))
-        actor.childReactor(id: "counter")?.send(Event("INCREMENT"))
+        let reactor = createReactor(parentMachine).start()
+        reactor.childReactor(id: "counter")?.send(Event("INCREMENT"))
+        reactor.childReactor(id: "counter")?.send(Event("INCREMENT"))
 
-        await actor.waitForSnapshot { $0.context.count == 2 }
+        await reactor.waitForSnapshot { $0.context.count == 2 }
 
-        #expect(actor.snapshot.context.count == 2)
+        #expect(reactor.snapshot.context.count == 2)
     }
 }

@@ -58,10 +58,10 @@ struct ParallelTransitionTests {
 
     @Test("parallel regions transition together on the same event")
     func parallelRegionsTogether() {
-        let actor = createReactor(parallelMachine).start()
-        actor.send(Event("SYNC"))
+        let reactor = createReactor(parallelMachine).start()
+        reactor.send(Event("SYNC"))
 
-        #expect(actor.snapshot.matches(StateValue.compound([
+        #expect(reactor.snapshot.matches(StateValue.compound([
             "mode": .atomic("dark"),
             "theme": .atomic("custom"),
         ])))
@@ -95,10 +95,10 @@ struct ParallelTransitionTests {
             type: .parallel
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("SET_DARK_CUSTOM"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("SET_DARK_CUSTOM"))
 
-        #expect(actor.snapshot.matches(StateValue.compound([
+        #expect(reactor.snapshot.matches(StateValue.compound([
             "mode": .atomic("dark"),
             "theme": .atomic("custom"),
         ])))
@@ -126,10 +126,10 @@ struct ParallelTransitionTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("GO"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("GO"))
 
-        #expect(actor.snapshot.matches(StateValue.compound([
+        #expect(reactor.snapshot.matches(StateValue.compound([
             "parent": .atomic("childTarget"),
         ])))
     }
@@ -167,10 +167,10 @@ struct ParallelTransitionTests {
             type: .parallel
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("SYNC"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("SYNC"))
 
-        #expect(actor.snapshot.context.modeCount == 1)
-        #expect(actor.snapshot.context.themeCount == 1)
+        #expect(reactor.snapshot.context.modeCount == 1)
+        #expect(reactor.snapshot.context.themeCount == 1)
     }
 }

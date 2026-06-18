@@ -30,9 +30,9 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("START"))
-        actor.send(Event("STOP"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("START"))
+        reactor.send(Event("STOP"))
 
         #expect(await cancelled.wait())
     }
@@ -64,8 +64,8 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.stop()
+        let reactor = createReactor(machine).start()
+        reactor.stop()
 
         #expect(await cancelled.wait())
     }
@@ -96,8 +96,8 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("STOP"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("STOP"))
 
         #expect(await cancelled.wait())
     }
@@ -128,8 +128,8 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        let persisted = try actor.getPersistedSnapshot()
+        let reactor = createReactor(parentMachine).start()
+        let persisted = try reactor.getPersistedSnapshot()
         #expect(persisted.children["task"] != nil)
 
         let restored = createReactor(parentMachine).start(from: persisted)

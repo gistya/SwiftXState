@@ -1,13 +1,13 @@
-/// A globally-unique address for a hosted actor: which Interactor it lives in, and its id there.
+/// A globally-unique address for a hosted reactor: which Interactor it lives in, and its id there.
 public struct ReactorAddress: Sendable, Equatable, Hashable, Codable {
     public let interactorID: String
-    public let actorID: String
+    public let reactorID: String
 
-    public init(interactorID: String, actorID: String) {
+    public init(interactorID: String, reactorID: String) {
         self.interactorID = interactorID
-        self.actorID = actorID
+        self.reactorID = reactorID
     }
 
-    /// A stable, collision-free node id for a unified graph: `interactor/actor`.
-    public var qualified: String { "\(interactorID)/\(actorID)" }
+    /// A stable, collision-free node id for a unified graph: `interactor/reactor`.
+    public var qualified: String { "\(interactorID)/\(reactorID)" }
 }

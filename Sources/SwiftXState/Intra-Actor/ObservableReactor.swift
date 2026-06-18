@@ -1,6 +1,6 @@
 import Foundation
 
-/// Scope passed to observable actor logic (`fromObservable`).
+/// Scope passed to observable reactor logic (`fromObservable`).
 public struct ObservableReactorScope: Sendable {
     public let input: SendableValue?
     public let system: ReactorSystem
@@ -17,7 +17,7 @@ public struct ObservableReactorScope: Sendable {
     }
 }
 
-/// Observable stream actor logic, mirroring XState's `fromObservable`.
+/// Observable stream reactor logic, mirroring XState's `fromObservable`.
 public struct ObservableReactorLogic<Context: Sendable & Equatable>: Sendable {
     public let create: @Sendable (ObservableReactorScope) -> AnySubscribable<Context>
 
@@ -28,7 +28,7 @@ public struct ObservableReactorLogic<Context: Sendable & Equatable>: Sendable {
     }
 }
 
-/// Type-erased observable actor logic.
+/// Type-erased observable reactor logic.
 public struct ObservableReactorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
@@ -109,7 +109,7 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildReactorRef, 
 
         let scope = ObservableReactorScope(
             input: input,
-            system: parent?.actorSystem ?? ReactorSystem(),
+            system: parent?.reactorSystem ?? ReactorSystem(),
             emit: { [emitListeners] event in
                 emitListeners.notify(event)
             }
@@ -161,7 +161,7 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildReactorRef, 
         if syncSnapshot {
             parent?.enqueueFromChild(
                 SnapshotReactorEvent(
-                    actorId: id,
+                    reactorId: id,
                     snapshot: ChildReactorSnapshot(
                         id: id,
                         status: .active,
@@ -187,7 +187,7 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildReactorRef, 
         subscription = nil
 
         parent?.enqueueFromChild(
-            ErrorReactorEvent(actorId: id, error: message)
+            ErrorReactorEvent(reactorId: id, error: message)
         )
     }
 
@@ -206,12 +206,12 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildReactorRef, 
         subscription = nil
 
         parent?.enqueueFromChild(
-            DoneReactorEvent(actorId: id, output: output)
+            DoneReactorEvent(reactorId: id, output: output)
         )
     }
 }
 
-/// Returns observable actor logic from a subscribable creator.
+/// Returns observable reactor logic from a subscribable creator.
 public func fromObservable<Context: Sendable & Equatable>(
     _ observableCreator: @escaping @Sendable (ObservableReactorScope) -> any Subscribable<Context>
 ) -> ReactorSource {
@@ -220,7 +220,7 @@ public func fromObservable<Context: Sendable & Equatable>(
     }))
 }
 
-/// Returns observable actor logic from a type-erased subscribable creator.
+/// Returns observable reactor logic from a type-erased subscribable creator.
 public func fromObservable<Context: Sendable & Equatable>(
     _ observableCreator: @escaping @Sendable (ObservableReactorScope) -> AnySubscribable<Context>
 ) -> ReactorSource {

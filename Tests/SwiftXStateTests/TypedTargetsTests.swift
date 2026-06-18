@@ -31,13 +31,13 @@ struct TypedTargetsTests {
 
     @Test("typed targets drive real transitions")
     func typedTargetsDrive() {
-        let actor = createReactor(createMachine(Lights.config)).start()
-        #expect(actor.snapshot.matches("green"))
-        actor.send(Lights.Next())
-        #expect(actor.snapshot.matches("yellow"))
-        actor.send(Lights.Next())
-        #expect(actor.snapshot.matches("red"))
-        actor.send(Lights.Next())
-        #expect(actor.snapshot.matches("green"))       // wrapped around — absolute targets resolved
+        let reactor = createReactor(createMachine(Lights.config)).start()
+        #expect(reactor.snapshot.matches("green"))
+        reactor.send(Lights.Next())
+        #expect(reactor.snapshot.matches("yellow"))
+        reactor.send(Lights.Next())
+        #expect(reactor.snapshot.matches("red"))
+        reactor.send(Lights.Next())
+        #expect(reactor.snapshot.matches("green"))       // wrapped around — absolute targets resolved
     }
 }

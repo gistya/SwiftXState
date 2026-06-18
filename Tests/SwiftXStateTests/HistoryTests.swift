@@ -27,24 +27,24 @@ struct HistoryTests {
 
     @Test("restores most recently visited state (explicit shallow)")
     func shallowHistory() {
-        let actor = createReactor(powerMachine(historyType: .shallow)).start()
+        let reactor = createReactor(powerMachine(historyType: .shallow)).start()
 
-        actor.send(Event("SWITCH"))
-        actor.send(Event("POWER"))
-        actor.send(Event("POWER"))
+        reactor.send(Event("SWITCH"))
+        reactor.send(Event("POWER"))
+        reactor.send(Event("POWER"))
 
-        #expect(actor.snapshot.value == .compound(["on": .atomic("second")]))
+        #expect(reactor.snapshot.value == .compound(["on": .atomic("second")]))
     }
 
     @Test("restores most recently visited state (default shallow)")
     func defaultShallowHistory() {
-        let actor = createReactor(powerMachine(historyType: nil)).start()
+        let reactor = createReactor(powerMachine(historyType: nil)).start()
 
-        actor.send(Event("SWITCH"))
-        actor.send(Event("POWER"))
-        actor.send(Event("POWER"))
+        reactor.send(Event("SWITCH"))
+        reactor.send(Event("POWER"))
+        reactor.send(Event("POWER"))
 
-        #expect(actor.snapshot.value == .compound(["on": .atomic("second")]))
+        #expect(reactor.snapshot.value == .compound(["on": .atomic("second")]))
     }
 
     @Test("falls back to initial state when no history (explicit shallow)")
@@ -65,10 +65,10 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("POWER"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("POWER"))
 
-        #expect(actor.snapshot.value == .compound(["on": .atomic("first")]))
+        #expect(reactor.snapshot.value == .compound(["on": .atomic("first")]))
     }
 
     @Test("falls back to initial state when no history (default shallow)")
@@ -89,10 +89,10 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("POWER"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("POWER"))
 
-        #expect(actor.snapshot.value == .compound(["on": .atomic("first")]))
+        #expect(reactor.snapshot.value == .compound(["on": .atomic("first")]))
     }
 
     @Test("uses configured default target when history is machine initial state")
@@ -106,8 +106,8 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        #expect(actor.snapshot.matches("bar"))
+        let reactor = createReactor(machine).start()
+        #expect(reactor.snapshot.matches("bar"))
     }
 
     @Test("uses configured default target when history is region initial state")
@@ -127,10 +127,10 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("NEXT"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("NEXT"))
 
-        #expect(actor.snapshot.value == .compound(["bar": .atomic("qwe")]))
+        #expect(reactor.snapshot.value == .compound(["bar": .atomic("qwe")]))
     }
 
     @Test("deep history restores nested leaf state")
@@ -158,12 +158,12 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("GO"))
-        actor.send(Event("LEAVE"))
-        actor.send(Event("RETURN"))
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("GO"))
+        reactor.send(Event("LEAVE"))
+        reactor.send(Event("RETURN"))
 
-        #expect(actor.snapshot.value == .compound([
+        #expect(reactor.snapshot.value == .compound([
             "parent": .compound(["child": .atomic("deep")]),
         ]))
     }

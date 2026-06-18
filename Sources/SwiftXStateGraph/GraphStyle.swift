@@ -21,7 +21,7 @@ public enum GraphGridStyle: String, Sendable, CaseIterable {
 /// style.nodeCornerRadius = 14
 /// style.activeNodeFill = .green
 ///
-/// MachineGraphView(actor: actor, machine: machine)
+/// MachineGraphView(reactor: reactor, machine: machine)
 ///     .graphStyle(style)
 /// ```
 public struct GraphStyle: Sendable {

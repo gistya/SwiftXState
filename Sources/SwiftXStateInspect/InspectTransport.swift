@@ -25,7 +25,7 @@ public struct InspectWireMessage: Sendable, Equatable, Codable {
 public struct InspectWireEvent: Sendable, Equatable, Codable {
     public var kind: String
     public var rootId: String
-    public var actor: InspectWireReactorRef
+    public var reactor: InspectWireReactorRef
     public var source: InspectWireReactorRef?
     public var event: InspectWireEventDescription?
     public var snapshot: InspectWireSnapshot?
@@ -36,7 +36,7 @@ public struct InspectWireEvent: Sendable, Equatable, Codable {
     public init(from inspectionEvent: InspectionEvent) {
         kind = inspectionEvent.kind.rawValue
         rootId = inspectionEvent.rootId
-        actor = InspectWireReactorRef(from: inspectionEvent.actor)
+        reactor = InspectWireReactorRef(from: inspectionEvent.reactor)
         source = inspectionEvent.source.map(InspectWireReactorRef.init(from:))
         event = inspectionEvent.event.map(InspectWireEventDescription.init(from:))
         snapshot = inspectionEvent.snapshot.map(InspectWireSnapshot.init(from:))
@@ -91,9 +91,9 @@ public struct InspectWireSnapshot: Sendable, Equatable, Codable {
     public var childCount: Int
 
     public init(from snapshot: InspectionSnapshot) {
-        sessionId = snapshot.actor.sessionId
-        systemId = snapshot.actor.systemId
-        machineId = snapshot.actor.machineId
+        sessionId = snapshot.reactor.sessionId
+        systemId = snapshot.reactor.systemId
+        machineId = snapshot.reactor.machineId
         status = String(describing: snapshot.status)
         value = snapshot.value
         stateValue = snapshot.stateValue.description

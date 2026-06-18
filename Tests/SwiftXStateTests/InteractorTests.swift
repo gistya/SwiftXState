@@ -74,7 +74,7 @@ private func snapshotValue(_ event: ScopedInspectionEvent) -> String? {
 @Suite("Interactor: the inter-actor plane")
 struct InteractorTests {
 
-    @Test("typed cross-Interactor send drives the hosted actor (run-to-completion preserved)")
+    @Test("typed cross-Interactor send drives the hosted reactor (run-to-completion preserved)")
     func typedSend() async {
         let ui = Interactor(id: "ui")
         let toggle = await ui.spawn(createMachine(Toggle.config))
@@ -146,12 +146,12 @@ struct InteractorTests {
         let interactorIDs = Set(collected.map(\.interactorID))
         #expect(interactorIDs.isSuperset(of: ["ui", "workers", "sensors"]))
 
-        // No id collision: the three "toggle" actors are distinct qualified addresses.
+        // No id collision: the three "toggle" reactors are distinct qualified addresses.
         let activeAddresses = Set(
             collected.compactMap { event -> String? in
                 guard case let .inspection(inner) = event.payload, inner.kind == .snapshot,
                       inner.snapshot?.value == "active" else { return nil }
-                return "\(event.interactorID)/\(inner.actor.sessionId)"
+                return "\(event.interactorID)/\(inner.reactor.sessionId)"
             }
         )
         #expect(activeAddresses == ["ui/toggle", "workers/toggle", "sensors/toggle"])
@@ -162,7 +162,7 @@ struct InteractorTests {
         #expect(Set(seqs).count == seqs.count)
     }
 
-    @Test("supervision restarts a hosted actor when it enters its failure state")
+    @Test("supervision restarts a hosted reactor when it enters its failure state")
     func supervisionRestart() async {
         let workers = Interactor(id: "workers")
         let worker = await workers.spawn(
@@ -191,18 +191,18 @@ struct InteractorTests {
         graph.apply(ScopedInspectionEvent(
             interactorID: "ui", lamport: 1, globalSeq: 1, timestamp: 0,
             payload: .lifecycle(.init(kind: .spawned,
-                actor: ActorAddress(interactorID: "ui", actorID: "nav"), detail: "navigator"))
+                reactor: ReactorAddress(interactorID: "ui", reactorID: "nav"), detail: "navigator"))
         ))
         graph.apply(ScopedInspectionEvent(
             interactorID: "workers", lamport: 1, globalSeq: 2, timestamp: 0,
             payload: .lifecycle(.init(kind: .spawned,
-                actor: ActorAddress(interactorID: "workers", actorID: "job"), detail: "job"))
+                reactor: ReactorAddress(interactorID: "workers", reactorID: "job"), detail: "job"))
         ))
         graph.apply(ScopedInspectionEvent(
             interactorID: "workers", lamport: 2, globalSeq: 3, timestamp: 0,
             payload: .message(.init(
-                from: ActorAddress(interactorID: "ui", actorID: "nav"),
-                to: ActorAddress(interactorID: "workers", actorID: "job"),
+                from: ReactorAddress(interactorID: "ui", reactorID: "nav"),
+                to: ReactorAddress(interactorID: "workers", reactorID: "job"),
                 event: "START", correlation: UUID()))
         ))
 

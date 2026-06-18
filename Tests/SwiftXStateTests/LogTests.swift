@@ -104,7 +104,7 @@ struct LogTests {
         #expect(outputs[0].message.contains("xstate.init"))
     }
 
-    @Test("log emits inspection action events from actors")
+    @Test("log emits inspection action events from reactors")
     func inspectionAction() {
         let collector = InspectionCollector()
         let machine = createMachine(MachineConfig(

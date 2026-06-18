@@ -1,6 +1,6 @@
 import Foundation
 
-/// A persisted snapshot for a non-machine child actor (task, callback, etc.).
+/// A persisted snapshot for a non-machine child reactor (task, callback, etc.).
 /// These children cannot be fully restored; only their last-known status is kept.
 public struct PersistedOpaqueChildSnapshot: Codable, Sendable, Equatable {
     public var status: SnapshotStatus
@@ -18,7 +18,7 @@ public struct PersistedOpaqueChildSnapshot: Codable, Sendable, Equatable {
     }
 }
 
-/// A persisted child actor snapshot — either a full machine snapshot or opaque status.
+/// A persisted child reactor snapshot — either a full machine snapshot or opaque status.
 public enum PersistedChildSnapshot: Sendable, Equatable {
     case machine(PersistedSnapshot)
     case opaque(PersistedOpaqueChildSnapshot)
@@ -117,7 +117,7 @@ public struct PersistedSnapshot: Codable, Sendable, Equatable {
 }
 
 public enum PersistenceError: Error, Equatable, LocalizedError {
-    case actorNotStarted
+    case reactorNotStarted
     case machineMismatch(expected: String, actual: String)
     case contextEncodingFailed
     case contextDecodingFailed
@@ -126,18 +126,18 @@ public enum PersistenceError: Error, Equatable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .actorNotStarted:
-            return "Actor has not been started"
+        case .reactorNotStarted:
+            return "Reactor has not been started"
         case let .machineMismatch(expected, actual):
-            return "Persisted snapshot is for machine '\(expected)', but actor uses '\(actual)'"
+            return "Persisted snapshot is for machine '\(expected)', but reactor uses '\(actual)'"
         case .contextEncodingFailed:
-            return "Failed to encode actor context"
+            return "Failed to encode reactor context"
         case .contextDecodingFailed:
             return "Failed to decode persisted context"
         case let .unknownState(state):
             return "Unknown persisted state '\(state)'"
         case let .childMachineMismatch(childId, expected, actual):
-            return "Persisted child '\(childId)' is for machine '\(expected)', but actor uses '\(actual)'"
+            return "Persisted child '\(childId)' is for machine '\(expected)', but reactor uses '\(actual)'"
         }
     }
 }

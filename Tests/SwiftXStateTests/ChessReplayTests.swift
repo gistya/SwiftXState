@@ -8,13 +8,13 @@ struct ChessReplayTests {
         let recorder = InspectionRecorder()
         let machine = ChessSampleMachine.make()
 
-        let actor = createReactor(
+        let reactor = createReactor(
             machine,
             options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ChessSampleMachine.initialContext())
 
-        actor.send(Event("TAP.6.4"))
-        actor.send(Event("TAP.4.4"))
+        reactor.send(Event("TAP.6.4"))
+        reactor.send(Event("TAP.4.4"))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")

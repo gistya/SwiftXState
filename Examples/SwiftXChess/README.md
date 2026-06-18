@@ -2,12 +2,6 @@
 
 A macOS SwiftUI sample that plays chess on top of a **SwiftXState** state machine. The app is structured so you can copy the same pattern into your own projects: define a machine, wrap it in a small session object, and bind SwiftUI views to `snapshot` / `context`.
 
-## Foreword
-
-**Note to the reader:** "Actor" here means a `SwiftXState.Actor` — not a Swift concurrency `actor`. SX's type names are kept as consistent as possible with the original XState for the sake of harmony. 
-
-(For details on using the Swift concurrency support built into SX, see the main README.md.)
-
 ## What SwiftXChess demonstrates
 
 | Concern | Where it lives |
@@ -35,7 +29,7 @@ flowchart LR
     end
 
     subgraph runtime [SwiftXState]
-        Actor[Actor of ChessContext]
+        Reactor[Reactor of ChessContext]
         SM[StateMachine from ChessMachineFactory]
     end
 
@@ -48,7 +42,7 @@ flowchart LR
     CS -->|@Observable refresh| CV
 ```
 
-**One-way command flow:** UI → `ChessSession.send` → `actor.send` → transition → `assign` mutates `ChessContext` → `snapshot` updates → SwiftUI re-renders.
+**One-way command flow:** UI → `ChessSession.send` → `reactor.send` → transition → `assign` mutates `ChessContext` → `snapshot` updates → SwiftUI re-renders.
 
 **One-way read flow:** Views read `session.context` (and sometimes `session.snapshot.value` for machine state strings).
 
@@ -110,11 +104,11 @@ Example: a tap in `playing` runs **two** things in parallel:
 
 ```swift
 let machine = ChessMachineFactory.machine
-actor = createActor(machine, options: ActorOptions(inspect: inspect))
-snapshot = actor.start(context: ChessContext.initial()).snapshot
+reactor = createReactor(machine, options: ReactorOptions(inspect: inspect))
+snapshot = reactor.start(context: ChessContext.initial()).snapshot
 ```
 
-- `createActor` comes from **SwiftXState**.
+- `createReactor` comes from **SwiftXState**.
 - `inspect` fans out to `InspectionRecorder` (for replay) and optionally `InspectBridge` (Stately).
 - After `start`, `snapshot` holds the current `MachineSnapshot<ChessContext>`.
 
@@ -136,7 +130,7 @@ Higher-level helpers wrap typed events:
 - `newGame()` → `.newGame`
 - `enterReplay()` / `exitReplay()` / `scrubReplay(to:)`
 
-**Important:** `snapshot` is updated synchronously on the main actor immediately after `actor.send`. Views depend on this — do not defer snapshot updates to an async subscriber if you want the canvas to stay in sync.
+**Important:** `snapshot` is updated synchronously on the main actor immediately after `reactor.send`. Views depend on this — do not defer snapshot updates to an async subscriber if you want the canvas to stay in sync.
 
 ### Reading state in views
 
@@ -203,12 +197,12 @@ Replay flow:
 1. User taps a square in `ChessBoardView` → `onTap(row, col)`.
 2. `ContentView` calls `session.tap(row:col:)`.
 3. `ChessSession.send(.tap(Square(row:col:)))`.
-4. `Actor.send` runs `selectTransitions` for event type `TAP.{row}.{col}`.
+4. `Reactor.send` runs `selectTransitions` for event type `TAP.{row}.{col}`.
 5. Matching transitions fire `assign` actions:
    - `ChessMachine.handleTap` parses event, calls `ChessRules.handleTap(&context, at:)`.
    - Castling region may transition if parameterized `forfeitsCastling` guard passes for that side.
 6. If `context.outcome` is set, `always` may move `game` → `gameOver`.
-7. `actor.snapshot` updates; `ChessSession.snapshot` copies it.
+7. `reactor.snapshot` updates; `ChessSession.snapshot` copies it.
 8. SwiftUI re-reads `session.context.board`, `selected`, `turn`, etc.
 
 Promotion follows the same path with `PROMOTE.{kind}` → `handlePromotion` → `ChessRules.handlePromotion`.
@@ -235,7 +229,7 @@ Promotion follows the same path with `PROMOTE.{kind}` → `handlePromotion` → 
 | Which events are accepted in which state | Board mutation algorithms |
 | Parallel regions for orthogonal concerns | Formatting strings for display (can also live on context) |
 
-Keep views free of `createActor`, `StateMachine`, and `assign`. They should only see `MySession`.
+Keep views free of `createReactor`, `StateMachine`, and `assign`. They should only see `MySession`.
 
 ### When to read `snapshot.value` vs `context`
 
@@ -282,7 +276,7 @@ Examples/SwiftXChess/
 │   ├── ChessRules.swift              # Pure chess logic (called from machine)
 │   ├── ChessSAN.swift                # SAN encoding
 │   ├── ChessReplayRestore.swift      # Snapshot restore for replay scrub
-│   ├── BoardActors/                  # Square / Piece / GameWatcher / BoardInspector actors
+│   ├── BoardReactors/                  # Square / Piece / GameWatcher / BoardInspector actors
 │   ├── ChessBoardView.swift / ChessPieceView.swift / ChessBoardPreviews.swift  # Board UI
 │   └── OpeningDemo*/OpeningPanelView.swift  # Opening-tree demo UI
 │
@@ -299,7 +293,7 @@ Run the openings engine on its own: `cd SwiftXChessOpenings && swift test`.
 The app target links:
 
 - **SwiftXChessOpenings** — the local opening-recognition package
-- **SwiftXState** — `createMachine`, `createActor`, `Actor`, `assign`, replay APIs
+- **SwiftXState** — `createMachine`, `createReactor`, `Reactor`, `assign`, replay APIs
 - **SwiftXStateSwiftUI** — available for additional helpers (this sample uses manual `@Observable` bridging)
 - **SwiftXStateInspect** / **SwiftXStateInspectURLSession** — Stately WebSocket bridge
 

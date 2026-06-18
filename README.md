@@ -92,11 +92,12 @@ Every effort has been made to ensure you can trust this library. For details, se
 - Feature-complete beta phase (see roadmap items below). 
 - Now with documentation (thanks to the awesome [swift-docc](https://github.com/swiftlang/swift-docc))
 
-## Why are your "`Actor`s" not "Swift `actor`s"?
+## What is the Interactor/Reactor model?
 
+- XState.js is based on the [actor model](https://en.wikipedia.org/wiki/Reactor_model) of software design, where "actors" are the basic building blocks of concurrency. 
 - Swift's `actor` is about asynchronous isolation and data-race safety.
-- XState.js's `Actor` is about synchronous deterministic transitions and replayability.
-- SwiftXState implements compatibility with XState.js, where `Actor`s deterministically orchestrate run-to-completion events, so we kept their terminology.
+- XState.js's `Reactor` is about synchronous deterministic transitions and replayability.
+- SwiftXState implements compatibility with XState.js, where `Reactor`s deterministically orchestrate run-to-completion events, so we kept their terminology.
 - We do use `Swift actor` for suitable roles, such as `InspectBridgeState`, which handles serialized asynchronous communication.
 
 
@@ -145,7 +146,7 @@ We offer two main API paths:
         ]
     ))
 
-    let actor = createActor(toggle).start()
+    let actor = createReactor(toggle).start()
     actor.send(Event("toggle"))
     print(actor.snapshot.matches("active")) // true
     ```
@@ -302,7 +303,7 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 
 | Capability | Status | Notes |
 |------------|--------|-------|
-| `createActor` + mailbox + `send` | ✅ Parity | See [Concurrency](#concurrency-swiftxstate-actor-vs-swift-actor) |
+| `createReactor` + mailbox + `send` | ✅ Parity | See [Concurrency](#concurrency-swiftxstate-actor-vs-swift-actor) |
 | `invoke` / `spawnChild` | ✅ Parity | |
 | `fromMachine` (child state machines) | ✅ Parity | |
 | `fromTask` (`fromPromise`) | ✅ Parity | `async throws` with structured scope |
@@ -311,8 +312,8 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 | `fromObservable` / `Subscribable` | ✅ Parity | |
 | `fromStore` | ✅ Parity | XState store actor logic |
 | `fromTaskGroup` | ➕ SwiftXState only | Structured concurrent child work via `TaskGroup` |
-| `sendBack` in callback actors | ✅ Parity | `CallbackActorScope.sendBack` — alias for `sendToParent` |
-| `ActorSystem` (register, get, inspect) | ✅ Parity | |
+| `sendBack` in callback actors | ✅ Parity | `CallbackReactorScope.sendBack` — alias for `sendToParent` |
+| `ReactorSystem` (register, get, inspect) | ✅ Parity | |
 | `forwardTo`, `sendTo` (with delay), `sendParent` | ✅ Parity | |
 | `emit` + `actor.on("eventType")` | ✅ Parity | |
 
@@ -321,12 +322,12 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 | Capability | Status | Notes |
 |------------|--------|-------|
 | `getPersistedSnapshot` / `restoreSnapshot` | ✅ Parity | Requires `Codable` context |
-| `actor.start(from:)` hydration | ✅ Parity | Two-step: `createActor` then `start(from:)` |
-| `createActor(..., snapshot:)` one-shot hydration | ✅ Parity | Already started; `ActorPersistenceStore.createActor(_:key:)` for SwiftData |
+| `actor.start(from:)` hydration | ✅ Parity | Two-step: `createReactor` then `start(from:)` |
+| `createReactor(..., snapshot:)` one-shot hydration | ✅ Parity | Already started; `ReactorPersistenceStore.createReactor(_:key:)` for SwiftData |
 | Child actor state in persisted snapshots | ✅ Parity | **Machine** children round-trip recursively; opaque children persist status only — use `onCancel` + `opaqueRestorePolicy` for SwiftData cleanup / deferred re-spawn |
 | **Replay sessions** (record, pure replay, scrub) | ➕ SwiftXState only | `ReplaySession`, `RecordedStep`, `ReplayDriver` |
 | Replay with full custom event payloads | ✅ Parity | `ReplayPayloadRepresentable`, `PayloadEvent`, `ReplayEventDecoder` |
-| **SwiftData persistence** | ➕ SwiftXState only | `ActorPersistenceStore`, `ReplayPersistenceStore` |
+| **SwiftData persistence** | ➕ SwiftXState only | `ReactorPersistenceStore`, `ReplayPersistenceStore` |
 
 ### Inspector and tooling
 

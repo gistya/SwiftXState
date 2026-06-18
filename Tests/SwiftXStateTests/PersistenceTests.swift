@@ -6,7 +6,7 @@ private struct PersistCounterContext: Sendable, Equatable, Codable {
     var count: Int
 }
 
-@Suite("Actor persistence")
+@Suite("Reactor persistence")
 struct PersistenceTests {
     private var counterMachine: StateMachine<PersistCounterContext> {
         createMachine(MachineConfig(
@@ -28,20 +28,20 @@ struct PersistenceTests {
     @Test("getPersistedSnapshot round-trips through restoreSnapshot")
     func roundTrip() throws {
         let machine = counterMachine
-        let actor = createReactor(machine).start(context: PersistCounterContext(count: 0))
-        actor.send(Event("INC"))
-        actor.send(Event("INC"))
+        let reactor = createReactor(machine).start(context: PersistCounterContext(count: 0))
+        reactor.send(Event("INC"))
+        reactor.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try reactor.getPersistedSnapshot()
         let restored = try restoreSnapshot(machine: machine, persisted: persisted)
 
-        #expect(restored.value == actor.snapshot.value)
+        #expect(restored.value == reactor.snapshot.value)
         #expect(restored.context.count == 2)
         #expect(restored.matches("idle"))
-        #expect(restored.tags == actor.snapshot.tags)
+        #expect(restored.tags == reactor.snapshot.tags)
     }
 
-    @Test("actor starts from persisted snapshot and continues transitioning")
+    @Test("reactor starts from persisted snapshot and continues transitioning")
     func startFromPersisted() throws {
         let machine = counterMachine
         let original = createReactor(machine).start(context: PersistCounterContext(count: 0))
@@ -99,10 +99,10 @@ struct PersistenceTests {
 
     @Test("persisted JSON survives encode and decode")
     func jsonRoundTrip() throws {
-        let actor = createReactor(counterMachine).start(context: PersistCounterContext(count: 3))
-        actor.send(Event("INC"))
+        let reactor = createReactor(counterMachine).start(context: PersistCounterContext(count: 3))
+        reactor.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try reactor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
         let decoded = try PersistedSnapshot.decodeJSON(data)
 
@@ -150,12 +150,12 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.send(Event("GO"))
-        actor.childReactor(id: "worker")?.send(Event("INC"))
-        actor.childReactor(id: "worker")?.send(Event("INC"))
+        let reactor = createReactor(parentMachine).start()
+        reactor.send(Event("GO"))
+        reactor.childReactor(id: "worker")?.send(Event("INC"))
+        reactor.childReactor(id: "worker")?.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try reactor.getPersistedSnapshot()
         #expect(persisted.children["worker"] != nil)
         if case let .machine(childPersisted) = persisted.children["worker"] {
             let childContext = try JSONDecoder().decode(
@@ -173,14 +173,14 @@ struct PersistenceTests {
             return
         }
 
-        #expect(child.actor.snapshot.context.count == 2)
+        #expect(child.reactor.snapshot.context.count == 2)
         #expect(restored.snapshot.matches("working"))
     }
 
     @Test("backward compatible persisted JSON without children field")
     func legacyPersistedJSON() throws {
-        let actor = createReactor(counterMachine).start(context: PersistCounterContext(count: 1))
-        let persisted = try actor.getPersistedSnapshot()
+        let reactor = createReactor(counterMachine).start(context: PersistCounterContext(count: 1))
+        let persisted = try reactor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
 
         var object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -254,18 +254,18 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createReactor(rootMachine).start()
-        actor.send(Event("GO"))
-        guard let midChild = actor.childReactor(id: "mid") as? MachineChildRef<MidContext> else {
-            Issue.record("Expected mid child actor")
+        let reactor = createReactor(rootMachine).start()
+        reactor.send(Event("GO"))
+        guard let midChild = reactor.childReactor(id: "mid") as? MachineChildRef<MidContext> else {
+            Issue.record("Expected mid child reactor")
             return
         }
         midChild.send(Event("GO"))
-        midChild.actor.childReactor(id: "leaf")?.send(Event("INC"))
-        midChild.actor.childReactor(id: "leaf")?.send(Event("INC"))
-        midChild.actor.childReactor(id: "leaf")?.send(Event("INC"))
+        midChild.reactor.childReactor(id: "leaf")?.send(Event("INC"))
+        midChild.reactor.childReactor(id: "leaf")?.send(Event("INC"))
+        midChild.reactor.childReactor(id: "leaf")?.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try reactor.getPersistedSnapshot()
         if case let .machine(midPersisted) = persisted.children["mid"],
            case let .machine(leafPersisted) = midPersisted.children["leaf"] {
             let leafContext = try JSONDecoder().decode(
@@ -279,13 +279,13 @@ struct PersistenceTests {
 
         let restored = createReactor(rootMachine).start(from: persisted)
         guard let mid = restored.childReactor(id: "mid") as? MachineChildRef<MidContext>,
-              let leaf = mid.actor.childReactor(id: "leaf") as? MachineChildRef<LeafContext> else {
+              let leaf = mid.reactor.childReactor(id: "leaf") as? MachineChildRef<LeafContext> else {
             Issue.record("Expected restored nested machine children")
             return
         }
 
-        #expect(mid.actor.snapshot.matches("working"))
-        #expect(leaf.actor.snapshot.context.count == 3)
+        #expect(mid.reactor.snapshot.matches("working"))
+        #expect(leaf.reactor.snapshot.context.count == 3)
     }
 
     @Test("persisted snapshot restores multiple parallel invoked children")
@@ -349,12 +349,12 @@ struct PersistenceTests {
             type: .parallel
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.childReactor(id: "workerA")?.send(Event("INC"))
-        actor.childReactor(id: "workerB")?.send(Event("INC"))
-        actor.childReactor(id: "workerB")?.send(Event("INC"))
+        let reactor = createReactor(parentMachine).start()
+        reactor.childReactor(id: "workerA")?.send(Event("INC"))
+        reactor.childReactor(id: "workerB")?.send(Event("INC"))
+        reactor.childReactor(id: "workerB")?.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try reactor.getPersistedSnapshot()
         let restored = createReactor(parentMachine).start(from: persisted)
 
         guard let workerA = restored.childReactor(id: "workerA") as? MachineChildRef<WorkerContext>,
@@ -363,8 +363,8 @@ struct PersistenceTests {
             return
         }
 
-        #expect(workerA.actor.snapshot.context.count == 1)
-        #expect(workerB.actor.snapshot.context.count == 4)
+        #expect(workerA.reactor.snapshot.context.count == 1)
+        #expect(workerB.reactor.snapshot.context.count == 4)
     }
 
     @Test("spawned machine child state survives persist and restore")
@@ -406,11 +406,11 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.childReactor(id: "spawnedWorker")?.send(Event("INC"))
-        actor.childReactor(id: "spawnedWorker")?.send(Event("INC"))
+        let reactor = createReactor(parentMachine).start()
+        reactor.childReactor(id: "spawnedWorker")?.send(Event("INC"))
+        reactor.childReactor(id: "spawnedWorker")?.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try reactor.getPersistedSnapshot()
         let restored = createReactor(parentMachine).start(from: persisted)
 
         guard let child = restored.childReactor(id: "spawnedWorker") as? MachineChildRef<ChildContext> else {
@@ -418,7 +418,7 @@ struct PersistenceTests {
             return
         }
 
-        #expect(child.actor.snapshot.context.count == 2)
+        #expect(child.reactor.snapshot.context.count == 2)
     }
 
     @Test("restoring done child does not re-emit DoneReactorEvent")
@@ -462,11 +462,11 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.send(Event("GO"))
-        #expect(actor.snapshot.context.doneCount == 1)
+        let reactor = createReactor(parentMachine).start()
+        reactor.send(Event("GO"))
+        #expect(reactor.snapshot.context.doneCount == 1)
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try reactor.getPersistedSnapshot()
         let restored = createReactor(parentMachine).start(from: persisted)
 
         #expect(restored.snapshot.context.doneCount == 1)
@@ -499,10 +499,10 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createReactor(parentMachine).start()
-        actor.send(Event("GO"))
+        let reactor = createReactor(parentMachine).start()
+        reactor.send(Event("GO"))
 
-        let activePersisted = try actor.getPersistedSnapshot()
+        let activePersisted = try reactor.getPersistedSnapshot()
         if case let .opaque(opaque) = activePersisted.children["task"] {
             #expect(opaque.status == .active)
         } else {
@@ -519,8 +519,8 @@ struct PersistenceTests {
             states: ["idle": StateNodeConfig()]
         ))
 
-        let actor = createReactor(counterMachine).start()
-        let persisted = try actor.getPersistedSnapshot()
+        let reactor = createReactor(counterMachine).start()
+        let persisted = try reactor.getPersistedSnapshot()
 
         #expect(throws: PersistenceError.machineMismatch(expected: "counter", actual: "other")) {
             try restoreSnapshot(machine: otherMachine, persisted: persisted)

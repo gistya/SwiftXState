@@ -2,9 +2,9 @@
 import SwiftUI
 import SwiftXState
 
-/// Sequence diagram: actors as vertical lifelines, events as arrows between them over
+/// Sequence diagram: reactors as vertical lifelines, events as arrows between them over
 /// time (oldest at top). Snapshots appear as small state markers on a lifeline. With many
-/// actors (e.g. the 96-actor stress test) only the lifelines touched by the recent window
+/// reactors (e.g. the 96-actor stress test) only the lifelines touched by the recent window
 /// are shown, so the diagram stays legible while the Reactors tab carries the full list.
 struct InspectorSequenceTab: View {
     let store: InspectorStore
@@ -25,7 +25,7 @@ struct InspectorSequenceTab: View {
             ContentUnavailableView_Compat(
                 title: "Sequence diagram",
                 systemImage: "arrow.left.arrow.right",
-                message: "Send events between actors to populate the diagram."
+                message: "Send events between reactors to populate the diagram."
             )
             .background(style.background)
         } else {
@@ -45,7 +45,7 @@ struct InspectorSequenceTab: View {
     // MARK: Columns
 
     private func columnLabel(_ key: String) -> String {
-        key == externalKey ? "external" : (store.actor(key)?.displayName ?? key)
+        key == externalKey ? "external" : (store.reactor(key)?.displayName ?? key)
     }
 
     /// Lifelines actually referenced by the recent events, capped for legibility.
@@ -98,8 +98,8 @@ struct InspectorSequenceTab: View {
                 drawMarker(&context, x: targetX, y: y,
                            label: entry.snapshot.map { compactValue($0.stateValue) } ?? "",
                            color: style.snapshotKindColor)
-            case .actor:
-                drawMarker(&context, x: targetX, y: y, label: "start", color: style.actorKindColor)
+            case .reactor:
+                drawMarker(&context, x: targetX, y: y, label: "start", color: style.reactorKindColor)
             default:
                 break
             }

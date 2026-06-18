@@ -9,7 +9,7 @@ import SwiftXStateInspectorUI
 //               focus and touch; works great in portrait and landscape.
 //   B · Split — sidebar (status / controls / tall openings) beside the board stacked over the live
 //               state graph. "Inspect" morphs the whole pane into the full MachineInspectorView
-//               (info bar + sidebar + actors drawer + graph); "Game" morphs back. Portrait-locked.
+//               (info bar + sidebar + reactors drawer + graph); "Game" morphs back. Portrait-locked.
 //
 // macOS is unaffected — `ContentView` only routes here under `#if os(iOS)`.
 
@@ -130,7 +130,7 @@ private struct IPadSplitLayout: View {
     @State private var scrubberStep: Double = 0
     @State private var inspectorMode = false
     @State private var inspectorTab: InspectorTab = .state
-    @State private var actorsExpanded = true
+    @State private var reactorsExpanded = true
 
     private var inspectorGraphStyle: GraphStyle {
         var style = GraphStyle.dark
@@ -139,7 +139,7 @@ private struct IPadSplitLayout: View {
     }
 
     // The whole screen is assembled from composable pieces. Entering inspector mode animates each
-    // inspector piece in from its own edge — info bar from the top, panel over the sidebar, actors
+    // inspector piece in from its own edge — info bar from the top, panel over the sidebar, reactors
     // drawer up from the bottom — while the main canvas cross-fades from board to inspector graph.
     var body: some View {
         VStack(spacing: 0) {
@@ -169,7 +169,7 @@ private struct IPadSplitLayout: View {
             .frame(maxHeight: .infinity)
 
             if inspectorMode, let store {
-                InspectorReactorsDrawer(store: store, expanded: $actorsExpanded)
+                InspectorReactorsDrawer(store: store, expanded: $reactorsExpanded)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -202,7 +202,7 @@ private struct IPadSplitLayout: View {
     }
 
     /// The board over the live game-watcher graph — stays put across modes. Entering the inspector
-    /// brings the chrome (info bar / panel / actors drawer) in around it; it doesn't swap in a new graph.
+    /// brings the chrome (info bar / panel / reactors drawer) in around it; it doesn't swap in a new graph.
     private var mainCanvas: some View {
         boardAndGraph
     }
@@ -253,22 +253,22 @@ private struct IPadSplitLayout: View {
         }
     }
 
-    /// Game mode: the live game-watcher graph. Inspector mode: the *selected* actor's graph, so the
-    /// bottom actors drawer drives what's shown.
+    /// Game mode: the live game-watcher graph. Inspector mode: the *selected* reactor's graph, so the
+    /// bottom reactors drawer drives what's shown.
     @ViewBuilder
     private var graphPane: some View {
         if inspectorMode, let store {
             InspectorGraphView(store: store, graphStyle: inspectorGraphStyle)
         } else {
-            MachineGraphView(actor: session.actor, machine: session.machine)
+            MachineGraphView(reactor: session.reactor, machine: session.machine)
                 .graphStyle(.dark)
         }
     }
 
-    /// Open the inspector on the game-watcher (rather than whichever board actor registered first).
+    /// Open the inspector on the game-watcher (rather than whichever board reactor registered first).
     private func selectGameWatcher() {
         guard let store else { return }
-        if let watcher = store.actors.first(where: { $0.machineID == GameWatcherMachine.id }) {
+        if let watcher = store.reactors.first(where: { $0.machineID == GameWatcherMachine.id }) {
             store.selectedSessionID = watcher.sessionID
         }
     }
@@ -305,7 +305,7 @@ private struct IPadStatusCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 LabeledContent("Turn", value: session.statusLine)
                 LabeledContent("Ply", value: "\(session.context.plyCount)")
-                LabeledContent("Actors", value: "\(session.snapshot.children.count)")
+                LabeledContent("Reactors", value: "\(session.snapshot.children.count)")
                 LabeledContent("State") {
                     Text(session.snapshot.value.description)
                         .font(.caption.monospaced())

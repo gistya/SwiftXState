@@ -48,27 +48,27 @@ public struct TypedSnapshot<Context: Sendable, Brand: StateID>: Sendable {
     }
 }
 
-/// Phantom-branded wrapper around `Actor` sharing the same state brand as `TypedSnapshot`.
+/// Phantom-branded wrapper around `Reactor` sharing the same state brand as `TypedSnapshot`.
 public struct TypedReactor<Context: Sendable, Brand: StateID>: Sendable {
-    public let actor: Reactor<Context>
+    public let reactor: Reactor<Context>
 
-    public init(_ actor: Reactor<Context>) {
-        self.actor = actor
+    public init(_ reactor: Reactor<Context>) {
+        self.reactor = reactor
     }
 
     public var snapshot: TypedSnapshot<Context, Brand> {
-        TypedSnapshot(actor.snapshot)
+        TypedSnapshot(reactor.snapshot)
     }
 
     @discardableResult
     public func start(context: Context? = nil) -> TypedSnapshot<Context, Brand> {
-        actor.start(context: context)
+        reactor.start(context: context)
         return snapshot
     }
 
     @discardableResult
     public func send(_ event: any Eventable) -> TypedSnapshot<Context, Brand> {
-        actor.send(event)
+        reactor.send(event)
         return snapshot
     }
 }

@@ -1,10 +1,10 @@
-# ``SwiftXState/Actor``
+# ``SwiftXState/Reactor``
 
 ## Overview
 
-An `Actor` is a running instance of a ``StateMachine``. Create one with `createActor(_:)`,
+An `Reactor` is a running instance of a ``StateMachine``. Create one with `createReactor(_:)`,
 boot it with ``start(input:context:)``, drive it with ``send(_:)``, and read its current
-``MachineSnapshot`` from ``snapshot``. See <doc:RunningActors> for a full walkthrough.
+``MachineSnapshot`` from ``snapshot``. See <doc:RunningReactors> for a full walkthrough.
 
 ## Topics
 

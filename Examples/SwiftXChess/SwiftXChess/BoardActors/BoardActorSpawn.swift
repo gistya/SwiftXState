@@ -41,8 +41,8 @@ enum BoardReactorSpawn {
                 )
             )
         }
-        // Spawn both board representations as separate inspectable actors — pick either in the
-        // inspector's actor drawer to swap between the occupancy and pieces views.
+        // Spawn both board representations as separate inspectable reactors — pick either in the
+        // inspector's reactor drawer to swap between the occupancy and pieces views.
         for mode in BoardMode.allCases {
             actions.append(inspectorSpawn(mode: mode, layout: layout))
         }

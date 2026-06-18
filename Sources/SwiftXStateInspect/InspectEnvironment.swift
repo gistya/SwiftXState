@@ -111,7 +111,7 @@ public enum InspectDefaults {
     }
 }
 
-/// Full client configuration for attaching an inspect transport to an actor system.
+/// Full client configuration for attaching an inspect transport to an reactor system.
 public struct InspectClientConfiguration: Sendable {
     public var policy: ConnectivityPolicy
     public var endpoint: InspectEndpoint

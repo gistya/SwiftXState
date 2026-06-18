@@ -102,20 +102,20 @@ struct GraphModelBuilderTests {
     }
 
     @MainActor
-    @Test("Active set updates as the actor transitions")
+    @Test("Active set updates as the reactor transitions")
     func liveUpdates() {
         let machine = makeTrafficParallelMachine()
-        let actor = createReactor(machine)
-        _ = actor.start(context: 0)
+        let reactor = createReactor(machine)
+        _ = reactor.start(context: 0)
         // The view's live subscription pushes each new snapshot through `setActive`; here we
         // exercise that exact path directly.
         let render = GraphRenderModel(model: GraphModelBuilder.build(from: machine))
-        render.setActive(stateValue: actor.snapshot.value)
+        render.setActive(stateValue: reactor.snapshot.value)
 
         #expect(render.activeIDs.contains("system.light.green"))
 
-        actor.send(Event("NEXT")) // green -> yellow
-        render.setActive(stateValue: actor.snapshot.value)
+        reactor.send(Event("NEXT")) // green -> yellow
+        render.setActive(stateValue: reactor.snapshot.value)
 
         #expect(render.activeIDs.contains("system.light.yellow"))
         #expect(!render.activeIDs.contains("system.light.green"))
@@ -125,10 +125,10 @@ struct GraphModelBuilderTests {
     @Test("Active set is computed from a live snapshot")
     func activeHighlighting() {
         let machine = makeTrafficParallelMachine()
-        let actor = createReactor(machine)
-        _ = actor.start(context: 0)
+        let reactor = createReactor(machine)
+        _ = reactor.start(context: 0)
         let render = GraphRenderModel(model: GraphModelBuilder.build(from: machine))
-        render.setActive(stateValue: actor.snapshot.value)
+        render.setActive(stateValue: reactor.snapshot.value)
 
         // Initial config: light.green + alarm.off both active in the parallel regions.
         #expect(render.activeIDs.contains("system.light.green"))

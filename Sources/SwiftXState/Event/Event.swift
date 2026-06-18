@@ -1,6 +1,6 @@
 import Foundation
 
-/// An event that can be sent to a state machine actor. Conform a Swift enum for a typed event
+/// An event that can be sent to a state machine reactor. Conform a Swift enum for a typed event
 /// union, or use the built-in `Event` for string events. `type` is the discriminator transitions
 /// key on (`on: ["TYPE": …]`).
 public protocol Eventable: Sendable, Equatable {
@@ -24,7 +24,7 @@ extension String: Eventable {
 /// Wildcard event descriptor matching any event type.
 public let wildcardEventDescriptor = "*"
 
-/// Internal init event sent when an actor starts.
+/// Internal init event sent when an reactor starts.
 public enum SystemEvent: String, Eventable, Codable {
     case `init` = "xstate.init"
     case stop = "xstate.stop"

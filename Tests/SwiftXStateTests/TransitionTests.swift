@@ -95,7 +95,7 @@ struct TransitionTests {
         #expect(next.context.count == 5)
     }
 
-    @Test("assign updates context via actor")
+    @Test("assign updates context via reactor")
     func assignAction() {
         let machine = createMachine(MachineConfig(
             initial: "idle",
@@ -109,9 +109,9 @@ struct TransitionTests {
             ]
         ))
 
-        let actor = createReactor(machine).start()
-        actor.send(Event("INCREMENT"))
-        #expect(actor.snapshot.context.count == 1)
+        let reactor = createReactor(machine).start()
+        reactor.send(Event("INCREMENT"))
+        #expect(reactor.snapshot.context.count == 1)
     }
 }
 

@@ -2,8 +2,8 @@
 import SwiftUI
 import SwiftXState
 
-/// A full-width bottom drawer of actors that scrolls left→right. Sits *under* the main
-/// view to make clear that the selected actor is what's being inspected. The "Actors" title
+/// A full-width bottom drawer of reactors that scrolls left→right. Sits *under* the main
+/// view to make clear that the selected reactor is what's being inspected. The "Reactors" title
 /// bar is always visible; clicking it (or the top-bar button) collapses/expands the strip.
 struct InspectorReactorBar: View {
     let store: InspectorStore
@@ -21,7 +21,7 @@ struct InspectorReactorBar: View {
                 Text("ACTORS")
                     .font(.system(size: 10, weight: .bold))
                     .tracking(0.6)
-                Text("\(store.actors.count)")
+                Text("\(store.reactors.count)")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(style.secondaryText)
                 Spacer()
@@ -37,8 +37,8 @@ struct InspectorReactorBar: View {
             if expanded {
                 ScrollView(.horizontal, showsIndicators: true) {
                     HStack(spacing: 8) {
-                        ForEach(store.actors) { actor in
-                            chip(actor)
+                        ForEach(store.reactors) { reactor in
+                            chip(reactor)
                         }
                     }
                     .padding(.horizontal, 10)
@@ -51,20 +51,20 @@ struct InspectorReactorBar: View {
     }
 
     @ViewBuilder
-    private func chip(_ actor:ReactorEntry) -> some View {
-        let selected = store.selectedSessionID == actor.sessionID
+    private func chip(_ reactor:ReactorEntry) -> some View {
+        let selected = store.selectedSessionID == reactor.sessionID
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 5) {
-                StatusDot(status: actor.status)
-                Text(actor.displayName)
+                StatusDot(status: reactor.status)
+                Text(reactor.displayName)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(style.primaryText)
                     .lineLimit(1)
             }
-            if let value = actor.stateValue {
+            if let value = reactor.stateValue {
                 StatePillView(stateValue: value)
             } else {
-                Text(actor.subtitle)
+                Text(reactor.subtitle)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(style.secondaryText)
                     .lineLimit(1)
@@ -79,7 +79,7 @@ struct InspectorReactorBar: View {
                 .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(selected ? style.accent : style.divider, lineWidth: 1))
         )
         .contentShape(Rectangle())
-        .onTapGesture { store.selectedSessionID = actor.sessionID }
+        .onTapGesture { store.selectedSessionID = reactor.sessionID }
     }
 }
 #endif

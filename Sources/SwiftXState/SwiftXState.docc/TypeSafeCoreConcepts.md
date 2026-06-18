@@ -138,7 +138,7 @@ enum Fetcher {
     )
 }
 
-let actor = createActor(createMachine(Fetcher.config)).start()
+let actor = createReactor(createMachine(Fetcher.config)).start()
 actor.send(Fetcher.Fetch())
 actor.send(Fetcher.Loaded(value: "hello"))
 actor.snapshot.matches("success")   // true
@@ -146,7 +146,7 @@ actor.snapshot.matches("success")   // true
 
 ## Next steps
 
-- <doc:RunningActors> — lifecycle, subscriptions, `waitFor`, and child actors.
+- <doc:RunningReactors> — lifecycle, subscriptions, `waitFor`, and child actors.
 - <doc:AsyncWork> — replace the manual `Loaded`/`Failed` events with a real async call via
   `fromTask`, transitioning on its result.
 - <doc:NamedImplementations> — register actions/guards/actors by name for reuse and inspection.

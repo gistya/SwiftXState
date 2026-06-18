@@ -29,15 +29,15 @@ struct AfterTests {
     @Test("transitions after delay")
     func transitionsAfterDelay() {
         let clock = SimulatedClock()
-        let actor = createReactor(lightMachine, options: ReactorOptions(clock: clock)).start()
+        let reactor = createReactor(lightMachine, options: ReactorOptions(clock: clock)).start()
 
-        #expect(actor.snapshot.matches("green"))
+        #expect(reactor.snapshot.matches("green"))
 
         clock.increment(500)
-        #expect(actor.snapshot.matches("green"))
+        #expect(reactor.snapshot.matches("green"))
 
         clock.increment(510)
-        #expect(actor.snapshot.matches("yellow"))
+        #expect(reactor.snapshot.matches("yellow"))
     }
 
     @Test("registers after event types on state node")
@@ -64,13 +64,13 @@ struct AfterTests {
             ]
         ))
 
-        let actor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
-        actor.send(Event("SKIP"))
+        let reactor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
+        reactor.send(Event("SKIP"))
 
-        #expect(actor.snapshot.matches("skipped"))
+        #expect(reactor.snapshot.matches("skipped"))
 
         clock.increment(2000)
-        #expect(actor.snapshot.matches("skipped"))
+        #expect(reactor.snapshot.matches("skipped"))
     }
 
     @Test("reschedules timer when re-entering state")
@@ -91,21 +91,21 @@ struct AfterTests {
             ]
         ))
 
-        let actor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
+        let reactor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
 
         clock.increment(500)
-        actor.send(Event("PAUSE"))
+        reactor.send(Event("PAUSE"))
 
         clock.increment(500)
-        #expect(actor.snapshot.matches("paused"))
+        #expect(reactor.snapshot.matches("paused"))
 
-        actor.send(Event("RESUME"))
+        reactor.send(Event("RESUME"))
 
         clock.increment(500)
-        #expect(actor.snapshot.matches("waiting"))
+        #expect(reactor.snapshot.matches("waiting"))
 
         clock.increment(510)
-        #expect(actor.snapshot.matches("done"))
+        #expect(reactor.snapshot.matches("done"))
     }
 
     @Test("supports guarded after transitions")
@@ -130,10 +130,10 @@ struct AfterTests {
             ]
         ))
 
-        let actor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
+        let reactor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
         clock.increment(10)
 
-        #expect(actor.snapshot.matches("y"))
+        #expect(reactor.snapshot.matches("y"))
     }
 
     @Test("supports named delay expressions")
@@ -162,15 +162,15 @@ struct AfterTests {
             )
         )
 
-        let actor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
+        let reactor = createReactor(machine, options: ReactorOptions(clock: clock)).start()
         #expect(resolved.value == DelayContext(delay: 500))
-        #expect(actor.snapshot.matches("inactive"))
+        #expect(reactor.snapshot.matches("inactive"))
 
         clock.increment(300)
-        #expect(actor.snapshot.matches("inactive"))
+        #expect(reactor.snapshot.matches("inactive"))
 
         clock.increment(200)
-        #expect(actor.snapshot.matches("active"))
+        #expect(reactor.snapshot.matches("active"))
     }
 
     @Test("pure transition handles after events")

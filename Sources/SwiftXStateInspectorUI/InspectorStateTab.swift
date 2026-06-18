@@ -2,22 +2,22 @@
 import SwiftUI
 import SwiftXState
 
-/// The selected actor's current snapshot: its state value and context as JSON trees,
+/// The selected reactor's current snapshot: its state value and context as JSON trees,
 /// plus status / tags / output / error.
 struct InspectorStateTab: View {
-    let actor:ReactorEntry?
-    /// When set and the actor is simulatable (pasted/static), shows "Send events" controls.
+    let reactor:ReactorEntry?
+    /// When set and the reactor is simulatable (pasted/static), shows "Send events" controls.
     var store: InspectorStore? = nil
     @Environment(\.inspectorStyle) private var style
 
     var body: some View {
-        if let actor, let snapshot = actor.latestSnapshot {
+        if let reactor, let snapshot = reactor.latestSnapshot {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    header(actor, snapshot)
+                    header(reactor, snapshot)
 
-                    if let store, store.isSimulatable(actor.sessionID) {
-                        sendEventsSection(store: store, sessionID: actor.sessionID)
+                    if let store, store.isSimulatable(reactor.sessionID) {
+                        sendEventsSection(store: store, sessionID: reactor.sessionID)
                     }
 
                     section("Value") {
@@ -43,16 +43,16 @@ struct InspectorStateTab: View {
             ContentUnavailableView_Compat(
                 title: "No snapshot yet",
                 systemImage: "doc.text.magnifyingglass",
-                message: "Select an actor and drive the machine to see its state."
+                message: "Select an reactor and drive the machine to see its state."
             )
             .background(style.background)
         }
     }
 
     @ViewBuilder
-    private func header(_ actor:ReactorEntry, _ snapshot: InspectionSnapshot) -> some View {
+    private func header(_ reactor:ReactorEntry, _ snapshot: InspectionSnapshot) -> some View {
         HStack(spacing: 10) {
-            Text(actor.displayName)
+            Text(reactor.displayName)
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(style.primaryText)
             Text(snapshot.status.displayName)

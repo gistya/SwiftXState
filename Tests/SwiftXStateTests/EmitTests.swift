@@ -43,7 +43,7 @@ struct EmitTests {
         #expect(actions.contains { $0.type == "xstate.emit" })
     }
 
-    @Test("actor.on receives statically emitted events")
+    @Test("reactor.on receives statically emitted events")
     func staticEmit() {
         let machine = createMachine(MachineConfig(
             initial: "idle",
@@ -58,10 +58,10 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createReactor(machine).start()
-        _ = actor.on("notification") { collector.append($0) }
+        let reactor = createReactor(machine).start()
+        _ = reactor.on("notification") { collector.append($0) }
 
-        actor.send(Event("GO"))
+        reactor.send(Event("GO"))
 
         let recorded = collector.recorded()
         #expect(recorded.count == 1)
@@ -69,7 +69,7 @@ struct EmitTests {
         #expect(recorded[0].get("message", as: String.self) == "Hello")
     }
 
-    @Test("actor.on wildcard receives all emitted events")
+    @Test("reactor.on wildcard receives all emitted events")
     func wildcardEmit() {
         let machine = createMachine(MachineConfig(
             initial: "idle",
@@ -85,10 +85,10 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createReactor(machine).start()
-        _ = actor.on("*") { collector.append($0) }
+        let reactor = createReactor(machine).start()
+        _ = reactor.on("*") { collector.append($0) }
 
-        actor.send(Event("GO"))
+        reactor.send(Event("GO"))
 
         #expect(collector.recorded().map(\.type) == ["first", "second"])
     }
@@ -114,10 +114,10 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createReactor(machine).start()
-        _ = actor.on("notification") { collector.append($0) }
+        let reactor = createReactor(machine).start()
+        _ = reactor.on("notification") { collector.append($0) }
 
-        actor.send(Event("GO"))
+        reactor.send(Event("GO"))
 
         #expect(collector.recorded().first?.get("message", as: String.self) == "dynamic")
     }
@@ -135,12 +135,12 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createReactor(machine).start()
-        let subscription = actor.on("ping") { collector.append($0) }
+        let reactor = createReactor(machine).start()
+        let subscription = reactor.on("ping") { collector.append($0) }
 
-        actor.send(Event("GO"))
+        reactor.send(Event("GO"))
         subscription.cancel()
-        actor.send(Event("GO"))
+        reactor.send(Event("GO"))
 
         #expect(collector.recorded().count == 1)
     }
@@ -170,8 +170,8 @@ struct EmitTests {
 
         let collector = EmittedEventCollector()
         let received = TestSignal()
-        let actor = createReactor(parentMachine).start()
-        _ = actor.childReactor(id: "worker")?.on("progress") {
+        let reactor = createReactor(parentMachine).start()
+        _ = reactor.childReactor(id: "worker")?.on("progress") {
             collector.append($0)
             received.fire()
         }
@@ -207,13 +207,13 @@ struct EmitTests {
 
         let collector = EmittedEventCollector()
         let received = TestSignal()
-        let actor = createReactor(parentMachine).start()
-        _ = actor.childReactor(id: "listener")?.on("armed") {
+        let reactor = createReactor(parentMachine).start()
+        _ = reactor.childReactor(id: "listener")?.on("armed") {
             collector.append($0)
             received.fire()
         }
 
-        actor.childReactor(id: "listener")?.send(Event("ARM"))
+        reactor.childReactor(id: "listener")?.send(Event("ARM"))
         await received.wait()
 
         #expect(collector.recorded().map(\.type) == ["armed"])
@@ -247,8 +247,8 @@ struct EmitTests {
 
         let collector = EmittedEventCollector()
         let received = TestSignal()
-        let actor = createReactor(parentMachine).start()
-        _ = actor.childReactor(id: "group")?.on("progress") {
+        let reactor = createReactor(parentMachine).start()
+        _ = reactor.childReactor(id: "group")?.on("progress") {
             collector.append($0)
             received.fire()
         }
@@ -258,7 +258,7 @@ struct EmitTests {
         #expect(collector.recorded().first?.get("count", as: Int.self) == 2)
     }
 
-    @Test("emit emits inspection action events from actors")
+    @Test("emit emits inspection action events from reactors")
     func inspectionAction() {
         let collector = InspectionCollector()
         let machine = createMachine(MachineConfig(

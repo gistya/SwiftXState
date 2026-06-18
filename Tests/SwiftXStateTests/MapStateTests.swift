@@ -120,10 +120,10 @@ struct MapStateTests {
             ]
         )
 
-        let actor = createReactor(machine).start()
-        #expect(actor.snapshot.mapStateFirst(mapper) == ViewState(label: "playing", isInteractive: true))
+        let reactor = createReactor(machine).start()
+        #expect(reactor.snapshot.mapStateFirst(mapper) == ViewState(label: "playing", isInteractive: true))
 
-        actor.send(Event("PAUSE"))
-        #expect(actor.snapshot.mapStateFirst(mapper) == ViewState(label: "paused", isInteractive: false))
+        reactor.send(Event("PAUSE"))
+        #expect(reactor.snapshot.mapStateFirst(mapper) == ViewState(label: "paused", isInteractive: false))
     }
 }

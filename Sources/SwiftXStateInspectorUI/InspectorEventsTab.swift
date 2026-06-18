@@ -7,7 +7,7 @@ import SwiftXState
 /// inspection event JSON.
 struct InspectorEventsTab: View {
     let store: InspectorStore
-    /// When non-nil, only events touching this actor are shown.
+    /// When non-nil, only events touching this reactor are shown.
     let filterSessionID: String?
 
     @Environment(\.inspectorStyle) private var style
@@ -77,7 +77,7 @@ struct InspectorEventsTab: View {
 
     @ViewBuilder
     private func title(_ entry: FeedEntry) -> some View {
-        let name = store.actor(entry.sessionID)?.displayName ?? entry.sessionID
+        let name = store.reactor(entry.sessionID)?.displayName ?? entry.sessionID
         switch entry.kind {
         case .event:
             HStack(spacing: 6) {
@@ -99,7 +99,7 @@ struct InspectorEventsTab: View {
                         .background(style.chrome, in: Capsule())
                 }
             }
-        case .actor:
+        case .reactor:
             Text(name).font(.system(size: 14, weight: .semibold)).foregroundStyle(style.primaryText)
         default:
             Text(name).font(.system(size: 13)).foregroundStyle(style.primaryText)

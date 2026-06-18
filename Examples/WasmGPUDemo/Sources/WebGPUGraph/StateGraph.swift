@@ -20,7 +20,7 @@ import SwiftWebGPU
 ///     print("tapped", name)
 /// }
 /// // after each transition:
-/// StateGraph.setActiveState(actor.snapshot.value.description)
+/// StateGraph.setActiveState(reactor.snapshot.value.description)
 /// ```
 @MainActor
 public enum StateGraph {
@@ -44,7 +44,7 @@ public enum StateGraph {
                                       textMode: textMode, onSelect: onSelect)
     }
 
-    /// Tell the renderer which state is active now (e.g. `actor.snapshot.value.description`).
+    /// Tell the renderer which state is active now (e.g. `reactor.snapshot.value.description`).
     /// The highlight eases smoothly toward the new node.
     public static func setActiveState(_ name: String) {
         GraphState.shared.setActiveState(name)

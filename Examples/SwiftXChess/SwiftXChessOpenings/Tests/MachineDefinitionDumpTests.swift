@@ -25,7 +25,7 @@ struct MachineDefinitionDumpTests {
             ),
         ])
         let snapshot = InspectionSnapshot(
-            actor: InspectionActorRef(sessionId: "tree", machineId: OpeningMoveTreeMachine.id),
+            reactor: InspectionReactorRef(sessionId: "tree", machineId: OpeningMoveTreeMachine.id),
             status: .active,
             value: "s999",
             stateValue: .atomic("s999"),
@@ -36,7 +36,7 @@ struct MachineDefinitionDumpTests {
         let event = InspectionEvent(
             kind: .snapshot,
             rootId: "tree",
-            actor: InspectionActorRef(sessionId: "tree", machineId: OpeningMoveTreeMachine.id),
+            reactor: InspectionReactorRef(sessionId: "tree", machineId: OpeningMoveTreeMachine.id),
             event: InspectionEventDescription(type: "SAN.e4"),
             snapshot: snapshot
         )
@@ -57,7 +57,7 @@ struct MachineDefinitionDumpTests {
             ),
         ])
         let snapshot = InspectionSnapshot(
-            actor: InspectionActorRef(sessionId: "tree", machineId: OpeningMoveTreeMachine.id),
+            reactor: InspectionReactorRef(sessionId: "tree", machineId: OpeningMoveTreeMachine.id),
             status: .active,
             value: "s1",
             stateValue: .atomic("s42"),
@@ -68,7 +68,7 @@ struct MachineDefinitionDumpTests {
         let event = InspectionEvent(
             kind: .microstep,
             rootId: "tree",
-            actor: InspectionActorRef(sessionId: "tree", machineId: OpeningMoveTreeMachine.id),
+            reactor: InspectionReactorRef(sessionId: "tree", machineId: OpeningMoveTreeMachine.id),
             event: InspectionEventDescription(type: "SAN.d4"),
             snapshot: snapshot,
             transitions: [
@@ -85,15 +85,15 @@ struct MachineDefinitionDumpTests {
         #expect((object?["snapshot"] as? [String: Any])?["value"] as? String == "tracking")
     }
 
-    @Test("attachInspect replays opening tree actor registration")
-    func attachInspectReplaysActorRegistration() throws {
+    @Test("attachInspect replays opening tree reactor registration")
+    func attachInspectReplaysReactorRegistration() throws {
         let collector = InspectionCollector()
         let treeSession = try OpeningTreeSession()
         treeSession.attachInspect(collector.observe())
 
-        let actorEvents = collector.recordedEvents().filter { $0.kind == .actor }
-        #expect(actorEvents.count == 1)
-        #expect(actorEvents[0].actor.machineId == OpeningMoveTreeMachine.id)
-        #expect(actorEvents[0].snapshot != nil)
+        let reactorEvents = collector.recordedEvents().filter { $0.kind == .reactor }
+        #expect(reactorEvents.count == 1)
+        #expect(reactorEvents[0].reactor.machineId == OpeningMoveTreeMachine.id)
+        #expect(reactorEvents[0].snapshot != nil)
     }
 }

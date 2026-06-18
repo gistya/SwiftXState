@@ -6,12 +6,12 @@ import SwiftXStateInspectorCore
 @_exported import WebGPUGraph
 
 /// The browser inspector toolkit. Give it a container element id and a `WebInspectorStore` (fed from
-/// any actor's inspection stream) and it renders an actor sidebar + State / Events / Sequence / Graph
-/// tabs. The Graph tab reuses the GPU `WebGPUGraph` renderer for the selected actor's definition.
+/// any reactor's inspection stream) and it renders an reactor sidebar + State / Events / Sequence / Graph
+/// tabs. The Graph tab reuses the GPU `WebGPUGraph` renderer for the selected reactor's definition.
 ///
 /// ```swift
 /// let store = WebInspectorStore()
-/// _ = createActor(machine, ActorOptions(inspect: store.observe())).start()
+/// _ = createReactor(machine, ReactorOptions(inspect: store.observe())).start()
 /// WebInspector.mount(containerId: "app", store: store)
 /// ```
 @MainActor
@@ -36,7 +36,7 @@ final class InspectorView {
     private var currentTab: Tab = .state
 
     // Persistent DOM regions (rebuilt children on render, except the graph canvas which is kept alive).
-    private var actorList = JSValue.undefined
+    private var reactorList = JSValue.undefined
     private var panels: [Tab: JSValue] = [:]
     private var tabButtons: [Tab: JSValue] = [:]
 
@@ -70,8 +70,8 @@ final class InspectorView {
         // Sidebar.
         let sidebar = DOM.el("div", "insp-sidebar")
         DOM.append(sidebar, DOM.el("div", "insp-section-title", text: "ACTORS"))
-        actorList = DOM.el("div", "insp-actor-list")
-        DOM.append(sidebar, actorList)
+        reactorList = DOM.el("div", "insp-actor-list")
+        DOM.append(sidebar, reactorList)
         DOM.append(body, sidebar)
 
         // Main: tab bar + content.
@@ -112,15 +112,15 @@ final class InspectorView {
     // MARK: Render (on every change)
 
     func render() {
-        renderActorList()
+        renderReactorList()
         renderTabBar()
         renderPanels()
     }
 
-    private func renderActorList() {
-        DOM.removeAllChildren(actorList)
+    private func renderReactorList() {
+        DOM.removeAllChildren(reactorList)
         let selected = store.state.selectedSessionID
-        for (entry, depth) in store.state.actorTree() {
+        for (entry, depth) in store.state.reactorTree() {
             let row = DOM.el("div", entry.sessionID == selected ? "insp-actor insp-actor-sel" : "insp-actor")
             DOM.style(row, "padding-left:\(8 + depth * 14)px")
 
@@ -136,10 +136,10 @@ final class InspectorView {
 
             let sid = entry.sessionID
             DOM.onClick(row) { [weak self] in self?.store.select(sid) }
-            DOM.append(actorList, row)
+            DOM.append(reactorList, row)
         }
-        if store.state.actors.isEmpty {
-            DOM.append(actorList, DOM.el("div", "insp-empty", text: "Waiting for actors…"))
+        if store.state.reactors.isEmpty {
+            DOM.append(reactorList, DOM.el("div", "insp-empty", text: "Waiting for reactors…"))
         }
     }
 
@@ -164,27 +164,27 @@ final class InspectorView {
     private func renderStatePanel() {
         let panel = panels[.state]!
         DOM.removeAllChildren(panel)
-        guard let actor = store.state.selectedActor else {
-            DOM.append(panel, DOM.el("div", "insp-empty", text: "Select an actor."))
+        guard let reactor = store.state.selectedReactor else {
+            DOM.append(panel, DOM.el("div", "insp-empty", text: "Select an reactor."))
             return
         }
 
         let head = DOM.el("div", "insp-state-head")
-        DOM.append(head, DOM.el("span", "insp-state-name", text: actor.displayName))
-        DOM.append(head, DOM.el("span", "insp-tag insp-tag-\(statusName(actor.status))", text: statusName(actor.status)))
+        DOM.append(head, DOM.el("span", "insp-state-name", text: reactor.displayName))
+        DOM.append(head, DOM.el("span", "insp-tag insp-tag-\(statusName(reactor.status))", text: statusName(reactor.status)))
         DOM.append(panel, head)
 
         DOM.append(panel, DOM.el("div", "insp-section-title", text: "VALUE"))
-        let value = actor.stateValue?.description ?? "—"
+        let value = reactor.stateValue?.description ?? "—"
         DOM.append(panel, DOM.el("div", "insp-value", text: value))
 
-        // Drivable events for statically-loaded (pasted/simulated) actors.
-        let events = store.state.availableEvents(for: actor.sessionID)
+        // Drivable events for statically-loaded (pasted/simulated) reactors.
+        let events = store.state.availableEvents(for: reactor.sessionID)
         if !events.isEmpty {
             let row = DOM.el("div", "insp-event-buttons")
             for name in events {
                 let btn = DOM.el("button", "insp-send", text: name)
-                let sid = actor.sessionID
+                let sid = reactor.sessionID
                 DOM.onClick(btn) { [weak self] in self?.store.send(name, to: sid) }
                 DOM.append(row, btn)
             }
@@ -192,7 +192,7 @@ final class InspectorView {
         }
 
         DOM.append(panel, DOM.el("div", "insp-section-title", text: "CONTEXT"))
-        let context = actor.contextJSON ?? .object([:])
+        let context = reactor.contextJSON ?? .object([:])
         DOM.append(panel, JSONTreeDOM.render(context, expandedDepth: 2))
     }
 
@@ -239,7 +239,7 @@ final class InspectorView {
     }
 
     private func updateGraphPanel() {
-        guard let actor = store.state.selectedActor, let definition = actor.definitionJSON else {
+        guard let reactor = store.state.selectedReactor, let definition = reactor.definitionJSON else {
             return
         }
         if graphStartedForDefinition != definition {
@@ -248,13 +248,13 @@ final class InspectorView {
             let mode = graphTextMode
             Task { @MainActor in
                 await StateGraph.start(canvasElementId: canvasId, definitionJSON: definition, textMode: mode) { [weak self] tapped in
-                    // Tapping a node could drive a simulated actor; left as a hook for now.
+                    // Tapping a node could drive a simulated reactor; left as a hook for now.
                     _ = self
                     _ = tapped
                 }
-                if let value = actor.stateValue?.description { StateGraph.setActiveState(value) }
+                if let value = reactor.stateValue?.description { StateGraph.setActiveState(value) }
             }
-        } else if let value = actor.stateValue?.description {
+        } else if let value = reactor.stateValue?.description {
             StateGraph.setActiveState(value)
         }
     }
@@ -273,7 +273,7 @@ final class InspectorView {
 
     private func kindName(_ k: InspectionEventKind) -> String {
         switch k {
-        case .actor: return "actor"
+        case .reactor: return "reactor"
         case .event: return "event"
         case .snapshot: return "snapshot"
         default: return "event"

@@ -1,15 +1,15 @@
 import Foundation
 import SwiftXState
 
-/// A tracked actor, accumulated from the inspection stream. One per `sessionId`.
+/// A tracked reactor, accumulated from the inspection stream. One per `sessionId`.
 public struct ReactorEntry: Identifiable, Sendable {
     public let sessionID: String
     public var machineID: String?
     public var systemID: String?
     public var parentSessionID: String?
-    /// XState-compatible machine definition (from the `.actor` registration event), used to graph it.
+    /// XState-compatible machine definition (from the `.reactor` registration event), used to graph it.
     public var definitionJSON: String?
-    /// Most recent snapshot seen for this actor (state value, context, status, …).
+    /// Most recent snapshot seen for this reactor (state value, context, status, …).
     public var latestSnapshot: InspectionSnapshot?
     public var lastEventType: String?
     public var status: SnapshotStatus = .active
@@ -23,7 +23,7 @@ public struct ReactorEntry: Identifiable, Sendable {
 
     public var id: String { sessionID }
 
-    /// Friendly name shown in the actor list (`game-watcher`, `opening-move-tree`, …).
+    /// Friendly name shown in the reactor list (`game-watcher`, `opening-move-tree`, …).
     public var displayName: String { machineID ?? systemID ?? sessionID }
     /// Secondary identifier shown in parentheses.
     public var subtitle: String { systemID ?? sessionID }
@@ -45,7 +45,7 @@ public struct FeedEntry: Identifiable, Sendable {
 
     public var kind: InspectionEventKind { event.kind }
     public var timestamp: TimeInterval { event.timestamp }
-    public var sessionID: String { event.actor.sessionID }
+    public var sessionID: String { event.reactor.sessionID }
     public var sourceSessionID: String? { event.source?.sessionID }
     public var eventType: String? { event.event?.type }
     public var snapshot: InspectionSnapshot? { event.snapshot }

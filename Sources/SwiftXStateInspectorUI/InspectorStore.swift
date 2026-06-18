@@ -12,8 +12,8 @@ import SwiftXState
 /// this and the browser inspector can't drift apart. Mutating the single tracked `state` property
 /// is what drives SwiftUI invalidation.
 ///
-/// Plug `observe()` into any actor's `ReactorOptions(inspect:)` (combine with other sinks as needed).
-/// All ingestion hops to the main actor.
+/// Plug `observe()` into any reactor's `ReactorOptions(inspect:)` (combine with other sinks as needed).
+/// All ingestion hops to the main reactor.
 @MainActor
 @Observable
 public final class InspectorStore {
@@ -26,10 +26,10 @@ public final class InspectorStore {
     // MARK: Forwarded state (so existing call sites and bindings keep working)
 
     /// Reactors in registration order.
-    public var actors: [ReactorEntry] { state.actors }
+    public var reactors: [ReactorEntry] { state.reactors }
     /// Chronological event feed (oldest first), capped at `feedCap`.
     public var feed: [FeedEntry] { state.feed }
-    /// Currently selected actor (drives the State/Events/Graph tabs).
+    /// Currently selected reactor (drives the State/Events/Graph tabs).
     public var selectedSessionID: String? {
         get { state.selectedSessionID }
         set { state.selectedSessionID = newValue }
@@ -49,7 +49,7 @@ public final class InspectorStore {
         }
     }
 
-    /// Ingest a single inspection event (already on the main actor).
+    /// Ingest a single inspection event (already on the main reactor).
     public func ingest(_ event: InspectionEvent) { state.ingest(event) }
 
     public func reset() { state.reset() }
@@ -66,7 +66,7 @@ public final class InspectorStore {
 
     public func send(_ event: String, to sessionID: String) { state.send(event, to: sessionID) }
 
-    /// Parse a pasted XState machine definition and load it as a fresh actor, selecting it.
+    /// Parse a pasted XState machine definition and load it as a fresh reactor, selecting it.
     @discardableResult
     public func loadDefinition(json: String, fallbackID: String = "pasted-machine") throws -> String {
         try state.loadDefinition(json: json, fallbackID: fallbackID)
@@ -74,20 +74,20 @@ public final class InspectorStore {
 
     // MARK: Lookups
 
-    public func actor(_ sessionID: String) -> ReactorEntry? { state.actor(sessionID) }
+    public func reactor(_ sessionID: String) -> ReactorEntry? { state.reactor(sessionID) }
 
     public var selectedReactor: ReactorEntry? { state.selectedReactor }
 
-    /// Feed filtered to a single actor (or all if `nil`).
+    /// Feed filtered to a single reactor (or all if `nil`).
     public func feed(for sessionID: String?) -> [FeedEntry] { state.feed(for: sessionID) }
 
-    /// Direct children of an actor, in registration order.
+    /// Direct children of an reactor, in registration order.
     public func children(of sessionID: String) -> [ReactorEntry] { state.children(of: sessionID) }
 
-    /// Root actors (no known parent in the registry).
+    /// Root reactors (no known parent in the registry).
     public var rootReactors: [ReactorEntry] { state.rootReactors }
 
     /// Flattened parent→child ordering with indentation depth, for the sidebar list.
-    public func actorTree() -> [(actor: ReactorEntry, depth: Int)] { state.actorTree() }
+    public func reactorTree() -> [(reactor: ReactorEntry, depth: Int)] { state.reactorTree() }
 }
 #endif

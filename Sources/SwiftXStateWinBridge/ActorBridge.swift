@@ -2,8 +2,8 @@
 //  ReactorBridge.swift
 //  SwiftXState — Windows / C# bridge
 //
-//  Handle-based actor exports. Because `Actor<Context>` is generic, it can't cross the C ABI directly,
-//  so each actor is erased behind closures (like the demo's DemoSession), stored in a registry, and
+//  Handle-based reactor exports. Because `Reactor<Context>` is generic, it can't cross the C ABI directly,
+//  so each reactor is erased behind closures (like the demo's DemoSession), stored in a registry, and
 //  referenced from C# by an opaque `Int64` handle. Events are passed by name (C string); state and
 //  context come back as JSON / strings the caller frees.
 //
@@ -19,7 +19,7 @@ import SwiftXState
 /// A C callback `void (*)(const char *json)` that C# can register to receive live inspection events.
 public typealias InspectCCallback = @convention(c) (UnsafePointer<CChar>?) -> Void
 
-/// Holds the (settable) C callback for one actor and forwards inspection events to it as JSON. The C
+/// Holds the (settable) C callback for one reactor and forwards inspection events to it as JSON. The C
 /// string is valid only for the duration of the call — C# must copy it (PtrToStringUTF8) immediately.
 final class CallbackSlot: @unchecked Sendable {
     private let lock = NSLock()
@@ -39,32 +39,32 @@ private func encodeEvent(_ event: InspectionEvent) -> String {
     return s
 }
 
-// MARK: - Type-erased actor handle + registry
+// MARK: - Type-erased reactor handle + registry
 
-/// A running actor with its context erased behind closures — all the C bridge needs.
+/// A running reactor with its context erased behind closures — all the C bridge needs.
 private struct ReactorHandleBox {
     let events: [String]
     let send: (String) -> Bool          // true if the event caused a transition
     let state: () -> String
     let contextJSON: () -> String
-    let inspect: CallbackSlot           // live inspection events go here (set via actorSetSnapshotCallback)
+    let inspect: CallbackSlot           // live inspection events go here (set via reactorSetSnapshotCallback)
 }
 
 private func makeBox<C: Sendable & Equatable>(_ machine: StateMachine<C>) -> ReactorHandleBox {
     let slot = CallbackSlot()
-    let actor = createReactor(machine, inspect: { event in slot.fire(encodeEvent(event)) }).start()
+    let reactor = createReactor(machine, inspect: { event in slot.fire(encodeEvent(event)) }).start()
     return ReactorHandleBox(
         events: machine.events,
         send: { name in
             let event = Event(name)
-            guard actor.snapshot.can(event) else { return false }
-            actor.send(event)
+            guard reactor.snapshot.can(event) else { return false }
+            reactor.send(event)
             return true
         },
-        state: { actor.snapshot.value.description },
+        state: { reactor.snapshot.value.description },
         contextJSON: {
             var fields: [String: String] = [:]
-            for child in Mirror(reflecting: actor.snapshot.context).children {
+            for child in Mirror(reflecting: reactor.snapshot.context).children {
                 if let label = child.label { fields[label] = "\(child.value)" }
             }
             return jsonString(fields)
@@ -73,27 +73,27 @@ private func makeBox<C: Sendable & Equatable>(_ machine: StateMachine<C>) -> Rea
     )
 }
 
-/// Thread-safe handle table. C# may call from any thread, so the registry is locked; the actors
+/// Thread-safe handle table. C# may call from any thread, so the registry is locked; the reactors
 /// themselves are `@unchecked Sendable` with their own internal queue.
 private final class BridgeRegistry: @unchecked Sendable {
     static let shared = BridgeRegistry()
     private let lock = NSLock()
-    private var actors: [Int64: ReactorHandleBox] = [:]
+    private var reactors: [Int64: ReactorHandleBox] = [:]
     private var nextHandle: Int64 = 1
 
     func add(_ box: ReactorHandleBox) -> Int64 {
         lock.lock(); defer { lock.unlock() }
         let id = nextHandle; nextHandle += 1
-        actors[id] = box
+        reactors[id] = box
         return id
     }
     func get(_ id: Int64) -> ReactorHandleBox? {
         lock.lock(); defer { lock.unlock() }
-        return actors[id]
+        return reactors[id]
     }
     func remove(_ id: Int64) {
         lock.lock(); defer { lock.unlock() }
-        actors[id] = nil
+        reactors[id] = nil
     }
 }
 
@@ -145,74 +145,74 @@ private func buildMachine(_ name: String) -> ReactorHandleBox? {
 
 // MARK: - C exports
 
-/// Create an actor for a built-in machine by name. Returns an opaque handle, or 0 if the name is
-/// unknown. Release it with `actorRelease`.
+/// Create an reactor for a built-in machine by name. Returns an opaque handle, or 0 if the name is
+/// unknown. Release it with `reactorRelease`.
 @WinC
-public func actorCreate(_ name: UnsafePointer<CChar>?) -> Int64 {
+public func reactorCreate(_ name: UnsafePointer<CChar>?) -> Int64 {
     guard let name, let box = buildMachine(String(cString: name)) else { return 0 }
     return BridgeRegistry.shared.add(box)
 }
 
-/// Send an event (by name) to an actor. Returns 1 if it caused a transition, 0 otherwise (unknown
+/// Send an event (by name) to an reactor. Returns 1 if it caused a transition, 0 otherwise (unknown
 /// handle, or the event isn't accepted in the current state).
 @WinC
-public func actorSend(_ handle: Int64, _ event: UnsafePointer<CChar>?) -> Int32 {
+public func reactorSend(_ handle: Int64, _ event: UnsafePointer<CChar>?) -> Int32 {
     guard let event, let box = BridgeRegistry.shared.get(handle) else { return 0 }
     return box.send(String(cString: event)) ? 1 : 0
 }
 
 /// Current state value as a string (e.g. "active", "a.b"). Caller frees. Empty handle → nil.
 @WinC
-public func actorState(_ handle: Int64) -> UnsafeMutablePointer<CChar>? {
+public func reactorState(_ handle: Int64) -> UnsafeMutablePointer<CChar>? {
     guard let box = BridgeRegistry.shared.get(handle) else { return nil }
     return dupCString(box.state())
 }
 
 /// Current context as a JSON object of `{ field: stringifiedValue }`. Caller frees.
 @WinC
-public func actorContextJSON(_ handle: Int64) -> UnsafeMutablePointer<CChar>? {
+public func reactorContextJSON(_ handle: Int64) -> UnsafeMutablePointer<CChar>? {
     guard let box = BridgeRegistry.shared.get(handle) else { return nil }
     return dupCString(box.contextJSON())
 }
 
-/// The events this actor's machine declares, as a JSON array of strings. Caller frees.
+/// The events this reactor's machine declares, as a JSON array of strings. Caller frees.
 @WinC
-public func actorEvents(_ handle: Int64) -> UnsafeMutablePointer<CChar>? {
+public func reactorEvents(_ handle: Int64) -> UnsafeMutablePointer<CChar>? {
     guard let box = BridgeRegistry.shared.get(handle) else { return nil }
     return dupCString(jsonString(box.events))
 }
 
-/// Register a C callback to receive this actor's live inspection events (one JSON document per event:
+/// Register a C callback to receive this reactor's live inspection events (one JSON document per event:
 /// `@xstate.snapshot`, `@xstate.event`, transitions, …). Pass null to clear. The JSON pointer is only
-/// valid during the call — copy it immediately. Callbacks fire on the actor's thread.
+/// valid during the call — copy it immediately. Callbacks fire on the reactor's thread.
 ///
 /// Cross-ABI contract (the bridge cannot enforce these across the C boundary, so the host must):
-/// - Keep the delegate/function pointer alive until after `actorRelease` returns. The slot stores a
+/// - Keep the delegate/function pointer alive until after `reactorRelease` returns. The slot stores a
 ///   raw `@convention(c)` pointer; if the host frees the delegate while an event is in flight, the
-///   callback fires into freed memory. `actorRelease` clears this slot first to narrow that window,
-///   but an event already mid-dispatch on the actor's thread can still be running.
-/// - Do not swap the callback (call this) concurrently with `actorRelease` on the same handle, and do
+///   callback fires into freed memory. `reactorRelease` clears this slot first to narrow that window,
+///   but an event already mid-dispatch on the reactor's thread can still be running.
+/// - Do not swap the callback (call this) concurrently with `reactorRelease` on the same handle, and do
 ///   not set a new callback from inside the callback. The slot lock is not reentrant.
 @WinC
-public func actorSetSnapshotCallback(_ handle: Int64, _ callback: InspectCCallback?) {
+public func reactorSetSnapshotCallback(_ handle: Int64, _ callback: InspectCCallback?) {
     BridgeRegistry.shared.get(handle)?.inspect.set(callback)
 }
 
-/// Release an actor handle (drops the actor). Safe to call with an unknown handle.
+/// Release an reactor handle (drops the reactor). Safe to call with an unknown handle.
 ///
-/// Clears the inspection callback before dropping the actor so a late event during teardown (e.g. a
-/// delayed transition firing as the actor deallocates) can't call into a callback the host is about
+/// Clears the inspection callback before dropping the reactor so a late event during teardown (e.g. a
+/// delayed transition firing as the reactor deallocates) can't call into a callback the host is about
 /// to free. This narrows — but cannot fully close — the window: an event already past the slot's
-/// lock and mid-dispatch on the actor's thread may still be invoking the old callback when this
-/// returns. The host must keep the delegate alive until after this call (see `actorSetSnapshotCallback`).
+/// lock and mid-dispatch on the reactor's thread may still be invoking the old callback when this
+/// returns. The host must keep the delegate alive until after this call (see `reactorSetSnapshotCallback`).
 @WinC
-public func actorRelease(_ handle: Int64) {
-    // Proactively detach the host callback first, then drop the actor.
+public func reactorRelease(_ handle: Int64) {
+    // Proactively detach the host callback first, then drop the reactor.
     BridgeRegistry.shared.get(handle)?.inspect.set(nil)
     BridgeRegistry.shared.remove(handle)
 }
 
-/// The machine names `actorCreate` accepts, as a JSON array of strings. Caller frees.
+/// The machine names `reactorCreate` accepts, as a JSON array of strings. Caller frees.
 @WinC
 public func machineList() -> UnsafeMutablePointer<CChar>? {
     dupCString(jsonString(availableMachines))

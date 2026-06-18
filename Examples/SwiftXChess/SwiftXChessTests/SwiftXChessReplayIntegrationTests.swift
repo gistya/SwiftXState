@@ -16,46 +16,46 @@ struct SwiftXChessReplayIntegrationTests {
         #expect(context.board[Square(row: 3, col: 4)]?.color == .white)
     }
 
-    @Test("TAP events update chess context on live actor")
+    @Test("TAP events update chess context on live reactor")
     func tapUpdatesContext() {
-        let actor = createReactor(ChessMachineFactory.machine).start()
-        #expect(actor.snapshot.matches(ChessGameState.playing))
-        #expect(actor.snapshot.typed(as: ChessGameState.self).inState(.playing))
+        let reactor = createReactor(ChessMachineFactory.machine).start()
+        #expect(reactor.snapshot.matches(ChessGameState.playing))
+        #expect(reactor.snapshot.typed(as: ChessGameState.self).inState(.playing))
 
         let tapEvent = ChessEvent.tap(Square(row: 1, col: 4))
-        let transitions = selectTransitions(event: tapEvent, snapshot: actor.snapshot)
+        let transitions = selectTransitions(event: tapEvent, snapshot: reactor.snapshot)
         #expect(!transitions.isEmpty)
 
         let (next, actions) = transition(
             ChessMachineFactory.machine,
-            snapshot: actor.snapshot,
+            snapshot: reactor.snapshot,
             event: tapEvent
         )
         #expect(next.context.selected == Square(row: 1, col: 4))
 
-        actor.send(tapEvent)
-        #expect(actor.snapshot.context.selected == Square(row: 1, col: 4))
+        reactor.send(tapEvent)
+        #expect(reactor.snapshot.context.selected == Square(row: 1, col: 4))
 
-        actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
-        #expect(actor.snapshot.context.selected == nil)
-        #expect(actor.snapshot.context.board[Square(row: 3, col: 4)]?.color == .white)
-        #expect(actor.snapshot.context.turn == .black)
+        reactor.send(ChessEvent.tap(Square(row: 3, col: 4)))
+        #expect(reactor.snapshot.context.selected == nil)
+        #expect(reactor.snapshot.context.board[Square(row: 3, col: 4)]?.color == .white)
+        #expect(reactor.snapshot.context.turn == .black)
     }
 
     @Test("enter replay freezes session and scrub restores board positions")
     func replayScrubRestoresBoard() {
         let recorder = InspectionRecorder()
         let machine = ChessMachineFactory.machine
-        let actor = createReactor(
+        let reactor = createReactor(
             machine,
             options: ReactorOptions(inspect: recorder.observe())
         ).start()
 
         // White pawn e2 -> e4
-        actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
-        actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 1, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 3, col: 4)))
 
-        let live = actor.snapshot.context
+        let live = reactor.snapshot.context
         #expect(live.board[Square(row: 3, col: 4)]?.color == .white)
         #expect(live.turn == .black)
 
@@ -66,9 +66,9 @@ struct SwiftXChessReplayIntegrationTests {
         #expect(session.steps.count > 2)
 
         ChessReplayBridge.setPendingSession(session)
-        actor.send(ChessEvent.enterReplay)
+        reactor.send(ChessEvent.enterReplay)
 
-        let replaying = actor.snapshot.context
+        let replaying = reactor.snapshot.context
         #expect(replaying.replaySession != nil)
         #expect(replaying.isReplayMode)
         let lastStep = max(session.steps.count - 1, 0)
@@ -82,8 +82,8 @@ struct SwiftXChessReplayIntegrationTests {
         )?.context
         #expect(replaying.board == expectedEnd?.board)
 
-        actor.send(ChessEvent.replayScrub(0))
-        let atStart = actor.snapshot.context
+        reactor.send(ChessEvent.replayScrub(0))
+        let atStart = reactor.snapshot.context
         #expect(atStart.replayStep == 0)
         let expectedStart = timeTravel(
             machine,
@@ -93,8 +93,8 @@ struct SwiftXChessReplayIntegrationTests {
         )?.context
         #expect(atStart.board == expectedStart?.board)
 
-        actor.send(ChessEvent.replayScrub(0))
-        let backToStart = actor.snapshot.context
+        reactor.send(ChessEvent.replayScrub(0))
+        let backToStart = reactor.snapshot.context
         #expect(backToStart.replayStep == 0)
         #expect(backToStart.board[Square(row: 1, col: 4)]?.kind == .pawn)
         #expect(backToStart.board[Square(row: 3, col: 4)] == nil)
@@ -104,13 +104,13 @@ struct SwiftXChessReplayIntegrationTests {
     func snapshotDecodeMatchesTimeTravel() {
         let recorder = InspectionRecorder()
         let machine = ChessMachineFactory.machine
-        let actor = createReactor(
+        let reactor = createReactor(
             machine,
             options: ReactorOptions(inspect: recorder.observe())
         ).start()
 
-        actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
-        actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 1, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 3, col: 4)))
 
         guard let session = recorder.session(), session.steps.count > 2 else {
             Issue.record("Expected recorded session with moves")
@@ -156,15 +156,15 @@ struct SwiftXChessReplayIntegrationTests {
 
         let recorder = InspectionRecorder()
         let gate = Gate()
-        let actor = createReactor(
+        let reactor = createReactor(
             ChessMachineFactory.machine,
             options: ReactorOptions(inspect: gate.observe(recorder))
         ).start()
 
-        actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
-        actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
-        actor.send(ChessEvent.tap(Square(row: 6, col: 4)))
-        actor.send(ChessEvent.tap(Square(row: 4, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 1, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 3, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 6, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 4, col: 4)))
 
         guard let recorded = recorder.session() else {
             Issue.record("Expected recorded session")
@@ -174,9 +174,9 @@ struct SwiftXChessReplayIntegrationTests {
 
         gate.setEnabled(false)
         ChessReplayBridge.setPendingSession(recorded)
-        actor.send(ChessEvent.enterReplay)
+        reactor.send(ChessEvent.enterReplay)
 
-        var snapshot = actor.snapshot
+        var snapshot = reactor.snapshot
         #expect(snapshot.context.replaySession?.steps.count == recorded.steps.count)
         #expect(snapshot.context.replayStep == stepCount)
         #expect(snapshot.context.board[Square(row: 4, col: 4)]?.color == .black)
@@ -184,8 +184,8 @@ struct SwiftXChessReplayIntegrationTests {
         func scrub(to step: Int) {
             let clamped = min(max(step, 0), stepCount)
             guard clamped != snapshot.context.replayStep else { return }
-            actor.send(ChessEvent.replayScrub(clamped))
-            snapshot = actor.snapshot
+            reactor.send(ChessEvent.replayScrub(clamped))
+            snapshot = reactor.snapshot
         }
 
         scrub(to: 0)
@@ -198,21 +198,21 @@ struct SwiftXChessReplayIntegrationTests {
         #expect(snapshot.context.board[Square(row: 4, col: 4)]?.color == .black)
 
         gate.setEnabled(true)
-        actor.send(ChessEvent.exitReplay)
-        #expect(actor.snapshot.context.replaySession == nil)
+        reactor.send(ChessEvent.exitReplay)
+        #expect(reactor.snapshot.context.replaySession == nil)
     }
 
     @Test("verify replay matches recorded snapshots")
     func verifyRecordedGame() {
         let recorder = InspectionRecorder()
         let machine = ChessMachineFactory.machine
-        let actor = createReactor(
+        let reactor = createReactor(
             machine,
             options: ReactorOptions(inspect: recorder.observe())
         ).start()
 
-        actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
-        actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 1, col: 4)))
+        reactor.send(ChessEvent.tap(Square(row: 3, col: 4)))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")

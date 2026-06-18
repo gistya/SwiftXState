@@ -17,7 +17,7 @@ declare the states once and the machine guarantees you can only ever be in one o
 
 - **Statecharts, not just enums** — hierarchical (nested) states, parallel regions, history,
   final states with output, guards, entry/exit/transition actions, and typed `context` data.
-- **An actor model** — run a machine as an ``Actor`` you `send` events to and read
+- **An actor model** — run a machine as an ``Reactor`` you `send` events to and read
   ``MachineSnapshot``s from; invoke and spawn child actors; run async work
   (`fromTask` / `fromCallback` / `fromTaskGroup`); message between parents and children.
 - **Two authoring styles** — an XState-familiar string API and a type-safe Swift API (below).
@@ -59,7 +59,7 @@ output, so you lose nothing by starting Basic and tightening up later.
 - **Familiar across the ecosystem.** Same model, names, and JSON format as XState/Stately.
 
 A **machine** (``StateMachine``) is the pure, reusable definition. You run it by creating an
-**actor** (``Actor``) — a live instance you `send` events to and read ``MachineSnapshot``s from.
+**actor** (``Reactor``) — a live instance you `send` events to and read ``MachineSnapshot``s from.
 One machine can back many actors; actors can invoke and spawn child actors, run async work, and
 talk to one another.
 
@@ -77,7 +77,7 @@ talk to one another.
 
 ### Going deeper (both paths)
 
-- <doc:RunningActors>
+- <doc:RunningReactors>
 - <doc:AsyncWork>
 - <doc:NamedImplementations>
 
@@ -104,7 +104,7 @@ talk to one another.
 
 ### Running Machines
 
-- ``Actor``
+- ``Reactor``
 - ``MachineSnapshot``
 - ``StateValue``
 - ``SnapshotStatus``
@@ -118,11 +118,11 @@ talk to one another.
 ### Async Work & Children
 
 - ``InvokeConfig``
-- ``TaskActorLogic``
-- ``CallbackActorLogic``
-- ``TaskGroupActorLogic``
+- ``TaskReactorLogic``
+- ``CallbackReactorLogic``
+- ``TaskGroupReactorLogic``
 - ``TaskGroupScope``
-- ``DoneActorEvent``
+- ``DoneReactorEvent``
 
 ### Named Implementations
 

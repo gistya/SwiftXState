@@ -11,7 +11,7 @@ public protocol Subscribable<Element>: Sendable {
     ) -> Subscription
 }
 
-/// Type-erased subscribable for use in observable actor logic.
+/// Type-erased subscribable for use in observable reactor logic.
 public struct AnySubscribable<T: Sendable & Equatable>: Sendable {
     private let _subscribe: @Sendable (
         @escaping @Sendable (T) -> Void,

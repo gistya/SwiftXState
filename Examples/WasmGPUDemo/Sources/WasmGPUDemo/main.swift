@@ -23,17 +23,17 @@ let machine = createMachine(MachineConfig(
         "error": StateNodeConfig(on: ["RETRY": .to("loading")]),
     ]
 ))
-let actor = createActor(machine).start()
+let reactor = createReactor(machine).start()
 
 var eventButtons: [(name: String, el: JSValue)] = []
 var retained: [JSClosure] = []
 var lastSelected: String?
 
 @MainActor func refresh() {
-    let active = actor.snapshot.value.description
+    let active = reactor.snapshot.value.description
     StateGraph.setActiveState(active)
     for (name, button) in eventButtons {
-        let enabled = actor.snapshot.can(Event(name))
+        let enabled = reactor.snapshot.can(Event(name))
         button.disabled = .boolean(!enabled)
         button.style = .string(buttonStyle(enabled: enabled))
     }
@@ -56,7 +56,7 @@ var lastSelected: String?
         button.innerText = .string(name)
         let closure = JSClosure { _ in
             MainActor.assumeIsolated {
-                actor.send(Event(name))
+                reactor.send(Event(name))
                 refresh()
             }
             return .undefined

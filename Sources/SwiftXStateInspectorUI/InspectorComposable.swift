@@ -8,7 +8,7 @@ import SwiftXStateGraph
 // for a custom "enter inspector mode" transition. All are driven by a shared `InspectorStore` and
 // themed via `InspectorStyle`.
 
-/// A slim info bar: the selected actor's name on the left, live actor/event counts on the right.
+/// A slim info bar: the selected reactor's name on the left, live reactor/event counts on the right.
 public struct InspectorInfoBar: View {
     private let store: InspectorStore
     @Environment(\.inspectorStyle) private var style
@@ -17,16 +17,16 @@ public struct InspectorInfoBar: View {
 
     public var body: some View {
         HStack(spacing: 10) {
-            if let actor = store.selectedReactor {
-                Text(actor.displayName)
+            if let reactor = store.selectedReactor {
+                Text(reactor.displayName)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(style.primaryText)
-                if let value = actor.stateValue {
+                if let value = reactor.stateValue {
                     StatePillView(stateValue: value)
                 }
             }
             Spacer()
-            Text("\(store.actors.count) actors · \(store.feed.count) events")
+            Text("\(store.reactors.count) reactors · \(store.feed.count) events")
                 .font(.caption)
                 .foregroundStyle(style.secondaryText)
         }
@@ -59,7 +59,7 @@ public struct InspectorPanel: View {
                 .labelsHidden()
 
                 if tab == .events {
-                    Toggle("This actor only", isOn: $eventsScopeToReactor)
+                    Toggle("This reactor only", isOn: $eventsScopeToReactor)
                         .toggleStyle(.switch)
                         .controlSize(.mini)
                         .font(.caption)
@@ -83,7 +83,7 @@ public struct InspectorPanel: View {
     private var content: some View {
         switch tab {
         case .state:
-            InspectorStateTab(actor: store.selectedReactor, store: store)
+            InspectorStateTab(reactor: store.selectedReactor, store: store)
         case .events:
             InspectorEventsTab(store: store, filterSessionID: eventsScopeToReactor ? store.selectedSessionID : nil)
         case .sequence:
@@ -92,7 +92,7 @@ public struct InspectorPanel: View {
     }
 }
 
-/// The live state graph for the store's selected actor.
+/// The live state graph for the store's selected reactor.
 public struct InspectorGraphView: View {
     private let store: InspectorStore
     private let graphStyle: GraphStyle
@@ -103,11 +103,11 @@ public struct InspectorGraphView: View {
     }
 
     public var body: some View {
-        InspectorGraphTab(actor: store.selectedReactor, graphStyle: graphStyle)
+        InspectorGraphTab(reactor: store.selectedReactor, graphStyle: graphStyle)
     }
 }
 
-/// The full-width actors drawer: a horizontally scrolling strip of actor chips; tap to select.
+/// The full-width reactors drawer: a horizontally scrolling strip of reactor chips; tap to select.
 /// `expanded` controls the collapsed/expanded strip.
 public struct InspectorReactorsDrawer: View {
     private let store: InspectorStore

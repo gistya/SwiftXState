@@ -28,7 +28,7 @@ public enum MachineDefinitionImporter {
         }
     }
 
-    /// Build a synthetic `.actor` registration event (carrying the definition + an initial
+    /// Build a synthetic `.reactor` registration event (carrying the definition + an initial
     /// snapshot) from a pasted definition string.
     ///
     /// - Parameters:
@@ -58,7 +58,7 @@ public enum MachineDefinitionImporter {
 
         let ref = InspectionReactorRef(sessionId: machineID, systemId: machineID, machineId: machineID)
         let snapshot = InspectionSnapshot(
-            actor: ref,
+            reactor: ref,
             status: .active,
             value: initial.description,
             stateValue: initial,
@@ -67,9 +67,9 @@ public enum MachineDefinitionImporter {
             context: context
         )
         return InspectionEvent(
-            kind: .actor,
+            kind: .reactor,
             rootId: machineID,
-            actor: ref,
+            reactor: ref,
             snapshot: snapshot,
             definitionJSON: trimmed
         )

@@ -253,7 +253,7 @@ public enum GraphModelBuilder {
     // MARK: Build from an exported definition (type-erased)
 
     /// Builds a `GraphModel` from the XState-compatible JSON that `StateMachine.definitionJSON()`
-    /// emits (see `MachineDefinitionExporter`). This lets an inspector graph a *type-erased* actor
+    /// emits (see `MachineDefinitionExporter`). This lets an inspector graph a *type-erased* reactor
     /// from its definition alone — no `StateMachine<Context>` required.
     public static func build(fromDefinitionJSON json: String, machineID: String) -> GraphModel {
         guard let data = json.data(using: .utf8),
@@ -399,7 +399,7 @@ public enum GraphModelBuilder {
         if eventType.hasPrefix("xstate.done.state.") {
             return ("done", .onDone)
         }
-        if eventType.hasPrefix("xstate.done.actor.") {
+        if eventType.hasPrefix("xstate.done.reactor.") {
             return ("done", .invoked)
         }
         if eventType.hasPrefix("xstate.error.") {

@@ -2,7 +2,7 @@
 import SwiftUI
 import SwiftXState
 
-/// The actor selector sidebar: a hierarchical list of every actor on the stream, each
+/// The reactor selector sidebar: a hierarchical list of every reactor on the stream, each
 /// with a state pill and status dot. Tapping selects it (drives the Graph/State tabs).
 struct InspectorReactorListView: View {
     let store: InspectorStore
@@ -18,8 +18,8 @@ struct InspectorReactorListView: View {
                 .padding(.top, 10)
                 .padding(.bottom, 6)
 
-            if store.actors.isEmpty {
-                Text("Waiting for actors…")
+            if store.reactors.isEmpty {
+                Text("Waiting for reactors…")
                     .font(.system(size: 12))
                     .foregroundStyle(style.secondaryText)
                     .padding(.horizontal, 12)
@@ -27,8 +27,8 @@ struct InspectorReactorListView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 2) {
-                        ForEach(store.actorTree(), id: \.actor.id) { item in
-                            row(item.actor, depth: item.depth)
+                        ForEach(store.reactorTree(), id: \.reactor.id) { item in
+                            row(item.reactor, depth: item.depth)
                         }
                     }
                     .padding(.horizontal, 6)
@@ -41,21 +41,21 @@ struct InspectorReactorListView: View {
     }
 
     @ViewBuilder
-    private func row(_ actor:ReactorEntry, depth: Int) -> some View {
-        let selected = store.selectedSessionID == actor.sessionID
+    private func row(_ reactor:ReactorEntry, depth: Int) -> some View {
+        let selected = store.selectedSessionID == reactor.sessionID
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                StatusDot(status: actor.status)
-                Text(actor.displayName)
+                StatusDot(status: reactor.status)
+                Text(reactor.displayName)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(style.primaryText)
                     .lineLimit(1)
                 Spacer(minLength: 0)
             }
-            if let value = actor.stateValue {
+            if let value = reactor.stateValue {
                 StatePillView(stateValue: value)
-            } else if actor.machineID != nil {
-                Text(actor.subtitle)
+            } else if reactor.machineID != nil {
+                Text(reactor.subtitle)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(style.secondaryText)
                     .lineLimit(1)
@@ -70,7 +70,7 @@ struct InspectorReactorListView: View {
                 .fill(selected ? style.rowSelectedBackground : .clear)
         )
         .contentShape(Rectangle())
-        .onTapGesture { store.selectedSessionID = actor.sessionID }
+        .onTapGesture { store.selectedSessionID = reactor.sessionID }
     }
 }
 #endif

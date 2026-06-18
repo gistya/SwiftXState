@@ -2,7 +2,7 @@ import Testing
 @testable import SwiftXState
 @testable import SwiftXChess
 
-@Suite("Board actor primitives")
+@Suite("Board reactor primitives")
 struct BoardReactorTests {
     @Test("square ids use coord suffix")
     func squareIds() {
@@ -29,37 +29,37 @@ struct BoardReactorTests {
 
     @Test("square OCCUPY and CLEAR")
     func squareOccupyClear() async {
-        let actor = createReactor(SquareReactorMachine.machine)
+        let reactor = createReactor(SquareReactorMachine.machine)
             .start(context: SquareContext(coord: "e4", occupantId: nil))
 
-        #expect(actor.snapshot.matches("empty"))
+        #expect(reactor.snapshot.matches("empty"))
 
-        actor.send(Event("OCCUPY.wPe2"))
+        reactor.send(Event("OCCUPY.wPe2"))
         try? await Task.sleep(for: .milliseconds(20))
-        #expect(actor.snapshot.matches("occupied"))
-        #expect(actor.snapshot.context.occupantId == "wPe2")
+        #expect(reactor.snapshot.matches("occupied"))
+        #expect(reactor.snapshot.context.occupantId == "wPe2")
 
-        actor.send(Event("CLEAR"))
+        reactor.send(Event("CLEAR"))
         try? await Task.sleep(for: .milliseconds(20))
-        #expect(actor.snapshot.matches("empty"))
-        #expect(actor.snapshot.context.occupantId == nil)
+        #expect(reactor.snapshot.matches("empty"))
+        #expect(reactor.snapshot.context.occupantId == nil)
     }
 
     @Test("piece MOVE_TO and CAPTURED")
     func pieceMoveCaptured() async {
-        let actor = createReactor(PieceReactorMachine.machine)
+        let reactor = createReactor(PieceReactorMachine.machine)
             .start(context: PieceContext(pieceId: "wPe2", kind: .pawn, color: .white, square: "e2"))
 
-        #expect(actor.snapshot.matches("alive"))
-        #expect(actor.snapshot.context.square == "e2")
+        #expect(reactor.snapshot.matches("alive"))
+        #expect(reactor.snapshot.context.square == "e2")
 
-        actor.send(Event("MOVE_TO.e4"))
+        reactor.send(Event("MOVE_TO.e4"))
         try? await Task.sleep(for: .milliseconds(20))
-        #expect(actor.snapshot.context.square == "e4")
+        #expect(reactor.snapshot.context.square == "e4")
 
-        actor.send(Event("CAPTURED"))
+        reactor.send(Event("CAPTURED"))
         try? await Task.sleep(for: .milliseconds(20))
-        #expect(actor.snapshot.matches("captured"))
-        #expect(actor.snapshot.context.square == nil)
+        #expect(reactor.snapshot.matches("captured"))
+        #expect(reactor.snapshot.context.square == nil)
     }
 }

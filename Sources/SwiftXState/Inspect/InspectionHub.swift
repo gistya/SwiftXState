@@ -11,7 +11,7 @@ import Foundation
 /// transport when an Interactor is remote.
 ///
 /// Lock-based and `@unchecked Sendable`, matching the codebase's other registries (`Reactor.System`,
-/// `InspectionCollector`) — the per-Interactor sinks fire on producer threads, so a global actor
+/// `InspectionCollector`) — the per-Interactor sinks fire on producer threads, so a global reactor
 /// would only add hops.
 public final class InspectionHub: @unchecked Sendable {
     /// The unified output. Consume `events.stream()` to drive a merged graph / sequence view.
@@ -60,7 +60,7 @@ public final class InspectionHub: @unchecked Sendable {
 
 // MARK: - Unified graph projection
 
-/// A minimal model of the merged multi-Interactor picture: domain clusters of actors, plus the
+/// A minimal model of the merged multi-Interactor picture: domain clusters of reactors, plus the
 /// cross-domain message edges between them. Built by folding the unified ``ScopedInspectionEvent``
 /// stream — exactly the two-level (clusters + inter-domain edges) graph the inspector renders.
 public struct UnifiedGraph: Sendable, Equatable {
@@ -83,7 +83,7 @@ public struct UnifiedGraph: Sendable, Equatable {
     public private(set) var edges: [Edge] = []
     ///Reactor ids grouped by their Interactor (the clusters).
     public var clusters: [String: [ReactorAddress]] {
-        Dictionary(grouping: nodes.keys, by: \.interactorID).mapValues { $0.sorted { $0.actorID < $1.actorID } }
+        Dictionary(grouping: nodes.keys, by: \.interactorID).mapValues { $0.sorted { $0.reactorID < $1.reactorID } }
     }
     /// Just the edges that actually cross an Interactor boundary — the inter-domain wiring.
     public var crossDomainEdges: [Edge] {
@@ -96,10 +96,10 @@ public struct UnifiedGraph: Sendable, Equatable {
     public mutating func apply(_ scoped: ScopedInspectionEvent) {
         switch scoped.payload {
         case let .inspection(event):
-            let address = ReactorAddress(interactorID: scoped.interactorID, actorID: event.actor.sessionId)
-            var node = nodes[address] ?? Node(address: address, machineID: event.actor.machineId, stateValue: nil, alive: true)
+            let address = ReactorAddress(interactorID: scoped.interactorID, reactorID: event.reactor.sessionId)
+            var node = nodes[address] ?? Node(address: address, machineID: event.reactor.machineId, stateValue: nil, alive: true)
             if let value = event.snapshot?.value { node.stateValue = value }
-            if node.machineID == nil { node.machineID = event.actor.machineId }
+            if node.machineID == nil { node.machineID = event.reactor.machineId }
             node.alive = event.snapshot?.status != .stopped
             nodes[address] = node
 
@@ -114,9 +114,9 @@ public struct UnifiedGraph: Sendable, Equatable {
             }
 
         case let .lifecycle(lifecycle):
-            var node = nodes[lifecycle.actor] ?? Node(address: lifecycle.actor, machineID: lifecycle.detail, stateValue: nil, alive: true)
+            var node = nodes[lifecycle.reactor] ?? Node(address: lifecycle.reactor, machineID: lifecycle.detail, stateValue: nil, alive: true)
             node.alive = lifecycle.kind != .stopped
-            nodes[lifecycle.actor] = node
+            nodes[lifecycle.reactor] = node
         }
     }
 }

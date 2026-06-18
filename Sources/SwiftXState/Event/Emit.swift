@@ -1,6 +1,6 @@
 import Foundation
 
-/// An event emitted to external listeners via `actor.on(…)`, separate from state machine events.
+/// An event emitted to external listeners via `reactor.on(…)`, separate from state machine events.
 public struct EmittedEvent: Eventable, Sendable, Equatable {
     public let type: String
     public let properties: [String: SendableValue]
@@ -46,7 +46,7 @@ func resolveEmitEvent<Context: Sendable>(
     }
 }
 
-/// Emits a statically-defined event to `actor.on(…)` listeners.
+/// Emits a statically-defined event to `reactor.on(…)` listeners.
 public func emit<Context: Sendable>(_ event: EmittedEvent) -> ActionRef<Context> {
     .emit(EmitAction(event: .fixed(event)))
 }
@@ -65,7 +65,7 @@ public func emit<Context: Sendable>(_ type: String) -> ActionRef<Context> {
 
 // MARK: - Emit listeners
 
-/// Registry for `actor.on(…)` and child actor emit listeners.
+/// Registry for `reactor.on(…)` and child reactor emit listeners.
 public final class EmitListeners: @unchecked Sendable {
     private struct Listener {
         let eventType: String

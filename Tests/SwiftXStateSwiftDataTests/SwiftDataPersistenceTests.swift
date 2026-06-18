@@ -8,7 +8,7 @@ private struct CartContext: Sendable, Equatable, Codable {
     var items: Int
 }
 
-@Suite("SwiftData actor persistence")
+@Suite("SwiftData reactor persistence")
 struct SwiftDataPersistenceTests {
     private var cartMachine: StateMachine<CartContext> {
         createMachine(MachineConfig(
@@ -35,14 +35,14 @@ struct SwiftDataPersistenceTests {
         return ReactorPersistenceStore(modelContext: ModelContext(container))
     }
 
-    @Test("saves and restores actor snapshot from SwiftData")
+    @Test("saves and restores reactor snapshot from SwiftData")
     func saveAndRestore() throws {
         let store = try makeStore()
-        let actor = createReactor(cartMachine).start(context: CartContext(items: 0))
-        actor.send(Event("ADD"))
-        actor.send(Event("ADD"))
+        let reactor = createReactor(cartMachine).start(context: CartContext(items: 0))
+        reactor.send(Event("ADD"))
+        reactor.send(Event("ADD"))
 
-        try store.save(actor, key: "session-1")
+        try store.save(reactor, key: "session-1")
 
         let reloaded = try #require(try store.createReactor(cartMachine, key: "session-1"))
 
@@ -62,8 +62,8 @@ struct SwiftDataPersistenceTests {
     @Test("delete removes persisted snapshot")
     func deleteSnapshot() throws {
         let store = try makeStore()
-        let actor = createReactor(cartMachine).start()
-        try store.save(actor, key: "temp")
+        let reactor = createReactor(cartMachine).start()
+        try store.save(reactor, key: "temp")
 
         try store.delete(key: "temp")
         #expect(try store.load(key: "temp") == nil)
@@ -72,13 +72,13 @@ struct SwiftDataPersistenceTests {
     @Test("upsert overwrites existing snapshot")
     func upsert() throws {
         let store = try makeStore()
-        let actor = createReactor(cartMachine).start(context: CartContext(items: 0))
+        let reactor = createReactor(cartMachine).start(context: CartContext(items: 0))
 
-        actor.send(Event("ADD"))
-        try store.save(actor, key: "cart")
+        reactor.send(Event("ADD"))
+        try store.save(reactor, key: "cart")
 
-        actor.send(Event("ADD"))
-        try store.save(actor, key: "cart")
+        reactor.send(Event("ADD"))
+        try store.save(reactor, key: "cart")
 
         let loaded = try store.load(key: "cart")
         let restored = try restoreSnapshot(machine: cartMachine, persisted: loaded!)

@@ -124,7 +124,7 @@ private final class ToggleRuntime: DemoRuntime {
     private let machine: StateMachine<EmptyContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor:Reactor<EmptyContext>?
+    private var reactor:Reactor<EmptyContext>?
     private var bridge: InspectBridge?
     private(set) var stateLine = "inactive"
     private(set) var contextLine = "—"
@@ -144,13 +144,13 @@ private final class ToggleRuntime: DemoRuntime {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
-            let actor = createReactor(machine, inspect: inspect)
-            self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            let reactor = createReactor(machine, inspect: inspect)
+            self.reactor = reactor
+            _ = reactor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            reactor.start()
+            apply(reactor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
@@ -158,8 +158,8 @@ private final class ToggleRuntime: DemoRuntime {
     }
 
     func stop() {
-        actor?.stop()
-        actor = nil
+        reactor?.stop()
+        reactor = nil
     }
 
     func stopInspect() async {
@@ -173,8 +173,8 @@ private final class ToggleRuntime: DemoRuntime {
         stateLine = snapshot.value.description
         eventButtons = [
             DemoEventButton(id: "toggle", label: "toggle") { [weak self] in
-                self?.actor?.send(Event("toggle"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("toggle"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
         ]
     }
@@ -186,7 +186,7 @@ private final class CounterRuntime: DemoRuntime {
     private let machine: StateMachine<CounterContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor:Reactor<CounterContext>?
+    private var reactor:Reactor<CounterContext>?
     private var bridge: InspectBridge?
     private(set) var stateLine = "ready"
     private(set) var contextLine = "count: 0"
@@ -206,13 +206,13 @@ private final class CounterRuntime: DemoRuntime {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
-            let actor = createReactor(machine, inspect: inspect)
-            self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            let reactor = createReactor(machine, inspect: inspect)
+            self.reactor = reactor
+            _ = reactor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            reactor.start()
+            apply(reactor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
@@ -220,8 +220,8 @@ private final class CounterRuntime: DemoRuntime {
     }
 
     func stop() {
-        actor?.stop()
-        actor = nil
+        reactor?.stop()
+        reactor = nil
     }
 
     func stopInspect() async {
@@ -236,8 +236,8 @@ private final class CounterRuntime: DemoRuntime {
         contextLine = "count: \(snapshot.context.count)"
         eventButtons = [
             DemoEventButton(id: "increase", label: "increase") { [weak self] in
-                self?.actor?.send(Event("increase"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("increase"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
         ]
     }
@@ -249,7 +249,7 @@ private final class FeedbackRuntime: DemoRuntime {
     private let machine: StateMachine<FeedbackContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor:Reactor<FeedbackContext>?
+    private var reactor:Reactor<FeedbackContext>?
     private var bridge: InspectBridge?
     private var draftFeedback = ""
     private(set) var stateLine = "prompt"
@@ -270,13 +270,13 @@ private final class FeedbackRuntime: DemoRuntime {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
-            let actor = createReactor(machine, inspect: inspect)
-            self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            let reactor = createReactor(machine, inspect: inspect)
+            self.reactor = reactor
+            _ = reactor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            reactor.start()
+            apply(reactor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
@@ -284,8 +284,8 @@ private final class FeedbackRuntime: DemoRuntime {
     }
 
     func stop() {
-        actor?.stop()
-        actor = nil
+        reactor?.stop()
+        reactor = nil
     }
 
     func stopInspect() async {
@@ -296,8 +296,8 @@ private final class FeedbackRuntime: DemoRuntime {
     }
 
     func sendDraft() {
-        actor?.send(FeedbackUpdateEvent(value: draftFeedback))
-        if let snapshot = actor?.snapshot { apply(snapshot) }
+        reactor?.send(FeedbackUpdateEvent(value: draftFeedback))
+        if let snapshot = reactor?.snapshot { apply(snapshot) }
     }
 
     private func apply(_ snapshot: MachineSnapshot<FeedbackContext>) {
@@ -307,32 +307,32 @@ private final class FeedbackRuntime: DemoRuntime {
 
         eventButtons = [
             DemoEventButton(id: "good", label: "feedback.good") { [weak self] in
-                self?.actor?.send(Event("feedback.good"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("feedback.good"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
             DemoEventButton(id: "bad", label: "feedback.bad") { [weak self] in
-                self?.actor?.send(Event("feedback.bad"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("feedback.bad"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
             DemoEventButton(id: "update", label: "feedback.update (demo)") { [weak self] in
-                self?.actor?.send(FeedbackUpdateEvent(value: "Needs more examples"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(FeedbackUpdateEvent(value: "Needs more examples"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
             DemoEventButton(id: "submit", label: "submit") { [weak self] in
-                self?.actor?.send(Event("submit"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("submit"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
             DemoEventButton(id: "back", label: "back") { [weak self] in
-                self?.actor?.send(Event("back"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("back"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
             DemoEventButton(id: "close", label: "close") { [weak self] in
-                self?.actor?.send(Event("close"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("close"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
             DemoEventButton(id: "restart", label: "restart") { [weak self] in
-                self?.actor?.send(Event("restart"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("restart"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
         ]
     }
@@ -344,7 +344,7 @@ private final class TrafficLightRuntime: DemoRuntime {
     private let machine: StateMachine<EmptyContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor:Reactor<EmptyContext>?
+    private var reactor:Reactor<EmptyContext>?
     private var bridge: InspectBridge?
     private(set) var stateLine = "green"
     private(set) var contextLine = "Nested pedestrian states under red"
@@ -364,13 +364,13 @@ private final class TrafficLightRuntime: DemoRuntime {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
-            let actor = createReactor(machine, inspect: inspect)
-            self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            let reactor = createReactor(machine, inspect: inspect)
+            self.reactor = reactor
+            _ = reactor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            reactor.start()
+            apply(reactor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
@@ -378,8 +378,8 @@ private final class TrafficLightRuntime: DemoRuntime {
     }
 
     func stop() {
-        actor?.stop()
-        actor = nil
+        reactor?.stop()
+        reactor = nil
     }
 
     func stopInspect() async {
@@ -393,16 +393,16 @@ private final class TrafficLightRuntime: DemoRuntime {
         stateLine = snapshot.value.description
         eventButtons = [
             DemoEventButton(id: "timer", label: "TIMER") { [weak self] in
-                self?.actor?.send(Event("TIMER"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("TIMER"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
             DemoEventButton(id: "ped", label: "PED_COUNTDOWN") { [weak self] in
-                self?.actor?.send(Event("PED_COUNTDOWN"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("PED_COUNTDOWN"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
             DemoEventButton(id: "outage", label: "POWER_OUTAGE") { [weak self] in
-                self?.actor?.send(Event("POWER_OUTAGE"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                self?.reactor?.send(Event("POWER_OUTAGE"))
+                if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
             },
         ]
     }
@@ -414,7 +414,7 @@ private final class CheckoutRuntime: DemoRuntime {
     private let machine: StateMachine<CheckoutContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor:Reactor<CheckoutContext>?
+    private var reactor:Reactor<CheckoutContext>?
     private var bridge: InspectBridge?
     private(set) var stateLine = "idle"
     private(set) var contextLine = "order ORD-1001 · $149.99"
@@ -435,8 +435,8 @@ private final class CheckoutRuntime: DemoRuntime {
     }
 
     func stop() {
-        actor?.stop()
-        actor = nil
+        reactor?.stop()
+        reactor = nil
     }
 
     func stopInspect() async {
@@ -447,8 +447,8 @@ private final class CheckoutRuntime: DemoRuntime {
     }
 
     private func bootReactor() {
-        actor?.stop()
-        actor = nil
+        reactor?.stop()
+        reactor = nil
         do {
             let inspect: @Sendable (InspectionEvent) -> Void
             if let bridge {
@@ -462,13 +462,13 @@ private final class CheckoutRuntime: DemoRuntime {
                 bridge = newBridge
                 inspect = newInspect
             }
-            let actor = createReactor(machine, inspect: inspect)
-            self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            let reactor = createReactor(machine, inspect: inspect)
+            self.reactor = reactor
+            _ = reactor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            reactor.start()
+            apply(reactor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
@@ -503,15 +503,15 @@ private final class CheckoutRuntime: DemoRuntime {
         if snapshot.status == .active {
             buttons.insert(
                 DemoEventButton(id: "submit", label: "Submit Order") { [weak self] in
-                    self?.actor?.send(Event("SUBMIT"))
-                    if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                    self?.reactor?.send(Event("SUBMIT"))
+                    if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
                 },
                 at: 0
             )
             buttons.insert(
                 DemoEventButton(id: "declined", label: "Submit Declined Card") { [weak self] in
-                    self?.actor?.send(Event("SUBMIT_DECLINED"))
-                    if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                    self?.reactor?.send(Event("SUBMIT_DECLINED"))
+                    if let snapshot = self?.reactor?.snapshot { self?.apply(snapshot) }
                 },
                 at: 1
             )

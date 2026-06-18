@@ -188,6 +188,6 @@ let fetcher = createMachine(MachineConfig(
 
 ## Next steps
 
-- <doc:RunningActors> — lifecycle, subscriptions, `waitFor`, and child actors.
+- <doc:RunningReactors> — lifecycle, subscriptions, `waitFor`, and child actors.
 - <doc:AsyncWork> — replace those manual `SUCCESS`/`FAILURE` events with a real async call.
 - <doc:NamedImplementations> — extract inline guards/actions into reusable named ones.

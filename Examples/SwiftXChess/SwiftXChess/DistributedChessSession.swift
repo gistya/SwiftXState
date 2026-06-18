@@ -8,8 +8,8 @@ import SwiftXStateInspectURLSession
 @MainActor
 @Observable
 final class DistributedChessSession {
-    let actor:Reactor<GameWatcherContext>
-    /// The machine the actor runs — exposed so a graph view can visualize this exact session.
+    let reactor:Reactor<GameWatcherContext>
+    /// The machine the reactor runs — exposed so a graph view can visualize this exact session.
     let machine: StateMachine<GameWatcherContext>
     private let treeSession: OpeningTreeSession
     private var bridge: InspectBridge?
@@ -80,8 +80,8 @@ final class DistributedChessSession {
         self.treeSession = treeSession
         treeSnapshot = treeSession.snapshot()
 
-        // Stream the 96 per-square/piece board actors too — a deliberate stress test for the
-        // inspector (this actor count kills the web client; the native one handles it).
+        // Stream the 96 per-square/piece board reactors too — a deliberate stress test for the
+        // inspector (this reactor count kills the web client; the native one handles it).
         let gameMachine = GameWatcherMachine.make(inspectableBoardReactors: false)
         self.machine = gameMachine
 
@@ -117,23 +117,23 @@ final class DistributedChessSession {
             let bridgeInspect = bridge.observe()
             let combined = Self.combineInspect(recordingGate.observe(recorder), bridgeInspect)
             let inspect = Self.combineInspect(combined, extraInspect ?? { _ in })
-            let actor = createReactor(gameMachine, options: ReactorOptions(inspect: inspect)).start()
+            let reactor = createReactor(gameMachine, options: ReactorOptions(inspect: inspect)).start()
             treeSession.attachInspect(Self.combineInspect(bridgeInspect, extraInspect ?? { _ in }))
-            self.actor = actor
+            self.reactor = reactor
             self.bridge = bridge
             connectionStatus = "Connected → Stately Inspector"
-            snapshot = actor.snapshot
+            snapshot = reactor.snapshot
             syncRecordingState()
         } catch {
             let inspect = Self.combineInspect(recordingGate.observe(recorder), extraInspect ?? { _ in })
-            let actor = createReactor(
+            let reactor = createReactor(
                 gameMachine,
                 options: ReactorOptions(inspect: inspect)
             ).start()
-            self.actor = actor
+            self.reactor = reactor
             connectionStatus = "Inspect unavailable"
             inspectorEndpoint = String(describing: error)
-            snapshot = actor.snapshot
+            snapshot = reactor.snapshot
             syncRecordingState()
         }
     }
@@ -141,16 +141,16 @@ final class DistributedChessSession {
     func tap(row: Int, col: Int) async {
         guard !context.isReplayMode, context.outcome == nil else { return }
         let event = ChessEvent.tap(Square(row: row, col: col))
-        actor.send(event)
-        snapshot = actor.snapshot
+        reactor.send(event)
+        snapshot = reactor.snapshot
         syncRecordingState()
         await syncOpeningTree()
     }
 
     func promote(to kind: PieceKind) async {
         guard !context.isReplayMode, context.pendingPromotion != nil else { return }
-        actor.send(ChessEvent.promote(kind))
-        snapshot = actor.snapshot
+        reactor.send(ChessEvent.promote(kind))
+        snapshot = reactor.snapshot
         syncRecordingState()
         await syncOpeningTree()
     }
@@ -159,13 +159,13 @@ final class DistributedChessSession {
         guard let session = recorder.session() else { return }
         recordingGate.setEnabled(false)
         ChessReplayBridge.setPendingSession(session)
-        actor.send(ChessEvent.enterReplay)
-        snapshot = actor.snapshot
+        reactor.send(ChessEvent.enterReplay)
+        snapshot = reactor.snapshot
     }
 
     func exitReplay() {
-        actor.send(ChessEvent.exitReplay)
-        snapshot = actor.snapshot
+        reactor.send(ChessEvent.exitReplay)
+        snapshot = reactor.snapshot
         recordingGate.setEnabled(true)
     }
 
@@ -173,14 +173,14 @@ final class DistributedChessSession {
         guard context.isReplayMode else { return }
         let clamped = min(max(step, 0), replayStepCount)
         guard clamped != context.replayStep else { return }
-        actor.send(ChessEvent.replayScrub(clamped))
-        snapshot = actor.snapshot
+        reactor.send(ChessEvent.replayScrub(clamped))
+        snapshot = reactor.snapshot
     }
 
     func newGame() async throws {
         recordingGate.setEnabled(true)
-        actor.send(ChessEvent.newGame)
-        snapshot = actor.snapshot
+        reactor.send(ChessEvent.newGame)
+        snapshot = reactor.snapshot
         syncRecordingState()
         try await treeSession.reset()
         treeSnapshot = treeSession.snapshot()

@@ -2,7 +2,7 @@
 import SwiftUI
 import SwiftXState
 
-/// The green state pill shown for an actor — the compact JSON of its current value,
+/// The green state pill shown for an reactor — the compact JSON of its current value,
 /// e.g. `{"game":{"active":{"turn":"idle"}}}` or `"board"`.
 struct StatePillView: View {
     let stateValue: StateValue
@@ -50,7 +50,7 @@ struct EventKindBadge: View {
 
     private var color: Color {
         switch kind {
-        case .actor: return style.actorKindColor
+        case .reactor: return style.reactorKindColor
         case .event: return style.eventKindColor
         case .snapshot, .transition: return style.snapshotKindColor
         case .microstep, .action: return style.secondaryText
@@ -59,7 +59,7 @@ struct EventKindBadge: View {
 
     private var label: String {
         switch kind {
-        case .actor: return "ACTOR"
+        case .reactor: return "ACTOR"
         case .event: return "EVENT"
         case .snapshot: return "SNAPSHOT"
         case .transition: return "TRANSITION"

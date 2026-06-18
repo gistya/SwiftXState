@@ -37,26 +37,26 @@ struct BoardInspectorTests {
 
     @Test("e4 opening flips the boards' square states")
     func mirrorsOpeningMove() async {
-        let actor = createReactor(GameWatcherMachine.make()).start()
+        let reactor = createReactor(GameWatcherMachine.make()).start()
         try? await Task.sleep(for: .milliseconds(100))
 
-        actor.send(Event("TAP.1.4"))
+        reactor.send(Event("TAP.1.4"))
         try? await Task.sleep(for: .milliseconds(30))
-        actor.send(Event("TAP.3.4"))
+        reactor.send(Event("TAP.3.4"))
         try? await Task.sleep(for: .milliseconds(80))
 
-        guard let occupancy = actor.childReactor(id: BoardInspectorMachine.childId(.occupancy)) as? MachineChildRef<BoardInspectorContext>,
-              let pieces = actor.childReactor(id: BoardInspectorMachine.childId(.pieces)) as? MachineChildRef<BoardInspectorContext> else {
+        guard let occupancy = reactor.childReactor(id: BoardInspectorMachine.childId(.occupancy)) as? MachineChildRef<BoardInspectorContext>,
+              let pieces = reactor.childReactor(id: BoardInspectorMachine.childId(.pieces)) as? MachineChildRef<BoardInspectorContext> else {
             Issue.record("board-inspector children missing")
             return
         }
 
         // Occupancy board: e2 cleared, e4 occupied.
-        #expect(occupancy.actor.snapshot.value.matches("e2.empty"))
-        #expect(occupancy.actor.snapshot.value.matches("e4.occupied"))
+        #expect(occupancy.reactor.snapshot.value.matches("e2.empty"))
+        #expect(occupancy.reactor.snapshot.value.matches("e4.occupied"))
 
         // Pieces board: e4 now holds the white pawn, e2 is empty.
-        #expect(pieces.actor.snapshot.value.matches("e2.empty"))
-        #expect(pieces.actor.snapshot.value.matches("e4.wP"))
+        #expect(pieces.reactor.snapshot.value.matches("e2.empty"))
+        #expect(pieces.reactor.snapshot.value.matches("e4.wP"))
     }
 }

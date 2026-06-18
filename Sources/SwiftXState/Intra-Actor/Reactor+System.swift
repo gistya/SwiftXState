@@ -1,14 +1,14 @@
 import Foundation
 
 
-/// Any actor that can be registered in an actor system.
+/// Any reactor that can be registered in an reactor system.
 public protocol ReactorSystemRef: AnyObject, Sendable {
     var sessionId: String { get }
     var systemId: String? { get }
 }
 
     
-/// Registry for actors within a state machine system, mirroring XState's `system`.
+/// Registry for reactors within a state machine system, mirroring XState's `system`.
 public final class ReactorSystem: @unchecked Sendable {
     private var keyedReactors: [String: any ReactorSystemRef] = [:]
     private var sessionReactors: [String: any ReactorSystemRef] = [:]
@@ -18,7 +18,7 @@ public final class ReactorSystem: @unchecked Sendable {
 
     public init() {}
 
-    /// Session id of the root actor in this system.
+    /// Session id of the root reactor in this system.
     public var rootSessionId: String? {
         lock.lock()
         defer { lock.unlock() }
@@ -33,7 +33,7 @@ public final class ReactorSystem: @unchecked Sendable {
         }
     }
 
-    /// Subscribes to inspection events from all actors in this system.
+    /// Subscribes to inspection events from all reactors in this system.
     @discardableResult
     public func inspect(
         _ observer: @escaping @Sendable (InspectionEvent) -> Void
@@ -69,50 +69,50 @@ public final class ReactorSystem: @unchecked Sendable {
         return !inspectionObservers.isEmpty
     }
 
-    /// Registers an actor by session id.
+    /// Registers an reactor by session id.
     @discardableResult
-    public func register(_ actor: any ReactorSystemRef) -> String {
+    public func register(_ reactor: any ReactorSystemRef) -> String {
         lock.lock()
         defer { lock.unlock() }
-        sessionReactors[actor.sessionId] = actor
-        if let systemId = actor.systemId {
-            keyedReactors[systemId] = actor
+        sessionReactors[reactor.sessionId] = reactor
+        if let systemId = reactor.systemId {
+            keyedReactors[systemId] = reactor
         }
-        return actor.sessionId
+        return reactor.sessionId
     }
 
-    /// Registers an actor under a named system id.
-    public func set(systemId: String, actor: any ReactorSystemRef) {
+    /// Registers an reactor under a named system id.
+    public func set(systemId: String, reactor: any ReactorSystemRef) {
         lock.lock()
         defer { lock.unlock() }
-        keyedReactors[systemId] = actor
+        keyedReactors[systemId] = reactor
     }
 
-    /// Looks up an actor by system id.
+    /// Looks up an reactor by system id.
     public func get(systemId: String) -> (any ReactorSystemRef)? {
         lock.lock()
         defer { lock.unlock() }
         return keyedReactors[systemId]
     }
 
-    /// Returns all actors registered by system id.
+    /// Returns all reactors registered by system id.
     public func getAll() -> [String: any ReactorSystemRef] {
         lock.lock()
         defer { lock.unlock() }
         return keyedReactors
     }
 
-    /// Removes an actor from the registry.
-    public func unregister(_ actor: any ReactorSystemRef) {
+    /// Removes an reactor from the registry.
+    public func unregister(_ reactor: any ReactorSystemRef) {
         lock.lock()
         defer { lock.unlock() }
-        sessionReactors.removeValue(forKey: actor.sessionId)
-        if let systemId = actor.systemId {
-            if keyedReactors[systemId] === actor {
+        sessionReactors.removeValue(forKey: reactor.sessionId)
+        if let systemId = reactor.systemId {
+            if keyedReactors[systemId] === reactor {
                 keyedReactors.removeValue(forKey: systemId)
             }
         }
-        for (key, value) in keyedReactors where value === actor {
+        for (key, value) in keyedReactors where value === reactor {
             keyedReactors.removeValue(forKey: key)
         }
     }

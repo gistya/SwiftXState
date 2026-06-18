@@ -25,13 +25,13 @@ struct ReplayTests {
             ]
         ))
 
-        let actor = createReactor(
+        let reactor = createReactor(
             machine,
             options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        reactor.send(Event("INC"))
+        reactor.send(Event("GO"))
 
         let session = recorder.session()
         #expect(session != nil)
@@ -59,13 +59,13 @@ struct ReplayTests {
             ]
         ))
 
-        let actor = createReactor(
+        let reactor = createReactor(
             machine,
             options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        reactor.send(Event("INC"))
+        reactor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
@@ -94,13 +94,13 @@ struct ReplayTests {
             ]
         ))
 
-        let actor = createReactor(
+        let reactor = createReactor(
             machine,
             options: ReactorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        reactor.send(Event("INC"))
+        reactor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
@@ -116,7 +116,7 @@ struct ReplayTests {
         #expect(atDone?.status == .done)
     }
 
-    @Test("live actor replay matches recording")
+    @Test("live reactor replay matches recording")
     func liveReactorReplay() {
         let recorder = InspectionRecorder()
 

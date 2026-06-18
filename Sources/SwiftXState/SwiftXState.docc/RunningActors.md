@@ -4,7 +4,7 @@ The actor lifecycle, reading state, observing changes, and coordinating child ac
 
 ## Overview
 
-A ``StateMachine`` is just the rules. An ``Actor`` is a *running instance* of those rules — the
+A ``StateMachine`` is just the rules. An ``Reactor`` is a *running instance* of those rules — the
 thing you actually interact with. This guide covers the actor's lifecycle and the ways you read
 from and react to it.
 
@@ -14,21 +14,21 @@ from and react to it.
 
 ## Creating and starting
 
-`createActor` builds an actor from a machine; `start()` boots it into its initial state. Until
+`createReactor` builds an actor from a machine; `start()` boots it into its initial state. Until
 you call `start()`, reading `snapshot` will trap — always start first.
 
 ```swift
-let actor = createActor(machine).start()
+let actor = createReactor(machine).start()
 ```
 
 You can seed an actor at creation:
 
 ```swift
 // Provide input that the machine turns into initial context
-let actor = createActor(machine, input: SendableValue(userId)).start()
+let actor = createReactor(machine, input: SendableValue(userId)).start()
 
 // Or override the starting context outright
-let actor = createActor(machine).start(context: FetchContext(retries: 2))
+let actor = createReactor(machine).start(context: FetchContext(retries: 2))
 ```
 
 Stop an actor when you're done; this exits its states (running their `exit` actions) and tears
@@ -40,7 +40,7 @@ actor.stop()
 
 ## Reading state
 
-After every event, the actor exposes a fresh ``MachineSnapshot`` via ``Actor/snapshot``:
+After every event, the actor exposes a fresh ``MachineSnapshot`` via ``Reactor/snapshot``:
 
 ```swift
 let snap = actor.snapshot
@@ -62,7 +62,7 @@ snap.output                    // set when a final state is reached (status == .
 
 ## Sending events
 
-``Actor/send(_:)`` is **synchronous** and **run-to-completion**: when it returns, the transition
+``Reactor/send(_:)`` is **synchronous** and **run-to-completion**: when it returns, the transition
 (and any events raised during it) have fully settled. Send the built-in ``Event`` or your own
 ``Eventable`` types:
 
@@ -105,7 +105,7 @@ print(done.context.data as Any)
 
 ## Child actors
 
-Actors compose. A parent can run other actors as children, two ways:
+Reactors compose. A parent can run other actors as children, two ways:
 
 - **`invoke`** — a child tied to a *state*. It starts when the state is entered and is stopped
   automatically when the state is exited. Declared on ``StateNodeConfig`` via ``InvokeConfig``.

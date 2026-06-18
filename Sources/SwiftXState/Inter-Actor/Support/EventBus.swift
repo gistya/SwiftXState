@@ -2,7 +2,7 @@ import Foundation
 
 /// A thread-safe fan-out of ``ScopedInspectionEvent``. Mirrors the codebase's lock-based
 /// `@unchecked Sendable` registries (see `Reactor.System`, `InspectionCollector`): emitting happens
-/// on whatever thread produced the event, so it can't be actor-isolated.
+/// on whatever thread produced the event, so it can't be reactor-isolated.
 public final class EventBus: @unchecked Sendable {
     private let lock = NSLock()
     private var sinks: [Int: @Sendable (ScopedInspectionEvent) -> Void] = [:]

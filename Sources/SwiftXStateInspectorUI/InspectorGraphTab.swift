@@ -3,28 +3,28 @@ import SwiftUI
 import SwiftXState
 import SwiftXStateGraph
 
-/// Graphs the selected actor by parsing its `definitionJSON` and highlighting its live
-/// `stateValue` — no typed `StateMachine`/`Actor` needed.
+/// Graphs the selected reactor by parsing its `definitionJSON` and highlighting its live
+/// `stateValue` — no typed `StateMachine`/`Reactor` needed.
 struct InspectorGraphTab: View {
-    let actor:ReactorEntry?
+    let reactor:ReactorEntry?
     var graphStyle: GraphStyle = .dark
 
     var body: some View {
-        if let actor, let definition = actor.definitionJSON {
+        if let reactor, let definition = reactor.definitionJSON {
             StateGraphView(
                 definitionJSON: definition,
-                machineID: actor.machineID ?? actor.sessionID,
-                stateValue: actor.stateValue
+                machineID: reactor.machineID ?? reactor.sessionID,
+                stateValue: reactor.stateValue
             )
             .graphStyle(graphStyle)
-            .id(actor.sessionID) // rebuild the render core when switching actors
+            .id(reactor.sessionID) // rebuild the render core when switching reactors
         } else {
             ContentUnavailableView_Compat(
                 title: "No graph available",
                 systemImage: "point.3.connected.trianglepath.dotted",
-                message: actor == nil
-                    ? "Select an actor to view its statechart."
-                    : "This actor did not report a machine definition."
+                message: reactor == nil
+                    ? "Select an reactor to view its statechart."
+                    : "This reactor did not report a machine definition."
             )
         }
     }

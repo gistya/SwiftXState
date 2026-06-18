@@ -247,14 +247,14 @@ enum GameWatcherRules {
 enum GameWatcherMachine {
     static let id = "game-watcher"
 
-    /// - Parameter inspectableBoardReactors: when `true`, the 96 per-square/piece board actors
+    /// - Parameter inspectableBoardReactors: when `true`, the 96 per-square/piece board reactors
     ///   are streamed to inspectors too (a deliberate stress test — this count kills the web
     ///   client but the native inspector handles it).
     static func make(inspectableBoardReactors: Bool = false) -> StateMachine<GameWatcherContext> {
         machineConfig(includeBoardSpawns: true, inspectableBoardReactors: inspectableBoardReactors)
     }
 
-    /// Compact graph for Stately Inspector — runtime still spawns 96 off-inspector board actors.
+    /// Compact graph for Stately Inspector — runtime still spawns 96 off-inspector board reactors.
     static func inspectorSummaryMachine() -> StateMachine<GameWatcherContext> {
         machineConfig(includeBoardSpawns: false, inspectableBoardReactors: false)
     }
@@ -266,8 +266,8 @@ enum GameWatcherMachine {
             boot.entry = BoardReactorSpawn.entryActions(layout: initial.layout, inspectableBoardReactors: inspectableBoardReactors)
         }
         let description = includeBoardSpawns
-            ? "Chess orchestrator — one inspector graph; 96 board actors run off-inspector"
-            : "Chess orchestrator (inspector summary; 96 board actors run off-graph)"
+            ? "Chess orchestrator — one inspector graph; 96 board reactors run off-inspector"
+            : "Chess orchestrator (inspector summary; 96 board reactors run off-graph)"
         return createMachine(
             MachineConfig(
                 id: id,

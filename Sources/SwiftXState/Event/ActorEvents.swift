@@ -13,41 +13,41 @@ public struct DoneStateEvent: Eventable {
     }
 }
 
-/// Event emitted when an invoked child actor reaches a final state.
+/// Event emitted when an invoked child reactor reaches a final state.
 public struct DoneReactorEvent: Eventable {
     public let type: String
-    public let actorId: String
+    public let reactorId: String
     public let output: SendableValue?
 
-    public init(actorId: String, output: SendableValue? = nil) {
-        self.actorId = actorId
-        self.type = createDoneReactorEventType(actorId)
+    public init(reactorId: String, output: SendableValue? = nil) {
+        self.reactorId = reactorId
+        self.type = createDoneReactorEventType(reactorId)
         self.output = output
     }
 }
 
-/// Event emitted when an invoked child actor fails.
+/// Event emitted when an invoked child reactor fails.
 public struct ErrorReactorEvent: Eventable {
     public let type: String
-    public let actorId: String
+    public let reactorId: String
     public let error: String
 
-    public init(actorId: String, error: String) {
-        self.actorId = actorId
-        self.type = createErrorReactorEventType(actorId)
+    public init(reactorId: String, error: String) {
+        self.reactorId = reactorId
+        self.type = createErrorReactorEventType(reactorId)
         self.error = error
     }
 }
 
-/// Event emitted when a child actor's snapshot changes (with `syncSnapshot`).
+/// Event emitted when a child reactor's snapshot changes (with `syncSnapshot`).
 public struct SnapshotReactorEvent: Eventable {
     public let type: String
-    public let actorId: String
+    public let reactorId: String
     public let snapshot: ChildReactorSnapshot
 
-    public init(actorId: String, snapshot: ChildReactorSnapshot) {
-        self.actorId = actorId
-        self.type = createSnapshotReactorEventType(actorId)
+    public init(reactorId: String, snapshot: ChildReactorSnapshot) {
+        self.reactorId = reactorId
+        self.type = createSnapshotReactorEventType(reactorId)
         self.snapshot = snapshot
     }
 }
@@ -56,14 +56,14 @@ public func createDoneStateEventType(_ stateId: String) -> String {
     "xstate.done.state.\(stateId)"
 }
 
-public func createDoneReactorEventType(_ actorId: String) -> String {
-    "xstate.done.actor.\(actorId)"
+public func createDoneReactorEventType(_ reactorId: String) -> String {
+    "xstate.done.reactor.\(reactorId)"
 }
 
-public func createErrorReactorEventType(_ actorId: String) -> String {
-    "xstate.error.actor.\(actorId)"
+public func createErrorReactorEventType(_ reactorId: String) -> String {
+    "xstate.error.reactor.\(reactorId)"
 }
 
-public func createSnapshotReactorEventType(_ actorId: String) -> String {
-    "xstate.snapshot.\(actorId)"
+public func createSnapshotReactorEventType(_ reactorId: String) -> String {
+    "xstate.snapshot.\(reactorId)"
 }

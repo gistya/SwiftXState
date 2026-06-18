@@ -4,11 +4,11 @@ import PackageDescription
 // A browser build of the SwiftXState inspector (Swift → WebAssembly), mirroring the native
 // Stately-style inspector but rendered with the DOM via JavaScriptKit.
 //
-//   • WebInspector   — a reusable toolkit: give it a `WebInspectorStore` (fed from any actor's
-//                      inspection stream) and a container element id, and it renders the actor
+//   • WebInspector   — a reusable toolkit: give it a `WebInspectorStore` (fed from any reactor's
+//                      inspection stream) and a container element id, and it renders the reactor
 //                      sidebar + State / Events / Sequence / Graph tabs. The Graph tab reuses the
 //                      GPU `WebGPUGraph` renderer from the sibling WasmGPUDemo package.
-//   • WasmInspector  — a thin demo: spins up a few SwiftXState actors and points the toolkit at them.
+//   • WasmInspector  — a thin demo: spins up a few SwiftXState reactors and points the toolkit at them.
 //
 // Build:  ./build.sh   (uses the PackageToJS plugin + the swift.org WebAssembly SDK)
 let package = Package(

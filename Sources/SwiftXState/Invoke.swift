@@ -127,7 +127,7 @@ func resolveReactorSource<Context: Sendable>(
 ) -> ResolvedReactorSource {
     switch source {
     case let .named(name):
-        guard let logic = implementations.actors[name] else {
+        guard let logic = implementations.reactors[name] else {
             return ResolvedReactorSource(named: name)
         }
         return ResolvedReactorSource(
@@ -187,7 +187,7 @@ func spawnChild<Context: Sendable>(
             persistedChild: persistedChild
         )
         children[id] = child
-        parent.actorSystem.register(child)
+        parent.reactorSystem.register(child)
         if inspectable {
             parent.inspectSpawnedChild(child, machineId: child.machineId)
         }
@@ -206,7 +206,7 @@ func spawnChild<Context: Sendable>(
             systemId: resolvedSystemId
         )
         children[id] = child
-        parent.actorSystem.register(child)
+        parent.reactorSystem.register(child)
         parent.inspectSpawnedChild(child, machineId: nil)
         child.start()
         return
@@ -220,11 +220,11 @@ func spawnChild<Context: Sendable>(
             id: id,
             input: input,
             parent: parent,
-            system: parent.actorSystem,
+            system: parent.reactorSystem,
             systemId: resolvedSystemId
         )
         children[id] = child
-        parent.actorSystem.register(child)
+        parent.reactorSystem.register(child)
         parent.inspectSpawnedChild(child, machineId: nil)
         child.start()
         return
@@ -241,7 +241,7 @@ func spawnChild<Context: Sendable>(
             systemId: resolvedSystemId
         )
         children[id] = child
-        parent.actorSystem.register(child)
+        parent.reactorSystem.register(child)
         parent.inspectSpawnedChild(child, machineId: nil)
         child.start()
         return
@@ -256,7 +256,7 @@ func spawnChild<Context: Sendable>(
             syncSnapshot: syncSnapshot
         )
         children[id] = child
-        parent.actorSystem.register(child)
+        parent.reactorSystem.register(child)
         parent.inspectSpawnedChild(child, machineId: nil)
         child.start()
         return
@@ -271,7 +271,7 @@ func spawnChild<Context: Sendable>(
             syncSnapshot: syncSnapshot
         )
         children[id] = child
-        parent.actorSystem.register(child)
+        parent.reactorSystem.register(child)
         parent.inspectSpawnedChild(child, machineId: nil)
         child.start()
         return
@@ -286,19 +286,19 @@ func spawnChild<Context: Sendable>(
             syncSnapshot: syncSnapshot
         )
         children[id] = child
-        parent.actorSystem.register(child)
+        parent.reactorSystem.register(child)
         parent.inspectSpawnedChild(child, machineId: nil)
         child.start()
         return
     }
 
     if let name = resolved.named {
-        fatalError("Actor logic '\(name)' not found. Register it via setup(actors:) or MachineImplementations.actors.")
+        fatalError("Reactor logic '\(name)' not found. Register it via setup(reactors:) or MachineImplementations.reactors.")
     }
 }
 
-/// An action that spawns a child actor from an `ActorSource` (`fromTask`, `fromCallback`, a child
-/// machine, or a `.named` registered actor). `input` seeds the child's context; `syncSnapshot`
+/// An action that spawns a child reactor from an `ReactorSource` (`fromTask`, `fromCallback`, a child
+/// machine, or a `.named` registered reactor). `input` seeds the child's context; `syncSnapshot`
 /// streams the child's snapshots back to the parent. XState's `spawnChild`.
 public func spawnChild<Context: Sendable>(
     _ src: ReactorSource,
@@ -320,29 +320,29 @@ public func spawnChild<Context: Sendable>(
     )
 }
 
-/// An action that sends an event to this actor's parent. XState's `sendParent`.
+/// An action that sends an event to this reactor's parent. XState's `sendParent`.
 public func sendParent<Context: Sendable>(_ event: Event) -> ActionRef<Context> {
     .sendParent(event)
 }
 
-/// An action that stops the spawned/invoked child actor with the given id.
+/// An action that stops the spawned/invoked child reactor with the given id.
 public func stopChild<Context: Sendable>(_ id: String) -> ActionRef<Context> {
     .stopChild(.fixed(id))
 }
 
-/// Stops a child actor whose id is resolved at runtime.
+/// Stops a child reactor whose id is resolved at runtime.
 public func stopChild<Context: Sendable>(
     _ expression: @escaping @Sendable (ActionArgs<Context>) -> String
 ) -> ActionRef<Context> {
     .stopChild(.expression(expression))
 }
 
-/// Stops a child actor. Alias for `stopChild`, matching XState's deprecated `stop` export.
+/// Stops a child reactor. Alias for `stopChild`, matching XState's deprecated `stop` export.
 public func stop<Context: Sendable>(_ id: String) -> ActionRef<Context> {
     stopChild(id)
 }
 
-/// Stops a child actor whose id is resolved at runtime.
+/// Stops a child reactor whose id is resolved at runtime.
 public func stop<Context: Sendable>(
     _ expression: @escaping @Sendable (ActionArgs<Context>) -> String
 ) -> ActionRef<Context> {

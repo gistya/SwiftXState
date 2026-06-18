@@ -83,7 +83,7 @@ public struct ClosureInspectSession: InspectSession {
 ///     machine: myMachine,
 ///     configuration: InspectClientConfiguration(endpoint: InspectEndpoint(host: "127.0.0.1", port: 8080))
 /// )
-/// let actor = createReactor(myMachine, inspect: observe).start()
+/// let reactor = createReactor(myMachine, inspect: observe).start()
 /// ```
 public struct ClosureInspectTransport: InspectTransport, Sendable {
     public let policy: ConnectivityPolicy

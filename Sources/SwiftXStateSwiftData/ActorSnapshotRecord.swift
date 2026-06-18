@@ -2,7 +2,7 @@
 import Foundation
 import SwiftData
 
-/// SwiftData model storing a persisted actor snapshot blob.
+/// SwiftData model storing a persisted reactor snapshot blob.
 @Model
 public final class ReactorSnapshotRecord {
     @Attribute(.unique) public var key: String

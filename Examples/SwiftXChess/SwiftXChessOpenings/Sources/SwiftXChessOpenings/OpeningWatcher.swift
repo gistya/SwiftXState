@@ -2,7 +2,7 @@ import ChessKit
 import Foundation
 import SwiftXState
 
-/// Read-only supervisor over the pure opening move-tree actor.
+/// Read-only supervisor over the pure opening move-tree reactor.
 public actor OpeningWatcher {
     public let dataset: OpeningDataset
     private var recognition: OpeningRecognitionState
@@ -26,8 +26,8 @@ public actor OpeningWatcher {
     }
 
     public func handleInspection(_ event: InspectionEvent) async {
-        guard event.actor.machineId == OpeningMoveTreeMachine.id else { return }
-        if let treeSessionId, event.actor.sessionId != treeSessionId {
+        guard event.reactor.machineId == OpeningMoveTreeMachine.id else { return }
+        if let treeSessionId, event.reactor.sessionId != treeSessionId {
             return
         }
         guard let snapshot = event.snapshot,
@@ -109,10 +109,10 @@ private actor OpeningInspectSink {
     }
 }
 
-/// Wires the base tree actor and watcher. The watcher never sends to the tree actor.
+/// Wires the base tree reactor and watcher. The watcher never sends to the tree reactor.
 public final class OpeningTreeSession: @unchecked Sendable {
     public let dataset: OpeningDataset
-    public let actor: Actor<OpeningTreeContext>
+    public let reactor: Reactor<OpeningTreeContext>
     public let trace: OpeningTransitionTrace
     private let watcher: OpeningWatcher
     private let inspectSink: OpeningInspectSink
@@ -122,48 +122,48 @@ public final class OpeningTreeSession: @unchecked Sendable {
         self.dataset = dataset
         self.trace = OpeningTransitionTrace(machineId: OpeningMoveTreeMachine.id, rootId: dataset.rootId)
         let machine = OpeningMoveTreeMachine.make(dataset: dataset)
-        self.actor = createActor(
+        self.reactor = createReactor(
             machine,
-            options: ActorOptions(inspect: inspectMux.observe())
+            options: ReactorOptions(inspect: inspectMux.observe())
         )
-        self.watcher = try OpeningWatcher(dataset: dataset, treeSessionId: actor.id)
+        self.watcher = try OpeningWatcher(dataset: dataset, treeSessionId: reactor.id)
         self.inspectSink = OpeningInspectSink(watcher: watcher)
         inspectMux.add(trace.observe())
         inspectMux.add { [inspectSink] event in
             Task { await inspectSink.ingest(event) }
         }
-        actor.start()
+        reactor.start()
     }
 
     public func attachInspect(_ handler: @escaping @Sendable (InspectionEvent) -> Void) {
         inspectMux.add(handler)
-        // Actor registration fires in init/start before external inspect hooks attach.
-        // Replay so Stately receives @xstate.actor before transition/snapshot events.
-        replayActorRegistration(to: handler)
+        // Reactor registration fires in init/start before external inspect hooks attach.
+        // Replay so Stately receives @xstate.reactor before transition/snapshot events.
+        replayReactorRegistration(to: handler)
     }
 
-    private func replayActorRegistration(to handler: @Sendable (InspectionEvent) -> Void) {
-        let actorRef = InspectionActorRef(
-            sessionId: actor.id,
-            systemId: actor.systemId,
+    private func replayReactorRegistration(to handler: @Sendable (InspectionEvent) -> Void) {
+        let reactorRef = InspectionReactorRef(
+            sessionId: reactor.id,
+            systemId: reactor.systemId,
             machineId: OpeningMoveTreeMachine.id
         )
         handler(
-            InspectionEvent.actor(
-                rootId: actor.id,
-                actor: actorRef,
-                registrationSnapshot: InspectionSnapshot.from(actor.snapshot, actor: actorRef)
+            InspectionEvent.reactor(
+                rootId: reactor.id,
+                reactor: reactorRef,
+                registrationSnapshot: InspectionSnapshot.from(reactor.snapshot, reactor: reactorRef)
             )
         )
     }
 
     public func send(san: String) {
-        actor.send(OpeningMoveEvent(san: san))
+        reactor.send(OpeningMoveEvent(san: san))
     }
 
     public func sendAndWait(san: String) async {
         let expected = await watcher.recordedReports().count + 1
-        actor.send(OpeningMoveEvent(san: san))
+        reactor.send(OpeningMoveEvent(san: san))
         for _ in 0..<2000 {
             if await watcher.recordedReports().count >= expected { return }
             try? await Task.sleep(nanoseconds: 500_000)
@@ -171,11 +171,11 @@ public final class OpeningTreeSession: @unchecked Sendable {
     }
 
     public func snapshot() -> MachineSnapshot<OpeningTreeContext> {
-        actor.snapshot
+        reactor.snapshot
     }
 
     public func availableMoves() -> [String] {
-        OpeningMoveTreeMachine.availableMoves(from: actor.snapshot.context.nodeId, dataset: dataset)
+        OpeningMoveTreeMachine.availableMoves(from: reactor.snapshot.context.nodeId, dataset: dataset)
     }
 
     public func reports() async -> [PlyReport] {
@@ -193,7 +193,7 @@ public final class OpeningTreeSession: @unchecked Sendable {
 
     public func reset() async throws {
         trace.reset()
-        actor.start(context: .initial(rootId: dataset.rootId))
+        reactor.start(context: .initial(rootId: dataset.rootId))
         try await watcher.reset()
     }
 }

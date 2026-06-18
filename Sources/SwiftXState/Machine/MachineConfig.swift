@@ -10,7 +10,7 @@ public struct MachineConfig<Context: Sendable>: Sendable {
     public var initial: String?
     /// The starting context value.
     public var context: Context?
-    /// Builds initial context from actor input, mirroring XState's `context: ({ input }) => …`.
+    /// Builds initial context from reactor input, mirroring XState's `context: ({ input }) => …`.
     public var contextFromInput: (@Sendable (SendableValue?) -> Context)?
     /// Child state nodes, keyed by name.
     public var states: [String: StateNodeConfig<Context>]
@@ -210,15 +210,15 @@ public enum ActionRef<Context: Sendable>: Sendable {
     case assign(AssignAction<Context>)
     /// An inline, unnamed action closure.
     case inline(@Sendable (ActionArgs<Context>) -> Void)
-    /// Spawn a child actor.
+    /// Spawn a child reactor.
     case spawn(SpawnRef<Context>)
     /// Stop a spawned/invoked child.
     case stopChild(ChildTarget<Context>)
     /// Forward the current event to a child.
     case forwardTo(ChildTarget<Context>)
-    /// Send an event to another actor.
+    /// Send an event to another reactor.
     case sendTo(SendToAction<Context>)
-    /// Send an event to the parent actor.
+    /// Send an event to the parent reactor.
     case sendParent(Event)
     /// Raise an event back into this machine (processed in the same or a later step).
     case raise(RaiseAction<Context>)
@@ -320,7 +320,7 @@ func resolveTransitionConfigs<Context: Sendable>(
 
 // MARK: - Initial Context Resolution
 
-/// Resolves the initial context for a machine, mirroring XState actor `input` + context initializer.
+/// Resolves the initial context for a machine, mirroring XState reactor `input` + context initializer.
 public func resolveInitialContext<Context: Sendable>(
     machine: StateMachine<Context>,
     input: SendableValue? = nil,

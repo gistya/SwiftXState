@@ -19,9 +19,9 @@ struct WaitForTests {
 
     @Test("resolves immediately when current snapshot matches")
     func resolvesImmediately() async throws {
-        let actor = createReactor(taggedMachine).start()
+        let reactor = createReactor(taggedMachine).start()
 
-        let snapshot = try await waitFor(actor) { $0.hasTag("loading") }
+        let snapshot = try await waitFor(reactor) { $0.hasTag("loading") }
 
         #expect(snapshot.hasTag("loading"))
         #expect(snapshot.matches("loading"))
@@ -29,11 +29,11 @@ struct WaitForTests {
 
     @Test("resolves when a later snapshot matches")
     func resolvesOnTransition() async throws {
-        let actor = createReactor(taggedMachine).start()
+        let reactor = createReactor(taggedMachine).start()
 
-        async let snapshot = waitFor(actor) { $0.hasTag("loaded") }
+        async let snapshot = waitFor(reactor) { $0.hasTag("loaded") }
 
-        actor.send(Event("LOADED"))
+        reactor.send(Event("LOADED"))
 
         let result = try await snapshot
         #expect(result.hasTag("loaded"))
@@ -42,39 +42,39 @@ struct WaitForTests {
 
     @Test("times out when predicate is never satisfied")
     func timesOut() async {
-        let actor = createReactor(taggedMachine).start()
+        let reactor = createReactor(taggedMachine).start()
 
         await #expect(throws: WaitForError.timeout(milliseconds: 50)) {
             try await waitFor(
-                actor,
+                reactor,
                 predicate: { $0.hasTag("loaded") },
                 options: WaitForOptions(timeout: 50)
             )
         }
     }
 
-    @Test("throws when actor stops before predicate matches")
-    func actorTerminated() async {
-        let actor = createReactor(taggedMachine).start()
+    @Test("throws when reactor stops before predicate matches")
+    func reactorTerminated() async {
+        let reactor = createReactor(taggedMachine).start()
 
         let task = Task {
-            try await waitFor(actor) { $0.hasTag("loaded") }
+            try await waitFor(reactor) { $0.hasTag("loaded") }
         }
 
-        actor.stop()
+        reactor.stop()
 
-        await #expect(throws: WaitForError.actorTerminated) {
+        await #expect(throws: WaitForError.reactorTerminated) {
             try await task.value
         }
     }
 
     @Test("rejects immediately for negative timeout")
     func negativeTimeout() async {
-        let actor = createReactor(taggedMachine).start()
+        let reactor = createReactor(taggedMachine).start()
 
         await #expect(throws: WaitForError.timeout(milliseconds: -1)) {
             try await waitFor(
-                actor,
+                reactor,
                 predicate: { $0.hasTag("loaded") },
                 options: WaitForOptions(timeout: -1)
             )
@@ -83,10 +83,10 @@ struct WaitForTests {
 
     @Test("supports task cancellation")
     func taskCancellation() async {
-        let actor = createReactor(taggedMachine).start()
+        let reactor = createReactor(taggedMachine).start()
 
         let task = Task {
-            try await waitFor(actor) { $0.hasTag("loaded") }
+            try await waitFor(reactor) { $0.hasTag("loaded") }
         }
 
         try? await Task.sleep(for: .milliseconds(20))
@@ -104,11 +104,11 @@ struct WaitForTests {
 
     @Test("matches string state paths")
     func matchesStatePath() async throws {
-        let actor = createReactor(taggedMachine).start()
+        let reactor = createReactor(taggedMachine).start()
 
-        async let snapshot = waitFor(actor) { $0.matches("ready") }
+        async let snapshot = waitFor(reactor) { $0.matches("ready") }
 
-        actor.send(Event("LOADED"))
+        reactor.send(Event("LOADED"))
 
         #expect(try await snapshot.matches("ready"))
     }

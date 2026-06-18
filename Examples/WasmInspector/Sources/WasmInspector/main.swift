@@ -3,9 +3,9 @@ import JavaScriptEventLoop
 import SwiftXState
 import WebInspector
 
-// A browser build of the SwiftXState inspector. Two live actors feed their inspection streams into a
-// single store; the WebInspector toolkit renders the actor sidebar + State / Events / Sequence /
-// Graph tabs (the Graph tab is the GPU WebGPUGraph renderer). A timer drives the actors so the feed
+// A browser build of the SwiftXState inspector. Two live reactors feed their inspection streams into a
+// single store; the WebInspector toolkit renders the reactor sidebar + State / Events / Sequence /
+// Graph tabs (the Graph tab is the GPU WebGPUGraph renderer). A timer drives the reactors so the feed
 // and graph animate on their own.
 
 JavaScriptEventLoop.installGlobalExecutor()
@@ -38,8 +38,8 @@ let player = createMachine(MachineConfig(
 ))
 
 let store = WebInspectorStore()
-let light = createActor(trafficLight, inspect: store.observe()).start()
-let media = createActor(player, inspect: store.observe()).start()
+let light = createReactor(trafficLight, inspect: store.observe()).start()
+let media = createReactor(player, inspect: store.observe()).start()
 
 // Text mode for the Graph tab: defaults to the embedded true-MSDF atlas; `?text=sdf` uses runtime SDF.
 let search = (JSObject.global.location.search.string ?? "")
@@ -47,7 +47,7 @@ let textMode: StateGraph.TextMode = search.contains("sdf") ? .sdf : .msdf
 
 WebInspector.mount(containerId: "app", store: store, graphTextMode: textMode)
 
-// Auto-drive the actors so the feed, pills and graph animate without interaction.
+// Auto-drive the reactors so the feed, pills and graph animate without interaction.
 let playerCycle = ["LOAD", "READY", "PLAY", "PAUSE", "PLAY", "STOP"]
 Task { @MainActor in
     var i = 0

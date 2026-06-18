@@ -681,8 +681,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/chesskit-app/chesskit-swift";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.17.0;
+				branch = interactor;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

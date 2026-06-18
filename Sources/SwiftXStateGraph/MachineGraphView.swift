@@ -46,7 +46,7 @@ final class GraphRenderModel {
 
     // MARK: Model + active state
 
-    /// Swaps in a new structure (e.g. the inspector selecting a different actor).
+    /// Swaps in a new structure (e.g. the inspector selecting a different reactor).
     func setModel(_ newModel: GraphModel) {
         guard newModel.structureHash != model.structureHash else {
             model = newModel
@@ -181,7 +181,7 @@ struct GraphRenderView: View {
             .onChange(of: geo.frame(in: .global)) { _, frame in
                 render.canvasFrame = frame
             }
-            // The model swapped (e.g. a different actor selected): relayout + refit.
+            // The model swapped (e.g. a different reactor selected): relayout + refit.
             .onChange(of: render.model.structureHash) { _, _ in
                 render.style = style
                 render.recomputeLayout()
@@ -388,34 +388,34 @@ struct GraphRenderView: View {
 
 // MARK: - Public: live, typed graph
 
-/// The root SwiftUI view for rendering a live state-machine graph from a typed actor.
+/// The root SwiftUI view for rendering a live state-machine graph from a typed reactor.
 ///
 /// ```swift
-/// MachineGraphView(actor: myReactor, machine: MyMachine.machine)
+/// MachineGraphView(reactor: myReactor, machine: MyMachine.machine)
 ///     .graphStyle(.dark)
 ///     .frame(minWidth: 800, minHeight: 600)
 /// ```
 ///
-/// Constructed with an `actor`, it subscribes to live snapshots and highlights the active
+/// Constructed with an `reactor`, it subscribes to live snapshots and highlights the active
 /// configuration in real time. The snapshot-only initializer renders a static configuration.
 @MainActor
 public struct MachineGraphView<Context: Sendable>: View {
     @State private var render: GraphRenderModel
     @State private var subscription = SubscriptionBox()
-    private let actor: Reactor<Context>?
+    private let reactor: Reactor<Context>?
 
-    /// Live graph driven by an actor.
-    public init(actor: Reactor<Context>, machine: StateMachine<Context>) {
-        self.actor = actor
+    /// Live graph driven by an reactor.
+    public init(reactor: Reactor<Context>, machine: StateMachine<Context>) {
+        self.reactor = reactor
         let model = GraphModelBuilder.build(from: machine)
         let render = GraphRenderModel(model: model)
-        render.setActive(stateValue: actor.snapshot.value)
+        render.setActive(stateValue: reactor.snapshot.value)
         _render = State(initialValue: render)
     }
 
     /// Static / replay graph from a snapshot (no live subscription).
     public init(machine: StateMachine<Context>, snapshot: MachineSnapshot<Context>) {
-        self.actor = nil
+        self.reactor = nil
         let model = GraphModelBuilder.build(from: machine)
         let render = GraphRenderModel(model: model)
         render.setActive(stateValue: snapshot.value)
@@ -425,9 +425,9 @@ public struct MachineGraphView<Context: Sendable>: View {
     public var body: some View {
         GraphRenderView(render: render)
             .onAppear {
-                guard let actor, subscription.handle == nil else { return }
-                render.setActive(stateValue: actor.snapshot.value)
-                subscription.handle = actor.subscribe { [weak render] snapshot in
+                guard let reactor, subscription.handle == nil else { return }
+                render.setActive(stateValue: reactor.snapshot.value)
+                subscription.handle = reactor.subscribe { [weak render] snapshot in
                     Task { @MainActor in render?.setActive(stateValue: snapshot.value) }
                 }
             }
@@ -438,8 +438,8 @@ public struct MachineGraphView<Context: Sendable>: View {
 // MARK: - Public: type-erased graph (definition + live state)
 
 /// Renders a statechart from a `GraphModel` (or an exported definition) plus an optional
-/// live `StateValue` for highlighting — without requiring a typed `Actor`/`StateMachine`.
-/// This is what the inspector uses to graph any actor from its `definitionJSON`.
+/// live `StateValue` for highlighting — without requiring a typed `Reactor`/`StateMachine`.
+/// This is what the inspector uses to graph any reactor from its `definitionJSON`.
 @MainActor
 public struct StateGraphView: View {
     private let model: GraphModel

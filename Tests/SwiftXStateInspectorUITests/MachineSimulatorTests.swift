@@ -190,12 +190,12 @@ struct InspectorSendTests {
         #expect(store.feed.count == feedBefore + 2) // event + snapshot rows
     }
 
-    @Test("live (non-loaded) actors are not simulatable")
+    @Test("live (non-loaded) reactors are not simulatable")
     @MainActor
     func liveNotSimulatable() {
         let store = InspectorStore()
         let ref = InspectionReactorRef(sessionId: "live", machineId: "live")
-        store.ingest(InspectionEvent(kind: .actor, rootId: "live", actor: ref))
+        store.ingest(InspectionEvent(kind: .reactor, rootId: "live", reactor: ref))
         #expect(!store.isSimulatable("live"))
         #expect(store.availableEvents(for: "live").isEmpty)
         store.send("ANYTHING", to: "live") // no-op

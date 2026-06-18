@@ -13,41 +13,41 @@ final class WinBridgeReactorTests: XCTestCase {
     }
 
     func testCounterContextUpdates() {
-        let handle = actorCreate("counter")
+        let handle = reactorCreate("counter")
         XCTAssertGreaterThan(handle, 0)
-        XCTAssertEqual(take(actorState(handle)), "running")
-        XCTAssertEqual(actorSend(handle, "INC"), 1)
-        XCTAssertEqual(actorSend(handle, "INC"), 1)
-        XCTAssertEqual(actorSend(handle, "NOPE"), 0)        // unhandled event → no transition
-        XCTAssertTrue(take(actorContextJSON(handle)).contains("\"count\":\"2\""))
-        actorRelease(handle)
-        XCTAssertEqual(take(actorState(handle)), "")        // released handle → nil → ""
+        XCTAssertEqual(take(reactorState(handle)), "running")
+        XCTAssertEqual(reactorSend(handle, "INC"), 1)
+        XCTAssertEqual(reactorSend(handle, "INC"), 1)
+        XCTAssertEqual(reactorSend(handle, "NOPE"), 0)        // unhandled event → no transition
+        XCTAssertTrue(take(reactorContextJSON(handle)).contains("\"count\":\"2\""))
+        reactorRelease(handle)
+        XCTAssertEqual(take(reactorState(handle)), "")        // released handle → nil → ""
     }
 
     func testToggleAndUnknownMachine() {
-        XCTAssertEqual(actorCreate("does-not-exist"), 0)
-        let handle = actorCreate("toggle")
-        XCTAssertEqual(take(actorState(handle)), "inactive")
-        XCTAssertEqual(actorSend(handle, "TOGGLE"), 1)
-        XCTAssertEqual(take(actorState(handle)), "active")
-        actorRelease(handle)
+        XCTAssertEqual(reactorCreate("does-not-exist"), 0)
+        let handle = reactorCreate("toggle")
+        XCTAssertEqual(take(reactorState(handle)), "inactive")
+        XCTAssertEqual(reactorSend(handle, "TOGGLE"), 1)
+        XCTAssertEqual(take(reactorState(handle)), "active")
+        reactorRelease(handle)
     }
 
     func testVendingGuardBlocksThenAllows() {
-        let handle = actorCreate("vending")
-        XCTAssertEqual(actorSend(handle, "DISPENSE"), 0)    // 0 credits → guard blocks
-        XCTAssertEqual(actorSend(handle, "COIN"), 1)
-        XCTAssertEqual(actorSend(handle, "COIN"), 1)
-        XCTAssertEqual(actorSend(handle, "COIN"), 1)
-        XCTAssertEqual(actorSend(handle, "DISPENSE"), 1)    // 3 credits → dispenses
-        XCTAssertEqual(take(actorState(handle)), "dispensing")
-        actorRelease(handle)
+        let handle = reactorCreate("vending")
+        XCTAssertEqual(reactorSend(handle, "DISPENSE"), 0)    // 0 credits → guard blocks
+        XCTAssertEqual(reactorSend(handle, "COIN"), 1)
+        XCTAssertEqual(reactorSend(handle, "COIN"), 1)
+        XCTAssertEqual(reactorSend(handle, "COIN"), 1)
+        XCTAssertEqual(reactorSend(handle, "DISPENSE"), 1)    // 3 credits → dispenses
+        XCTAssertEqual(take(reactorState(handle)), "dispensing")
+        reactorRelease(handle)
     }
 
     func testMachineListAndEvents() {
         XCTAssertTrue(take(machineList()).contains("counter"))
-        let handle = actorCreate("toggle")
-        XCTAssertTrue(take(actorEvents(handle)).contains("TOGGLE"))
-        actorRelease(handle)
+        let handle = reactorCreate("toggle")
+        XCTAssertTrue(take(reactorEvents(handle)).contains("TOGGLE"))
+        reactorRelease(handle)
     }
 }

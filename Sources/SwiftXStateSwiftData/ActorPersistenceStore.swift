@@ -3,7 +3,7 @@ import Foundation
 import SwiftData
 import SwiftXState
 
-/// Persists and restores actor snapshots using SwiftData.
+/// Persists and restores reactor snapshots using SwiftData.
 public struct ReactorPersistenceStore {
     private let modelContext: ModelContext
 
@@ -11,12 +11,12 @@ public struct ReactorPersistenceStore {
         self.modelContext = modelContext
     }
 
-    /// Saves the actor's current snapshot under a stable key (upserts).
+    /// Saves the reactor's current snapshot under a stable key (upserts).
     public func save<Context: Codable & Sendable>(
-        _ actor: Reactor<Context>,
+        _ reactor: Reactor<Context>,
         key: String
     ) throws {
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try reactor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
 
         var descriptor = FetchDescriptor<ReactorSnapshotRecord>(
@@ -65,21 +65,21 @@ public struct ReactorPersistenceStore {
         }
     }
 
-    /// Restores an actor from a persisted snapshot stored under `key`.
+    /// Restores an reactor from a persisted snapshot stored under `key`.
     @discardableResult
     public func restore<Context: Codable & Sendable>(
-        _ actor: Reactor<Context>,
+        _ reactor: Reactor<Context>,
         key: String,
         context: Context? = nil
     ) throws -> Bool {
         guard let persisted = try load(key: key) else {
             return false
         }
-        actor.start(from: persisted, context: context)
+        reactor.start(from: persisted, context: context)
         return true
     }
 
-    /// Creates and hydrates an actor from a persisted snapshot stored under `key`.
+    /// Creates and hydrates an reactor from a persisted snapshot stored under `key`.
     public func createReactor<Context: Codable & Sendable>(
         _ machine: StateMachine<Context>,
         key: String,

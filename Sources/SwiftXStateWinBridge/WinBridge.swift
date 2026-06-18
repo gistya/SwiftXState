@@ -29,7 +29,7 @@ public func addNumbers(_ a: Int32, _ b: Int32) -> Int32 {
 }
 
 /// Proves SwiftXState itself is reachable across the bridge: builds a small machine and returns its
-/// Stately-compatible definition JSON as a C string (caller frees). Real, handle-based actor/event
+/// Stately-compatible definition JSON as a C string (caller frees). Real, handle-based reactor/event
 /// APIs will follow the same C-string + opaque-handle conventions.
 @WinC
 public func sampleDefinitionJSON() -> UnsafeMutablePointer<CChar>? {

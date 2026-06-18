@@ -6,7 +6,7 @@ import Foundation
 /// shape is untouched.
 public struct ScopedInspectionEvent: Sendable, Identifiable {
     public enum Payload: Sendable {
-        /// A normal runtime inspection event from a hosted actor (`@xstate.*`).
+        /// A normal runtime inspection event from a hosted reactor (`@xstate.*`).
         case inspection(InspectionEvent)
         /// A message routed across the inter-actor plane — the cross-domain edge of the graph.
         case message(MessageEdge)
@@ -24,7 +24,7 @@ public struct ScopedInspectionEvent: Sendable, Identifiable {
     public struct Lifecycle: Sendable, Equatable {
         public enum Kind: String, Sendable { case spawned, stopped, restarted, crashed }
         public let kind: Kind
-        public let actor: ReactorAddress
+        public let reactor: ReactorAddress
         public let detail: String?
     }
 

@@ -23,7 +23,7 @@ extension ReplayableEvent {
         case kind
         case type
         case payload
-        case actorId
+        case reactorId
         case outputDescription
         case message
         case value
@@ -39,17 +39,17 @@ extension ReplayableEvent {
         case let .system(event):
             try container.encode(Discriminator.system, forKey: .kind)
             try container.encode(event, forKey: .type)
-        case let .done(actorId, outputDescription):
+        case let .done(reactorId, outputDescription):
             try container.encode(Discriminator.done, forKey: .kind)
-            try container.encode(actorId, forKey: .actorId)
+            try container.encode(reactorId, forKey: .reactorId)
             try container.encodeIfPresent(outputDescription, forKey: .outputDescription)
-        case let .error(actorId, message):
+        case let .error(reactorId, message):
             try container.encode(Discriminator.error, forKey: .kind)
-            try container.encode(actorId, forKey: .actorId)
+            try container.encode(reactorId, forKey: .reactorId)
             try container.encode(message, forKey: .message)
-        case let .snapshotSync(actorId, value):
+        case let .snapshotSync(reactorId, value):
             try container.encode(Discriminator.snapshotSync, forKey: .kind)
-            try container.encode(actorId, forKey: .actorId)
+            try container.encode(reactorId, forKey: .reactorId)
             try container.encodeIfPresent(value, forKey: .value)
         }
     }
@@ -67,17 +67,17 @@ extension ReplayableEvent {
             self = .system(try container.decode(SystemEvent.self, forKey: .type))
         case .done:
             self = .done(
-                actorId: try container.decode(String.self, forKey: .actorId),
+                reactorId: try container.decode(String.self, forKey: .reactorId),
                 outputDescription: try container.decodeIfPresent(String.self, forKey: .outputDescription)
             )
         case .error:
             self = .error(
-                actorId: try container.decode(String.self, forKey: .actorId),
+                reactorId: try container.decode(String.self, forKey: .reactorId),
                 message: try container.decode(String.self, forKey: .message)
             )
         case .snapshotSync:
             self = .snapshotSync(
-                actorId: try container.decode(String.self, forKey: .actorId),
+                reactorId: try container.decode(String.self, forKey: .reactorId),
                 value: try container.decodeIfPresent(String.self, forKey: .value)
             )
         }

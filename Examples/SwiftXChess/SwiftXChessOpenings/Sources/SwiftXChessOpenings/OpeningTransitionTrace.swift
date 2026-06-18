@@ -35,12 +35,12 @@ public final class OpeningTransitionTrace: @unchecked Sendable {
     }
 
     private func handle(_ event: InspectionEvent) {
-        guard event.actor.machineId == machineId else { return }
+        guard event.reactor.machineId == machineId else { return }
         lock.lock()
         defer { lock.unlock() }
 
         switch event.kind {
-        case .actor:
+        case .reactor:
             if let snapshot = event.snapshot {
                 lastNodeId = nodeId(from: snapshot)
             }
