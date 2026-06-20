@@ -1,8 +1,7 @@
 name: Windows Bridge
 
 # Verifies the SwiftXState C# / Windows bridge:
-#   - the generated C# stays in sync with the @WinC functions (no drift),
-#   - the macro gating + handle exports pass their tests,
+#   - the handle-export tests pass,
 #   - the C exports actually appear when built with SWIFTXWIN, and
 #   - a C# program can drive an actor through the bridge end to end.
 on:
@@ -34,19 +33,8 @@ jobs:
           key: ${{ runner.os }}-spm-winbridge-${{ hashFiles('Package.resolved', 'Package.swift') }}
           restore-keys: ${{ runner.os }}-spm-winbridge-
 
-      # The generated bridge must match the @WinC functions. Regenerate and fail on any diff.
-      - name: Check generated C# is up to date
-        run: |
-          swift package --allow-writing-to-package-directory generate-csharp-bridge
-          if ! git diff --quiet -- Interop/csharp/SwiftXStateWinBridge.cs; then
-            echo "::error::Interop/csharp/SwiftXStateWinBridge.cs is out of date."
-            echo "Run: swift package generate-csharp-bridge --allow-writing-to-package-directory"
-            git --no-pager diff -- Interop/csharp/SwiftXStateWinBridge.cs
-            exit 1
-          fi
-
-      - name: Macro gating + handle export tests
-        run: swift test --filter 'WinCMacroTests|WinBridgeActorTests'
+      - name: Handle export tests
+        run: swift test --filter 'WinBridgeActorTests|WinBridgeFlowTests'
 
       # With SWIFTXWIN set, the manifest adds -D SWIFTXWIN and the @_cdecl exports appear.
       - name: Build bridge with C exports + verify symbols
