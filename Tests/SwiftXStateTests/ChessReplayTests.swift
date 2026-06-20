@@ -4,17 +4,17 @@ import Testing
 @Suite("Chess replay sample machine")
 struct ChessReplayTests {
     @Test("recorded taps replay through time travel")
-    func tapReplay() {
+    func tapReplay() async {
         let recorder = InspectionRecorder()
         let machine = ChessSampleMachine.make()
 
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: ChessSampleMachine.initialContext())
 
-        actor.send(Event("TAP.6.4"))
-        actor.send(Event("TAP.4.4"))
+        await actor.send(Event("TAP.6.4"))
+        await actor.send(Event("TAP.4.4"))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")

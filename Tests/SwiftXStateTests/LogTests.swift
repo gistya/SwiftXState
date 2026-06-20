@@ -105,7 +105,7 @@ struct LogTests {
     }
 
     @Test("log emits inspection action events from actors")
-    func inspectionAction() {
+    func inspectionAction() async {
         let collector = InspectionCollector()
         let machine = createMachine(MachineConfig(
             initial: "idle",
@@ -120,7 +120,7 @@ struct LogTests {
         LogHandler.setSink { _ in }
         defer { LogHandler.setSink(nil) }
 
-        createActor(machine, options: ActorOptions(inspect: collector.observe())).start().send(Event("GO"))
+        await createActor(machine, options: ActorOptions(inspect: collector.observe())).start().send(Event("GO"))
 
         #expect(collector.recordedEvents().contains { $0.kind == .action && $0.actionType == "xstate.log" })
     }

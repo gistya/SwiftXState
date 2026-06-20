@@ -8,7 +8,7 @@ private struct ReplayCounterContext: Sendable, Equatable {
 @Suite("Recording and replay (devtools v2)")
 struct ReplayTests {
     @Test("InspectionRecorder captures transition steps")
-    func recorderCapturesSteps() {
+    func recorderCapturesSteps() async {
         let recorder = InspectionRecorder()
 
         let machine = createMachine(MachineConfig(
@@ -25,13 +25,13 @@ struct ReplayTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        await actor.send(Event("INC"))
+        await actor.send(Event("GO"))
 
         let session = recorder.session()
         #expect(session != nil)
@@ -42,7 +42,7 @@ struct ReplayTests {
     }
 
     @Test("pure replay matches recorded session")
-    func verifyPureReplay() {
+    func verifyPureReplay() async {
         let recorder = InspectionRecorder()
 
         let machine = createMachine(MachineConfig(
@@ -59,13 +59,13 @@ struct ReplayTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        await actor.send(Event("INC"))
+        await actor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
@@ -77,7 +77,7 @@ struct ReplayTests {
     }
 
     @Test("timeTravel returns snapshot at step")
-    func timeTravelToStep() {
+    func timeTravelToStep() async {
         let recorder = InspectionRecorder()
 
         let machine = createMachine(MachineConfig(
@@ -94,13 +94,13 @@ struct ReplayTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        await actor.send(Event("INC"))
+        await actor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
@@ -117,7 +117,7 @@ struct ReplayTests {
     }
 
     @Test("live actor replay matches recording")
-    func liveActorReplay() {
+    func liveActorReplay() async {
         let recorder = InspectionRecorder()
 
         let machine = createMachine(MachineConfig(
@@ -134,27 +134,27 @@ struct ReplayTests {
             ]
         ))
 
-        let recordedActor = createActor(
+        let recordedActor = await createActor(
             machine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: ReplayCounterContext(count: 0))
-        recordedActor.send(Event("INC"))
-        recordedActor.send(Event("GO"))
+        await recordedActor.send(Event("INC"))
+        await recordedActor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
             return
         }
 
-        let (replayedActor, verifications) = replayActor(
+        let (replayedActor, verifications) = await replayActor(
             machine,
             context: ReplayCounterContext(count: 0),
             session: session
         )
 
         #expect(verifications.filter { !$0.matches }.isEmpty)
-        #expect(replayedActor.snapshot.matches("done"))
-        #expect(replayedActor.snapshot.context.count == 1)
+        #expect(await replayedActor.snapshot.matches("done"))
+        #expect(await replayedActor.snapshot.context.count == 1)
     }
 
     @Test("StoreRecorder captures and replays store session")

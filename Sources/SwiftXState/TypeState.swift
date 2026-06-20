@@ -48,31 +48,6 @@ public struct TypedSnapshot<Context: Sendable, Brand: StateID>: Sendable {
     }
 }
 
-/// Phantom-branded wrapper around `Actor` sharing the same state brand as `TypedSnapshot`.
-public struct TypedActor<Context: Sendable, Brand: StateID>: Sendable {
-    public let actor: Actor<Context>
-
-    public init(_ actor: Actor<Context>) {
-        self.actor = actor
-    }
-
-    public var snapshot: TypedSnapshot<Context, Brand> {
-        TypedSnapshot(actor.snapshot)
-    }
-
-    @discardableResult
-    public func start(context: Context? = nil) -> TypedSnapshot<Context, Brand> {
-        actor.start(context: context)
-        return snapshot
-    }
-
-    @discardableResult
-    public func send(_ event: any Eventable) -> TypedSnapshot<Context, Brand> {
-        actor.send(event)
-        return snapshot
-    }
-}
-
 public extension MachineSnapshot {
     func typed<Brand: StateID>(as _: Brand.Type = Brand.self) -> TypedSnapshot<Context, Brand> {
         TypedSnapshot(self)
@@ -80,12 +55,6 @@ public extension MachineSnapshot {
 
     func matches(_ state: some StateID) -> Bool {
         matches(state.statePath)
-    }
-}
-
-public extension Actor {
-    func typed<Brand: StateID>(as _: Brand.Type = Brand.self) -> TypedActor<Context, Brand> {
-        TypedActor(self)
     }
 }
 

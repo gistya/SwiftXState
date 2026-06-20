@@ -26,83 +26,83 @@ struct PersistenceTests {
     }
 
     @Test("getPersistedSnapshot round-trips through restoreSnapshot")
-    func roundTrip() throws {
+    func roundTrip() async throws {
         let machine = counterMachine
-        let actor = createActor(machine).start(context: PersistCounterContext(count: 0))
-        actor.send(Event("INC"))
-        actor.send(Event("INC"))
+        let actor = await createActor(machine).start(context: PersistCounterContext(count: 0))
+        await actor.send(Event("INC"))
+        await actor.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try await actor.getPersistedSnapshot()
         let restored = try restoreSnapshot(machine: machine, persisted: persisted)
 
-        #expect(restored.value == actor.snapshot.value)
+        #expect(await restored.value == actor.snapshot.value)
         #expect(restored.context.count == 2)
         #expect(restored.matches("idle"))
-        #expect(restored.tags == actor.snapshot.tags)
+        #expect(await restored.tags == actor.snapshot.tags)
     }
 
     @Test("actor starts from persisted snapshot and continues transitioning")
-    func startFromPersisted() throws {
+    func startFromPersisted() async throws {
         let machine = counterMachine
-        let original = createActor(machine).start(context: PersistCounterContext(count: 0))
-        original.send(Event("INC"))
-        let persisted = try original.getPersistedSnapshot()
+        let original = await createActor(machine).start(context: PersistCounterContext(count: 0))
+        await original.send(Event("INC"))
+        let persisted = try await original.getPersistedSnapshot()
 
-        let restoredActor = createActor(machine).start(from: persisted)
+        let restoredActor = await createActor(machine).start(from: persisted)
 
-        #expect(restoredActor.snapshot.context.count == 1)
-        #expect(restoredActor.snapshot.matches("idle"))
+        #expect(await restoredActor.snapshot.context.count == 1)
+        #expect(await restoredActor.snapshot.matches("idle"))
 
-        restoredActor.send(Event("INC"))
-        restoredActor.send(Event("DONE"))
+        await restoredActor.send(Event("INC"))
+        await restoredActor.send(Event("DONE"))
 
-        #expect(restoredActor.snapshot.matches("finished"))
-        #expect(restoredActor.snapshot.context.count == 2)
-        #expect(restoredActor.snapshot.status == .done)
+        #expect(await restoredActor.snapshot.matches("finished"))
+        #expect(await restoredActor.snapshot.context.count == 2)
+        #expect(await restoredActor.snapshot.status == .done)
     }
 
     @Test("createActor with snapshot hydrates in one step")
-    func createActorWithSnapshot() throws {
+    func createActorWithSnapshot() async throws {
         let machine = counterMachine
-        let original = createActor(machine).start(context: PersistCounterContext(count: 0))
-        original.send(Event("INC"))
-        original.send(Event("INC"))
-        let persisted = try original.getPersistedSnapshot()
+        let original = await createActor(machine).start(context: PersistCounterContext(count: 0))
+        await original.send(Event("INC"))
+        await original.send(Event("INC"))
+        let persisted = try await original.getPersistedSnapshot()
 
-        let restoredActor = createActor(machine, snapshot: persisted)
+        let restoredActor = await createActor(machine, snapshot: persisted)
 
-        #expect(restoredActor.snapshot.context.count == 2)
-        #expect(restoredActor.snapshot.matches("idle"))
-        #expect(restoredActor.snapshot.status == .active)
+        #expect(await restoredActor.snapshot.context.count == 2)
+        #expect(await restoredActor.snapshot.matches("idle"))
+        #expect(await restoredActor.snapshot.status == .active)
 
-        restoredActor.send(Event("DONE"))
-        #expect(restoredActor.snapshot.matches("finished"))
-        #expect(restoredActor.snapshot.status == .done)
+        await restoredActor.send(Event("DONE"))
+        #expect(await restoredActor.snapshot.matches("finished"))
+        #expect(await restoredActor.snapshot.status == .done)
     }
 
     @Test("createActor with snapshot accepts context override")
-    func createActorWithSnapshotContextOverride() throws {
+    func createActorWithSnapshotContextOverride() async throws {
         let machine = counterMachine
-        let original = createActor(machine).start(context: PersistCounterContext(count: 0))
-        original.send(Event("INC"))
-        let persisted = try original.getPersistedSnapshot()
+        let original = await createActor(machine).start(context: PersistCounterContext(count: 0))
+        await original.send(Event("INC"))
+        let persisted = try await original.getPersistedSnapshot()
 
-        let restoredActor = createActor(
+        let restoredActor = await createActor(
             machine,
             snapshot: persisted,
             context: PersistCounterContext(count: 99)
         )
 
-        #expect(restoredActor.snapshot.context.count == 99)
-        #expect(restoredActor.snapshot.matches("idle"))
+        #expect(await restoredActor.snapshot.context.count == 99)
+        #expect(await restoredActor.snapshot.matches("idle"))
     }
 
     @Test("persisted JSON survives encode and decode")
-    func jsonRoundTrip() throws {
-        let actor = createActor(counterMachine).start(context: PersistCounterContext(count: 3))
-        actor.send(Event("INC"))
+    func jsonRoundTrip() async throws {
+        let actor = await createActor(counterMachine).start(context: PersistCounterContext(count: 3))
+        await actor.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try await actor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
         let decoded = try PersistedSnapshot.decodeJSON(data)
 
@@ -111,7 +111,7 @@ struct PersistenceTests {
     }
 
     @Test("persisted snapshot includes invoked child machine state")
-    func childMachinePersistence() throws {
+    func childMachinePersistence() async throws {
         struct WorkerContext: Sendable, Equatable, Codable {
             var count: Int
         }
@@ -150,12 +150,12 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.send(Event("GO"))
-        actor.childActor(id: "worker")?.send(Event("INC"))
-        actor.childActor(id: "worker")?.send(Event("INC"))
+        let actor = await createActor(parentMachine).start()
+        await actor.send(Event("GO"))
+        await actor.childActor(id: "worker")?.send(Event("INC"))
+        await actor.childActor(id: "worker")?.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try await actor.getPersistedSnapshot()
         #expect(persisted.children["worker"] != nil)
         if case let .machine(childPersisted) = persisted.children["worker"] {
             let childContext = try JSONDecoder().decode(
@@ -167,20 +167,20 @@ struct PersistenceTests {
             Issue.record("Expected machine child snapshot")
         }
 
-        let restored = createActor(parentMachine).start(from: persisted)
-        guard let child = restored.childActor(id: "worker") as? MachineChildRef<WorkerContext> else {
+        let restored = await createActor(parentMachine).start(from: persisted)
+        guard let child = await restored.childActor(id: "worker") as? MachineChildRef<WorkerContext> else {
             Issue.record("Expected restored machine child")
             return
         }
 
-        #expect(child.actor.snapshot.context.count == 2)
-        #expect(restored.snapshot.matches("working"))
+        #expect(await child.actor.snapshot.context.count == 2)
+        #expect(await restored.snapshot.matches("working"))
     }
 
     @Test("backward compatible persisted JSON without children field")
-    func legacyPersistedJSON() throws {
-        let actor = createActor(counterMachine).start(context: PersistCounterContext(count: 1))
-        let persisted = try actor.getPersistedSnapshot()
+    func legacyPersistedJSON() async throws {
+        let actor = await createActor(counterMachine).start(context: PersistCounterContext(count: 1))
+        let persisted = try await actor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
 
         var object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -194,7 +194,7 @@ struct PersistenceTests {
     }
 
     @Test("persisted snapshot includes nested grandchild machine state")
-    func nestedGrandchildPersistence() throws {
+    func nestedGrandchildPersistence() async throws {
         struct LeafContext: Sendable, Equatable, Codable {
             var count: Int
         }
@@ -254,18 +254,18 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createActor(rootMachine).start()
-        actor.send(Event("GO"))
-        guard let midChild = actor.childActor(id: "mid") as? MachineChildRef<MidContext> else {
+        let actor = await createActor(rootMachine).start()
+        await actor.send(Event("GO"))
+        guard let midChild = await actor.childActor(id: "mid") as? MachineChildRef<MidContext> else {
             Issue.record("Expected mid child actor")
             return
         }
-        midChild.send(Event("GO"))
-        midChild.actor.childActor(id: "leaf")?.send(Event("INC"))
-        midChild.actor.childActor(id: "leaf")?.send(Event("INC"))
-        midChild.actor.childActor(id: "leaf")?.send(Event("INC"))
+        await midChild.send(Event("GO"))
+        await midChild.actor.childActor(id: "leaf")?.send(Event("INC"))
+        await midChild.actor.childActor(id: "leaf")?.send(Event("INC"))
+        await midChild.actor.childActor(id: "leaf")?.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
+        let persisted = try await actor.getPersistedSnapshot()
         if case let .machine(midPersisted) = persisted.children["mid"],
            case let .machine(leafPersisted) = midPersisted.children["leaf"] {
             let leafContext = try JSONDecoder().decode(
@@ -277,19 +277,20 @@ struct PersistenceTests {
             Issue.record("Expected nested machine child snapshots")
         }
 
-        let restored = createActor(rootMachine).start(from: persisted)
-        guard let mid = restored.childActor(id: "mid") as? MachineChildRef<MidContext>,
-              let leaf = mid.actor.childActor(id: "leaf") as? MachineChildRef<LeafContext> else {
+        let restored = await createActor(rootMachine).start(from: persisted)
+        guard let mid = await restored.childActor(id: "mid") as? MachineChildRef<MidContext>,
+              let leaf = await mid.actor.childActor(id: "leaf") as? MachineChildRef<LeafContext> else {
             Issue.record("Expected restored nested machine children")
             return
         }
-
-        #expect(mid.actor.snapshot.matches("working"))
-        #expect(leaf.actor.snapshot.context.count == 3)
+        
+        let actor2 = mid.actor
+        #expect(await actor2.snapshot.matches("working"))
+        #expect(await leaf.actor.snapshot.context.count == 3)
     }
 
     @Test("persisted snapshot restores multiple parallel invoked children")
-    func parallelInvokePersistence() throws {
+    func parallelInvokePersistence() async throws {
         struct WorkerContext: Sendable, Equatable, Codable {
             var count: Int
         }
@@ -349,26 +350,26 @@ struct PersistenceTests {
             type: .parallel
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "workerA")?.send(Event("INC"))
-        actor.childActor(id: "workerB")?.send(Event("INC"))
-        actor.childActor(id: "workerB")?.send(Event("INC"))
+        let actor = await createActor(parentMachine).start()
+        await actor.childActor(id: "workerA")?.send(Event("INC"))
+        await actor.childActor(id: "workerB")?.send(Event("INC"))
+        await actor.childActor(id: "workerB")?.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
-        let restored = createActor(parentMachine).start(from: persisted)
+        let persisted = try await actor.getPersistedSnapshot()
+        let restored = await createActor(parentMachine).start(from: persisted)
 
-        guard let workerA = restored.childActor(id: "workerA") as? MachineChildRef<WorkerContext>,
-              let workerB = restored.childActor(id: "workerB") as? MachineChildRef<WorkerContext> else {
+        guard let workerA = await restored.childActor(id: "workerA") as? MachineChildRef<WorkerContext>,
+              let workerB = await restored.childActor(id: "workerB") as? MachineChildRef<WorkerContext> else {
             Issue.record("Expected restored parallel machine children")
             return
         }
 
-        #expect(workerA.actor.snapshot.context.count == 1)
-        #expect(workerB.actor.snapshot.context.count == 4)
+        #expect(await workerA.actor.snapshot.context.count == 1)
+        #expect(await workerB.actor.snapshot.context.count == 4)
     }
 
     @Test("spawned machine child state survives persist and restore")
-    func spawnedMachineChildPersistence() throws {
+    func spawnedMachineChildPersistence() async throws {
         struct ChildContext: Sendable, Equatable, Codable {
             var count: Int
         }
@@ -406,23 +407,23 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "spawnedWorker")?.send(Event("INC"))
-        actor.childActor(id: "spawnedWorker")?.send(Event("INC"))
+        let actor = await createActor(parentMachine).start()
+        await actor.childActor(id: "spawnedWorker")?.send(Event("INC"))
+        await actor.childActor(id: "spawnedWorker")?.send(Event("INC"))
 
-        let persisted = try actor.getPersistedSnapshot()
-        let restored = createActor(parentMachine).start(from: persisted)
+        let persisted = try await actor.getPersistedSnapshot()
+        let restored = await createActor(parentMachine).start(from: persisted)
 
-        guard let child = restored.childActor(id: "spawnedWorker") as? MachineChildRef<ChildContext> else {
+        guard let child = await restored.childActor(id: "spawnedWorker") as? MachineChildRef<ChildContext> else {
             Issue.record("Expected restored spawned machine child")
             return
         }
 
-        #expect(child.actor.snapshot.context.count == 2)
+        #expect(await child.actor.snapshot.context.count == 2)
     }
 
     @Test("restoring done child does not re-emit DoneActorEvent")
-    func restoredDoneChildDoesNotReemit() throws {
+    func restoredDoneChildDoesNotReemit() async throws {
         struct ChildContext: Sendable, Equatable, Codable {
             var value: String
         }
@@ -462,19 +463,20 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.send(Event("GO"))
-        #expect(actor.snapshot.context.doneCount == 1)
+        let actor = await createActor(parentMachine).start()
+        await actor.send(Event("GO"))
+        await actor.waitForSnapshot { $0.context.doneCount == 1 }
+        #expect(await actor.snapshot.context.doneCount == 1)
 
-        let persisted = try actor.getPersistedSnapshot()
-        let restored = createActor(parentMachine).start(from: persisted)
+        let persisted = try await actor.getPersistedSnapshot()
+        let restored = await createActor(parentMachine).start(from: persisted)
 
-        #expect(restored.snapshot.context.doneCount == 1)
-        #expect(restored.snapshot.matches("working"))
+        #expect(await restored.snapshot.context.doneCount == 1)
+        #expect(await restored.snapshot.matches("working"))
     }
 
     @Test("persisted snapshot records opaque task child status")
-    func opaqueTaskChildPersistence() throws {
+    func opaqueTaskChildPersistence() async throws {
         struct ParentContext: Sendable, Equatable, Codable {
             var label: String
         }
@@ -499,10 +501,10 @@ struct PersistenceTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.send(Event("GO"))
+        let actor = await createActor(parentMachine).start()
+        await actor.send(Event("GO"))
 
-        let activePersisted = try actor.getPersistedSnapshot()
+        let activePersisted = try await actor.getPersistedSnapshot()
         if case let .opaque(opaque) = activePersisted.children["task"] {
             #expect(opaque.status == .active)
         } else {
@@ -511,7 +513,7 @@ struct PersistenceTests {
     }
 
     @Test("rejects machine mismatch on restore")
-    func machineMismatch() throws {
+    func machineMismatch() async throws {
         let otherMachine = createMachine(MachineConfig(
             id: "other",
             initial: "idle",
@@ -519,8 +521,8 @@ struct PersistenceTests {
             states: ["idle": StateNodeConfig()]
         ))
 
-        let actor = createActor(counterMachine).start()
-        let persisted = try actor.getPersistedSnapshot()
+        let actor = await createActor(counterMachine).start()
+        let persisted = try await actor.getPersistedSnapshot()
 
         #expect(throws: PersistenceError.machineMismatch(expected: "counter", actual: "other")) {
             try restoreSnapshot(machine: otherMachine, persisted: persisted)

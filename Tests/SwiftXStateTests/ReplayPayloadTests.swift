@@ -67,14 +67,14 @@ struct ReplayPayloadTests {
     }
 
     @Test("InspectionRecorder captures typed payloads")
-    func recorderCapturesPayload() {
+    func recorderCapturesPayload() async {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = await createActor(
             tapMachine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: TapContext(lastRow: nil, lastCol: nil))
 
-        actor.send(TapEvent(row: 1, col: 2))
+        await actor.send(TapEvent(row: 1, col: 2))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
@@ -92,14 +92,14 @@ struct ReplayPayloadTests {
     }
 
     @Test("pure replay with decoder matches recorded session")
-    func verifyPayloadReplay() {
+    func verifyPayloadReplay() async {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = await createActor(
             tapMachine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: TapContext(lastRow: nil, lastCol: nil))
 
-        actor.send(TapEvent(row: 4, col: 6))
+        await actor.send(TapEvent(row: 4, col: 6))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
@@ -126,13 +126,13 @@ struct ReplayPayloadTests {
     }
 
     @Test("ReplaySession JSON round-trips typed payloads")
-    func jsonRoundTrip() throws {
+    func jsonRoundTrip() async throws {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = await createActor(
             tapMachine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: TapContext(lastRow: nil, lastCol: nil))
-        actor.send(TapEvent(row: 2, col: 7))
+        await actor.send(TapEvent(row: 2, col: 7))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")

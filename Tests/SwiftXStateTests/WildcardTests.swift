@@ -8,7 +8,7 @@ private struct WildcardContext: Sendable, Equatable {
 @Suite("Wildcard transitions")
 struct WildcardTests {
     @Test("full wildcard catches unhandled events")
-    func fullWildcard() {
+    func fullWildcard() async {
         let machine = createMachine(MachineConfig(
             initial: "asleep",
             context: WildcardContext(lastEvent: nil),
@@ -20,14 +20,14 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("anything"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("anything"))
 
-        #expect(actor.snapshot.matches("awake"))
+        #expect(await actor.snapshot.matches("awake"))
     }
 
     @Test("exact transition takes priority over full wildcard")
-    func exactOverWildcard() {
+    func exactOverWildcard() async {
         let machine = createMachine(MachineConfig(
             initial: "idle",
             context: WildcardContext(lastEvent: nil),
@@ -41,14 +41,14 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("GO"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("GO"))
 
-        #expect(actor.snapshot.matches("handled"))
+        #expect(await actor.snapshot.matches("handled"))
     }
 
     @Test("full wildcard used when exact guard fails")
-    func wildcardWhenGuardFails() {
+    func wildcardWhenGuardFails() async {
         let machine = createMachine(MachineConfig(
             initial: "idle",
             context: WildcardContext(lastEvent: nil),
@@ -65,14 +65,14 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("GO"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("GO"))
 
-        #expect(actor.snapshot.matches("caught"))
+        #expect(await actor.snapshot.matches("caught"))
     }
 
     @Test("partial wildcard matches event prefix")
-    func partialWildcard() {
+    func partialWildcard() async {
         let machine = createMachine(MachineConfig(
             initial: "prompt",
             context: WildcardContext(lastEvent: nil),
@@ -84,14 +84,14 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("feedback.good"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("feedback.good"))
 
-        #expect(actor.snapshot.matches("form"))
+        #expect(await actor.snapshot.matches("form"))
     }
 
     @Test("partial wildcard matches base event without suffix")
-    func partialWildcardBaseEvent() {
+    func partialWildcardBaseEvent() async {
         let machine = createMachine(MachineConfig(
             initial: "prompt",
             context: WildcardContext(lastEvent: nil),
@@ -103,14 +103,14 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("feedback"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("feedback"))
 
-        #expect(actor.snapshot.matches("form"))
+        #expect(await actor.snapshot.matches("form"))
     }
 
     @Test("partial wildcard does not match unrelated events")
-    func partialWildcardNoMatch() {
+    func partialWildcardNoMatch() async {
         let machine = createMachine(MachineConfig(
             initial: "prompt",
             context: WildcardContext(lastEvent: nil),
@@ -122,10 +122,10 @@ struct WildcardTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("other"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("other"))
 
-        #expect(actor.snapshot.matches("prompt"))
+        #expect(await actor.snapshot.matches("prompt"))
     }
 
     @Test("wildcard descriptors are excluded from machine.events")

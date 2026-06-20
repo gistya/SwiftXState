@@ -96,16 +96,17 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         self.syncSnapshot = syncSnapshot
     }
 
-    func start() {
-        lock.lock()
-        guard subscription == nil, status != .done else {
-            lock.unlock()
-            return
+    func start() async {
+        let shouldStart = lock.withLock {
+            guard subscription == nil, status != .done else {
+                return false
+            }
+            status = .active
+            lastError = nil
+            doneSent = false
+            return true
         }
-        status = .active
-        lastError = nil
-        doneSent = false
-        lock.unlock()
+        guard shouldStart else { return }
 
         let scope = ObservableActorScope(
             input: input,
@@ -129,22 +130,22 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         )
     }
 
-    func stop() {
+    func stop() async {
         subscription?.cancel()
         subscription = nil
-        lock.lock()
-        status = .stopped
-        lastError = nil
-        lock.unlock()
+        lock.withLock {
+            status = .stopped
+            lastError = nil
+        }
         emitListeners.removeAll()
     }
 
-    func send(_: any Eventable) {}
+    func send(_: any Eventable) async {}
 
     func on(
         _ eventType: String,
         handler: @escaping @Sendable (EmittedEvent) -> Void
-    ) -> Subscription {
+    ) async -> Subscription {
         emitListeners.on(eventType, handler: handler)
     }
 
@@ -159,16 +160,18 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         lock.unlock()
 
         if syncSnapshot {
-            parent?.enqueueFromChild(
-                SnapshotActorEvent(
-                    actorId: id,
-                    snapshot: ChildActorSnapshot(
-                        id: id,
-                        status: .active,
-                        value: snapshotValue
+            Task { [weak parent] in
+                await parent?.enqueueFromChild(
+                    SnapshotActorEvent(
+                        actorId: id,
+                        snapshot: ChildActorSnapshot(
+                            id: id,
+                            status: .active,
+                            value: snapshotValue
+                        )
                     )
                 )
-            )
+            }
         }
     }
 
@@ -186,9 +189,11 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         subscription?.cancel()
         subscription = nil
 
-        parent?.enqueueFromChild(
-            ErrorActorEvent(actorId: id, error: message)
-        )
+        Task { [weak parent] in
+            await parent?.enqueueFromChild(
+                ErrorActorEvent(actorId: id, error: message)
+            )
+        }
     }
 
     private func handleComplete() {
@@ -205,9 +210,11 @@ final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         subscription?.cancel()
         subscription = nil
 
-        parent?.enqueueFromChild(
-            DoneActorEvent(actorId: id, output: output)
-        )
+        Task { [weak parent] in
+            await parent?.enqueueFromChild(
+                DoneActorEvent(actorId: id, output: output)
+            )
+        }
     }
 }
 

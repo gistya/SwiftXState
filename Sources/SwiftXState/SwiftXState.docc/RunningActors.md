@@ -57,7 +57,7 @@ snap.output                    // set when a final state is reached (status == .
 ``MachineSnapshot/matches(_:)-(String)`` accepts dotted paths for nested states, e.g.
 `snap.matches("checkout.payment")`.
 
-> Note: **Type-safe equivalent.** With `@MachineStates`, read state from the generated enum so the
+> Note: **Type-safe equivalent.** With a `StateName` enum, read state from the enum so the
 > check can't drift from your declarations: `snap.matches(State.loading.rawValue)`.
 
 ## Sending events

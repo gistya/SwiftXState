@@ -15,8 +15,8 @@ public struct ActorPersistenceStore {
     public func save<Context: Codable & Sendable>(
         _ actor: Actor<Context>,
         key: String
-    ) throws {
-        let persisted = try actor.getPersistedSnapshot()
+    ) async throws {
+        let persisted = try await actor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
 
         var descriptor = FetchDescriptor<ActorSnapshotRecord>(
@@ -71,11 +71,11 @@ public struct ActorPersistenceStore {
         _ actor: Actor<Context>,
         key: String,
         context: Context? = nil
-    ) throws -> Bool {
+    ) async throws -> Bool {
         guard let persisted = try load(key: key) else {
             return false
         }
-        actor.start(from: persisted, context: context)
+        await actor.start(from: persisted, context: context)
         return true
     }
 
@@ -86,11 +86,11 @@ public struct ActorPersistenceStore {
         id: String? = nil,
         options: ActorOptions = ActorOptions(),
         context: Context? = nil
-    ) throws -> Actor<Context>? {
+    ) async throws -> Actor<Context>? {
         guard let persisted = try load(key: key) else {
             return nil
         }
-        return SwiftXState.createActor(
+        return await SwiftXState.createActor(
             machine,
             snapshot: persisted,
             id: id,

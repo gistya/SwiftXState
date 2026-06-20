@@ -30,9 +30,9 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("START"))
-        actor.send(Event("STOP"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("START"))
+        await actor.send(Event("STOP"))
 
         #expect(await cancelled.wait())
     }
@@ -64,8 +64,8 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.stop()
+        let actor = await createActor(machine).start()
+        await actor.stop()
 
         #expect(await cancelled.wait())
     }
@@ -96,14 +96,14 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("STOP"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("STOP"))
 
         #expect(await cancelled.wait())
     }
 
     @Test("opaqueRestorePolicy skipIfActive avoids re-spawn on hydrate")
-    func skipIfActiveOnRestore() throws {
+    func skipIfActiveOnRestore() async throws {
         struct ParentContext: Sendable, Equatable, Codable {
             var label: String
         }
@@ -128,12 +128,12 @@ struct TaskCancellationTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        let persisted = try actor.getPersistedSnapshot()
+        let actor = await createActor(parentMachine).start()
+        let persisted = try await actor.getPersistedSnapshot()
         #expect(persisted.children["task"] != nil)
 
-        let restored = createActor(parentMachine).start(from: persisted)
-        #expect(restored.childActor(id: "task") == nil)
-        #expect(restored.snapshot.children["task"]?.status == .active)
+        let restored = await createActor(parentMachine).start(from: persisted)
+        #expect(await restored.childActor(id: "task") == nil)
+        #expect(await restored.snapshot.children["task"]?.status == .active)
     }
 }

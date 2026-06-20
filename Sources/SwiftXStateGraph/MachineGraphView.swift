@@ -405,11 +405,12 @@ public struct MachineGraphView<Context: Sendable>: View {
     private let actor: Actor<Context>?
 
     /// Live graph driven by an actor.
-    public init(actor: Actor<Context>, machine: StateMachine<Context>) {
+    public init(actor: Actor<Context>, machine: StateMachine<Context>) async {
         self.actor = actor
         let model = GraphModelBuilder.build(from: machine)
         let render = GraphRenderModel(model: model)
-        render.setActive(stateValue: actor.snapshot.value)
+        let snapshot = await actor.snapshot
+        render.setActive(stateValue: snapshot.value)
         _render = State(initialValue: render)
     }
 
@@ -426,9 +427,11 @@ public struct MachineGraphView<Context: Sendable>: View {
         GraphRenderView(render: render)
             .onAppear {
                 guard let actor, subscription.handle == nil else { return }
-                render.setActive(stateValue: actor.snapshot.value)
-                subscription.handle = actor.subscribe { [weak render] snapshot in
-                    Task { @MainActor in render?.setActive(stateValue: snapshot.value) }
+                Task { @MainActor in
+                    render.setActive(stateValue: await actor.snapshot.value)
+                    subscription.handle = await actor.subscribe { [weak render] snapshot in
+                        Task { @MainActor in render?.setActive(stateValue: snapshot.value) }
+                    }
                 }
             }
             .onDisappear { subscription.cancel() }

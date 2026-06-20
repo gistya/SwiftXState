@@ -49,71 +49,82 @@ public enum WaitForError: Error, Equatable, LocalizedError {
 }
 
 /// Subscribes to an actor and waits until its snapshot satisfies a predicate.
-///
-/// Checks the current snapshot first. Throws if the predicate is not satisfied
-/// before an optional timeout (default: no timeout) or if the actor stops.
 public func waitFor<Context: Sendable>(
     _ actor: Actor<Context>,
     predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool,
     options: WaitForOptions = WaitForOptions()
 ) async throws -> MachineSnapshot<Context> {
-    if let timeout = options.timeout, timeout < 0 {
-        #if DEBUG
-        print("`timeout` passed to `waitFor` is negative and it will reject immediately.")
-        #endif
-        throw WaitForError.timeout(milliseconds: timeout)
-    }
+    try await actor.waitFor(predicate: predicate, options: options)
+}
 
-    try Task.checkCancellation()
 
-    let initial = actor.snapshot
-    if predicate(initial) {
-        return initial
-    }
-
-    let state = WaitForState<Context>()
-
-    return try await withTaskCancellationHandler {
-        try await withCheckedThrowingContinuation { continuation in
-            state.continuation = continuation
-
-            func checkEmitted(_ snapshot: MachineSnapshot<Context>) {
-                if predicate(snapshot) {
-                    state.finish {
-                        state.dispose()
-                        continuation.resume(returning: snapshot)
-                        state.continuation = nil
-                    }
-                } else if snapshot.status == .stopped {
-                    state.finish {
-                        state.dispose()
-                        continuation.resume(throwing: WaitForError.actorTerminated)
-                        state.continuation = nil
-                    }
-                }
-            }
-
-            state.subscription = actor.subscribe { snapshot in
-                checkEmitted(snapshot)
-            }
-
-            if let timeout = options.timeout {
-                state.timeoutTask = Task {
-                    try? await Task.sleep(for: .milliseconds(timeout))
-                    guard !Task.isCancelled else { return }
-                    state.finish {
-                        state.dispose()
-                        continuation.resume(throwing: WaitForError.timeout(milliseconds: timeout))
-                        state.continuation = nil
-                    }
-                }
-            }
+extension Actor {
+    /// Subscribes to an actor and waits until its snapshot satisfies a predicate.
+    ///
+    /// Checks the current snapshot first. Throws if the predicate is not satisfied
+    /// before an optional timeout (default: no timeout) or if the actor stops.
+    public func waitFor(
+        predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool,
+        options: WaitForOptions = WaitForOptions()
+    ) async throws -> MachineSnapshot<Context> {
+        if let timeout = options.timeout, timeout < 0 {
+            #if DEBUG
+            print("`timeout` passed to `waitFor` is negative and it will reject immediately.")
+            #endif
+            throw WaitForError.timeout(milliseconds: timeout)
         }
-    } onCancel: {
-        state.finish {
-            state.dispose()
-            state.continuation?.resume(throwing: CancellationError())
-            state.continuation = nil
+
+        try Task.checkCancellation()
+
+        let initial = snapshot
+        if predicate(initial) {
+            return initial
+        }
+
+        let state = WaitForState<Context>()
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                state.continuation = continuation
+
+                @Sendable func checkEmitted(_ snapshot: MachineSnapshot<Context>) {
+                    if predicate(snapshot) {
+                        state.finish {
+                            state.dispose()
+                            continuation.resume(returning: snapshot)
+                            state.continuation = nil
+                        }
+                    } else if snapshot.status == .stopped {
+                        state.finish {
+                            state.dispose()
+                            continuation.resume(throwing: WaitForError.actorTerminated)
+                            state.continuation = nil
+                        }
+                    }
+                }
+
+                state.subscription = subscribe { snapshot in
+                    checkEmitted(snapshot)
+                }
+
+                if let timeout = options.timeout {
+                    state.timeoutTask = Task {
+                        try? await Task.sleep(for: .milliseconds(timeout))
+                        guard !Task.isCancelled else { return }
+                        state.finish {
+                            state.dispose()
+                            continuation.resume(throwing: WaitForError.timeout(milliseconds: timeout))
+                            state.continuation = nil
+                        }
+                    }
+                }
+            }
+        } onCancel: {
+            state.finish {
+                state.dispose()
+                state.continuation?.resume(throwing: CancellationError())
+                state.continuation = nil
+            }
         }
     }
 }

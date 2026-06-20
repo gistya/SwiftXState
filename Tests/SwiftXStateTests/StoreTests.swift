@@ -266,7 +266,7 @@ struct StoreTests {
     }
 
     @Test("fromStore spawns store child actor")
-    func fromStoreActor() {
+    func fromStoreActor() async {
         let storeSource = fromStore(
             context: StoreContext(count: 0, name: "child"),
             on: ["increment": storeIncrement]
@@ -293,13 +293,14 @@ struct StoreTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = await createActor(parentMachine).start()
 
-        #expect(actor.snapshot.children["counter"] != nil)
-        #expect(actor.snapshot.children["counter"]?.status == .active)
+        #expect(await actor.snapshot.children["counter"] != nil)
+        #expect(await actor.snapshot.children["counter"]?.status == .active)
 
-        actor.send(Event("GO"))
-        #expect(actor.snapshot.value == StateValue.atomic("done"))
+        await actor.send(Event("GO"))
+        let snapshot = await actor.snapshot
+        #expect(snapshot.value == StateValue.atomic("done"))
     }
 }
 

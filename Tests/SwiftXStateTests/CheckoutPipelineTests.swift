@@ -6,29 +6,29 @@ struct CheckoutPipelineTests {
     @Test("successful checkout completes with output")
     func successPath() async {
         let machine = CheckoutMachineFactory.make()
-        let actor = createActor(machine).start()
-        actor.send(Event("SUBMIT"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("SUBMIT"))
 
         await actor.waitForSnapshot { $0.status == .done }
 
-        #expect(actor.snapshot.status == .done)
-        #expect(actor.snapshot.matches("completed"))
-        #expect(actor.snapshot.output?.get(CheckoutResult.self)?.status == "completed")
-        #expect(actor.snapshot.error == nil)
+        #expect(await actor.snapshot.status == .done)
+        #expect(await actor.snapshot.matches("completed"))
+        #expect(await actor.snapshot.output?.get(CheckoutResult.self)?.status == "completed")
+        #expect(await actor.snapshot.error == nil)
     }
 
     @Test("declined card ends in error with message")
     func failurePath() async {
         let machine = CheckoutMachineFactory.make()
-        let actor = createActor(machine).start()
-        actor.send(Event("SUBMIT_DECLINED"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("SUBMIT_DECLINED"))
 
         await actor.waitForSnapshot { $0.status == .error }
 
-        #expect(actor.snapshot.status == .error)
-        #expect(actor.snapshot.matches("rejected"))
-        #expect(actor.snapshot.output == nil)
-        #expect(actor.snapshot.error?.get(String.self) == "Payment card declined")
+        #expect(await actor.snapshot.status == .error)
+        #expect(await actor.snapshot.matches("rejected"))
+        #expect(await actor.snapshot.output == nil)
+        #expect(await actor.snapshot.error?.get(String.self) == "Payment card declined")
     }
 }
 

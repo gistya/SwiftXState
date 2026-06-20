@@ -48,11 +48,10 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.send(Event("GO"))
+        let actor = await createActor(parentMachine).start()
+        await actor.send(Event("GO"))
         await actor.waitForSnapshot { $0.context.count == 1 }
-
-        #expect(actor.snapshot.context.count == 1)
+        #expect(await actor.snapshot.context.count == 1)
     }
 
     @Test("sendTo resolves event type from context")
@@ -87,11 +86,11 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.send(Event("GO"))
+        let actor = await createActor(parentMachine).start()
+        await actor.send(Event("GO"))
         await actor.waitForSnapshot { $0.context.count == 1 }
 
-        #expect(actor.snapshot.context.count == 1)
+        #expect(await actor.snapshot.context.count == 1)
     }
 
     @Test("delayed sendTo delivers after delay")
@@ -130,11 +129,11 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.send(Event("ARM"))
+        let actor = await createActor(parentMachine).start()
+        await actor.send(Event("ARM"))
         await actor.waitForSnapshot { $0.context.count == 1 }
 
-        #expect(actor.snapshot.context.count == 1)
+        #expect(await actor.snapshot.context.count == 1)
     }
 
     @Test("cancel prevents a delayed sendTo from firing")
@@ -170,12 +169,12 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.send(Event("ARM"))
-        actor.send(Event("CANCEL"))
+        let actor = await createActor(parentMachine).start()
+        await actor.send(Event("ARM"))
+        await actor.send(Event("CANCEL"))
         try? await Task.sleep(for: .milliseconds(150))
 
-        #expect(actor.snapshot.context.count == 0)
+        #expect(await actor.snapshot.context.count == 0)
     }
 
     @Test("sendTo records xstate.sendTo in transition actions")
@@ -230,10 +229,10 @@ struct SendToTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.send(Event("GO"))
+        let actor = await createActor(parentMachine).start()
+        await actor.send(Event("GO"))
         await actor.waitForSnapshot { $0.context.count == 1 }
 
-        #expect(actor.snapshot.context.count == 1)
+        #expect(await actor.snapshot.context.count == 1)
     }
 }

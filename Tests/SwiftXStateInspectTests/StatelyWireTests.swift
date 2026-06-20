@@ -151,9 +151,9 @@ struct StatelyWireTests {
                 ]
             )
         )
-        bridge.start()
+        await bridge.start()
 
-        _ = createActor(trafficMachine, inspect: bridge.observe()).start()
+        _ = await createActor(trafficMachine, inspect: bridge.observe()).start()
 
         // Wait until the actor registration and the resulting snapshot have both
         // been published, rather than guessing a fixed delay.
@@ -199,10 +199,10 @@ struct StatelyWireTests {
                 ]
             )
         )
-        bridge.start()
+        await bridge.start()
 
         let collector = InspectionCollector()
-        let actor = createActor(
+        let actor = await createActor(
             trafficMachine,
             inspect: { event in
                 collector.observe()(event)
@@ -210,7 +210,7 @@ struct StatelyWireTests {
             }
         ).start()
 
-        actor.send(Event("NEXT"))
+        await actor.send(Event("NEXT"))
 
         // Wait until the actor, transition/microstep, and snapshot events have
         // all been published over the transport.

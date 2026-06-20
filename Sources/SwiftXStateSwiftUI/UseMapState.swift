@@ -2,17 +2,16 @@
 import SwiftUI
 import SwiftXState
 
+private final class WeakMapStateDriverBox<Object: AnyObject>: @unchecked Sendable {
+    weak var object: Object?
+
+    init(_ object: Object) {
+        self.object = object
+    }
+}
+
 /// Selects the most specific mapped value from a machine snapshot, re-rendering only when it changes.
 /// Mirrors XState's `mapState` + first-match semantics for view models.
-///
-/// Like `useSelector`, the returned value is captured at call time. The internal driver
-/// subscribes for future changes, but because a fresh driver is created on every view
-/// body evaluation, SwiftUI does not track it for automatic invalidation.
-/// 
-/// For reliable observation in complex UIs, prefer a stable @Observable (e.g. your
-/// Session exposing a `viewState` computed via `snapshot.mapStateFirst(...)`) or the
-/// `MachineState` / `StoreState` property-wrapper patterns. This hook is best for
-/// convenient one-off derivations when the parent view already re-renders for other reasons.
 @MainActor
 @Observable
 public final class MapStateDriver<Context: Sendable, T: Sendable & Equatable> {
@@ -25,19 +24,25 @@ public final class MapStateDriver<Context: Sendable, T: Sendable & Equatable> {
         mapper: StateMap<Context, T>
     ) {
         self.mapper = mapper
-        self.value = mapStateFirst(actor.snapshot, mapper: mapper)
-        self.subscription = actor.subscribe { [weak self] snapshot in
-            guard let self else { return }
-            let next = mapStateFirst(snapshot, mapper: mapper)
-            if self.value != next {
-                Task { @MainActor in
-                    self.value = next
+
+        let box = WeakMapStateDriverBox(self)
+        Task { [box, actor, mapper] in
+            let initial = mapStateFirst(await actor.snapshot, mapper: mapper)
+            let subscription = await actor.subscribe { snapshot in
+                let next = mapStateFirst(snapshot, mapper: mapper)
+                Task { @MainActor [box] in
+                    guard let driver = box.object, driver.value != next else { return }
+                    driver.value = next
                 }
+            }
+            await MainActor.run { [box] in
+                box.object?.value = initial
+                box.object?.subscription = subscription
             }
         }
     }
 
-    isolated deinit {
+    deinit {
         subscription?.cancel()
     }
 }

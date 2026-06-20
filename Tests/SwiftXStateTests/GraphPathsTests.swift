@@ -83,7 +83,7 @@ struct GraphPathsTests {
 
         var states: [String] = []
         var events: [String] = []
-        try model.test(
+        model.test(
             toRed,
             onState: { states.append($0.value.description) },
             onEvent: { events.append($0.type) }

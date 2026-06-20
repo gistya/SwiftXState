@@ -20,27 +20,34 @@ struct InspectorStoreTests {
     }
 
     @Test("Registers actors and tracks live snapshots from the real stream")
-    func ingestsLiveStream() {
+    func ingestsLiveStream() async {
         let store = InspectorStore()
+        // `Actor` runs on its own (off-main) executor, so its inspect events fire off-main. Capture
+        // them with a thread-safe collector and replay into the @MainActor store here on the test's
+        // main actor — the same shape as InspectorStore.observe() without the Task-hop timing.
+        let collector = InspectionCollector()
         let machine = makeMachine()
-        let actor = createActor(machine, options: ActorOptions(inspect: { event in
-            // Drive synchronously for the test rather than through observe()'s Task hop.
-            MainActor.assumeIsolated { store.ingest(event) }
-        })).start()
+        let actor = await createActor(machine, options: ActorOptions(inspect: collector.observe())).start()
+        let actorID = actor.sessionId
+
+        for event in collector.recordedEvents() { store.ingest(event) }
+        collector.reset()
 
         // One actor registered, with its definition (so the inspector can graph it).
         #expect(store.actors.count == 1)
-        let entry = store.actor(actor.id)
+        let entry = store.actor(actorID)
         #expect(entry != nil)
         #expect(entry?.definitionJSON != nil)
-        #expect(store.selectedSessionID == actor.id)
+        #expect(store.selectedSessionID == actorID)
 
         // Initial snapshot tracked.
         #expect(entry?.stateValue?.matches("green") == true)
 
-        actor.send(Event("NEXT"))
-        #expect(store.actor(actor.id)?.stateValue?.matches("yellow") == true)
-        #expect(store.actor(actor.id)?.lastEventType == "NEXT")
+        await actor.send(Event("NEXT"))
+        for event in collector.recordedEvents() { store.ingest(event) }
+
+        #expect(store.actor(actorID)?.stateValue?.matches("yellow") == true)
+        #expect(store.actor(actorID)?.lastEventType == "NEXT")
 
         // Feed accumulated event + snapshot rows.
         #expect(store.feed.contains { $0.kind == .actor })

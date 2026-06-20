@@ -57,18 +57,18 @@ struct ParallelTransitionTests {
     }
 
     @Test("parallel regions transition together on the same event")
-    func parallelRegionsTogether() {
-        let actor = createActor(parallelMachine).start()
-        actor.send(Event("SYNC"))
+    func parallelRegionsTogether() async {
+        let actor = await createActor(parallelMachine).start()
+        await actor.send(Event("SYNC"))
 
-        #expect(actor.snapshot.matches(StateValue.compound([
+        #expect(await actor.snapshot.matches(StateValue.compound([
             "mode": .atomic("dark"),
             "theme": .atomic("custom"),
         ])))
     }
 
     @Test("multi-target transition updates multiple parallel regions")
-    func multiTargetTransition() {
+    func multiTargetTransition() async {
         let machine: StateMachine<ParallelContext> = createMachine(MachineConfig(
             context: ParallelContext(modeCount: 0, themeCount: 0),
             states: [
@@ -95,17 +95,17 @@ struct ParallelTransitionTests {
             type: .parallel
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("SET_DARK_CUSTOM"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("SET_DARK_CUSTOM"))
 
-        #expect(actor.snapshot.matches(StateValue.compound([
+        #expect(await actor.snapshot.matches(StateValue.compound([
             "mode": .atomic("dark"),
             "theme": .atomic("custom"),
         ])))
     }
 
     @Test("deepest handler wins when parent and child both handle an event")
-    func deepestHandlerWins() {
+    func deepestHandlerWins() async {
         let machine: StateMachine<ParallelContext> = createMachine(MachineConfig(
             initial: "parent",
             context: ParallelContext(modeCount: 0, themeCount: 0),
@@ -126,16 +126,16 @@ struct ParallelTransitionTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("GO"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("GO"))
 
-        #expect(actor.snapshot.matches(StateValue.compound([
+        #expect(await actor.snapshot.matches(StateValue.compound([
             "parent": .atomic("childTarget"),
         ])))
     }
 
     @Test("parallel transition actions run for each selected transition")
-    func parallelTransitionActions() {
+    func parallelTransitionActions() async {
         let machine: StateMachine<ParallelContext> = createMachine(MachineConfig(
             context: ParallelContext(modeCount: 0, themeCount: 0),
             states: [
@@ -167,10 +167,10 @@ struct ParallelTransitionTests {
             type: .parallel
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("SYNC"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("SYNC"))
 
-        #expect(actor.snapshot.context.modeCount == 1)
-        #expect(actor.snapshot.context.themeCount == 1)
+        #expect(await actor.snapshot.context.modeCount == 1)
+        #expect(await actor.snapshot.context.themeCount == 1)
     }
 }

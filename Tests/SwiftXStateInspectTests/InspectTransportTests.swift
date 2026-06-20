@@ -92,7 +92,7 @@ struct InspectTransportTests {
                 wireFormat: .envelope
             )
         )
-        bridge.start()
+        await bridge.start()
 
         let event = InspectionEvent.actor(
             rootId: "root",

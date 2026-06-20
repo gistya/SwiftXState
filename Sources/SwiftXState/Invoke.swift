@@ -156,7 +156,7 @@ func resolveActorSource<Context: Sendable>(
     }
 }
 
-func spawnChild<Context: Sendable>(
+func makeChildActorRef<Context: Sendable>(
     from source: ActorSource,
     id: String,
     systemId: String?,
@@ -167,9 +167,8 @@ func spawnChild<Context: Sendable>(
     implementations: MachineImplementations<Context>,
     options: ActorOptions,
     persistedChild: PersistedChildSnapshot? = nil,
-    opaqueRestorePolicy: OpaqueInvokeRestorePolicy = .restart,
-    children: inout [String: any ChildActorRef]
-) {
+    opaqueRestorePolicy: OpaqueInvokeRestorePolicy = .restart
+) -> (any ChildActorRef)? {
     let resolved = resolveActorSource(source, implementations: implementations)
     var childOptions = options
     childOptions.systemId = systemId ?? id
@@ -178,7 +177,7 @@ func spawnChild<Context: Sendable>(
     let resolvedSystemId = systemId ?? id
 
     if let machine = resolved.machine {
-        let child = machine.spawn(
+        return machine.spawn(
             id: id,
             input: input,
             parent: parent,
@@ -186,115 +185,80 @@ func spawnChild<Context: Sendable>(
             syncSnapshot: syncSnapshot,
             persistedChild: persistedChild
         )
-        children[id] = child
-        parent.actorSystem.register(child)
-        if inspectable {
-            parent.inspectSpawnedChild(child, machineId: child.machineId)
-        }
-        child.start()
-        return
     }
 
     if let task = resolved.task {
         guard shouldSpawnOpaqueChild(persistedChild: persistedChild, policy: opaqueRestorePolicy) else {
-            return
+            return nil
         }
-        let child = task.spawn(
+        return task.spawn(
             id: id,
             input: input,
             parent: parent,
             systemId: resolvedSystemId
         )
-        children[id] = child
-        parent.actorSystem.register(child)
-        parent.inspectSpawnedChild(child, machineId: nil)
-        child.start()
-        return
     }
 
     if let callback = resolved.callback {
         guard shouldSpawnOpaqueChild(persistedChild: persistedChild, policy: opaqueRestorePolicy) else {
-            return
+            return nil
         }
-        let child = callback.spawn(
+        return callback.spawn(
             id: id,
             input: input,
             parent: parent,
             system: parent.actorSystem,
             systemId: resolvedSystemId
         )
-        children[id] = child
-        parent.actorSystem.register(child)
-        parent.inspectSpawnedChild(child, machineId: nil)
-        child.start()
-        return
     }
 
     if let taskGroup = resolved.taskGroup {
         guard shouldSpawnOpaqueChild(persistedChild: persistedChild, policy: opaqueRestorePolicy) else {
-            return
+            return nil
         }
-        let child = taskGroup.spawn(
+        return taskGroup.spawn(
             id: id,
             input: input,
             parent: parent,
             systemId: resolvedSystemId
         )
-        children[id] = child
-        parent.actorSystem.register(child)
-        parent.inspectSpawnedChild(child, machineId: nil)
-        child.start()
-        return
     }
 
     if let transition = resolved.transition {
-        let child = transition.spawn(
+        return transition.spawn(
             id: id,
             input: input,
             parent: parent,
             systemId: resolvedSystemId,
             syncSnapshot: syncSnapshot
         )
-        children[id] = child
-        parent.actorSystem.register(child)
-        parent.inspectSpawnedChild(child, machineId: nil)
-        child.start()
-        return
     }
 
     if let observable = resolved.observable {
-        let child = observable.spawn(
+        return observable.spawn(
             id: id,
             input: input,
             parent: parent,
             systemId: resolvedSystemId,
             syncSnapshot: syncSnapshot
         )
-        children[id] = child
-        parent.actorSystem.register(child)
-        parent.inspectSpawnedChild(child, machineId: nil)
-        child.start()
-        return
     }
 
     if let store = resolved.store {
-        let child = store.spawn(
+        return store.spawn(
             id: id,
             input: input,
             parent: parent,
             systemId: resolvedSystemId,
             syncSnapshot: syncSnapshot
         )
-        children[id] = child
-        parent.actorSystem.register(child)
-        parent.inspectSpawnedChild(child, machineId: nil)
-        child.start()
-        return
     }
 
     if let name = resolved.named {
         fatalError("Actor logic '\(name)' not found. Register it via setup(actors:) or MachineImplementations.actors.")
     }
+
+    return nil
 }
 
 /// An action that spawns a child actor from an `ActorSource` (`fromTask`, `fromCallback`, a child

@@ -96,7 +96,7 @@ struct TransitionTests {
     }
 
     @Test("assign updates context via actor")
-    func assignAction() {
+    func assignAction() async {
         let machine = createMachine(MachineConfig(
             initial: "idle",
             context: CounterContext(count: 0),
@@ -109,9 +109,9 @@ struct TransitionTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("INCREMENT"))
-        #expect(actor.snapshot.context.count == 1)
+        let actor = await createActor(machine).start()
+        await actor.send(Event("INCREMENT"))
+        #expect(await actor.snapshot.context.count == 1)
     }
 }
 

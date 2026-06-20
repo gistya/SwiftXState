@@ -4,7 +4,7 @@ import Testing
 @Suite("Inspection / devtools MVP")
 struct InspectionTests {
     @Test("emits actor, transition, snapshot, and action events on start")
-    func startInspection() {
+    func startInspection() async {
         let collector = InspectionCollector()
 
         let machine = createMachine(MachineConfig(
@@ -15,7 +15,7 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             options: ActorOptions(inspect: collector.observe())
         ).start()
@@ -25,11 +25,11 @@ struct InspectionTests {
         #expect(kinds.contains(.transition))
         #expect(kinds.contains(.snapshot))
         #expect(kinds.contains(.action))
-        #expect(actor.actorSystem.rootSessionId == actor.id)
+        #expect(await actor.actorSystem.rootSessionId == actor.id)
     }
 
     @Test("root actor registration carries the machine definition JSON")
-    func rootRegistrationDefinition() {
+    func rootRegistrationDefinition() async {
         let collector = InspectionCollector()
 
         let machine = createMachine(MachineConfig(
@@ -43,10 +43,10 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(machine, options: ActorOptions(inspect: collector.observe())).start()
-
+        let actor = await createActor(machine, options: ActorOptions(inspect: collector.observe())).start()
+        let id = await actor.id
         let registration = collector.recordedEvents().first {
-            $0.kind == .actor && $0.actor.sessionId == actor.id
+            $0.kind == .actor && $0.actor.sessionId == id
         }
         #expect(registration != nil)
         // Inspectors graph type-erased actors from this; it must be present and parseable.
@@ -56,7 +56,7 @@ struct InspectionTests {
     }
 
     @Test("emits event and transition when sending")
-    func sendInspection() {
+    func sendInspection() async {
         let collector = InspectionCollector()
 
         let machine = createMachine(MachineConfig(
@@ -68,13 +68,13 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             options: ActorOptions(inspect: collector.observe())
         ).start()
         collector.reset()
 
-        actor.send(Event("GO"))
+        await actor.send(Event("GO"))
 
         let events = collector.recordedEvents()
         #expect(events.contains { $0.kind == .event && $0.event?.type == "GO" })
@@ -83,7 +83,7 @@ struct InspectionTests {
     }
 
     @Test("emits microstep events when sending")
-    func microstepInspection() {
+    func microstepInspection() async {
         let collector = InspectionCollector()
 
         let machine = createMachine(MachineConfig(
@@ -95,13 +95,13 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             options: ActorOptions(inspect: collector.observe())
         ).start()
         collector.reset()
 
-        actor.send(Event("GO"))
+        await actor.send(Event("GO"))
 
         let microsteps = collector.recordedEvents().filter { $0.kind == .microstep }
         #expect(!microsteps.isEmpty)
@@ -137,7 +137,7 @@ struct InspectionTests {
             ]
         ))
 
-        _ = createActor(
+        _ = await createActor(
             machine,
             options: ActorOptions(inspect: collector.observe())
         ).start()
@@ -172,7 +172,7 @@ struct InspectionTests {
             ]
         ))
 
-        _ = createActor(
+        _ = await createActor(
             machine,
             options: ActorOptions(inspect: collector.observe())
         ).start()
@@ -182,7 +182,7 @@ struct InspectionTests {
     }
 
     @Test("actor registration precedes inspectable spawn actions on start")
-    func actorRegistrationBeforeSpawnActions() {
+    func actorRegistrationBeforeSpawnActions() async {
         let collector = InspectionCollector()
 
         let childMachine = createMachine(MachineConfig(
@@ -216,13 +216,14 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(
+        let actor = await createActor(
             parentMachine,
             options: ActorOptions(inspect: collector.observe())
         ).start()
 
         let events = collector.recordedEvents()
-        let actorIndex = events.firstIndex { $0.kind == .actor && $0.actor.sessionId == actor.id }
+        let id = await actor.id
+        let actorIndex = events.firstIndex { $0.kind == .actor && $0.actor.sessionId == id }
         let spawnActionIndices = events.enumerated().compactMap { index, event in
             event.kind == .action && event.actionType == "xstate.spawnChild" ? index : nil
         }
@@ -263,7 +264,7 @@ struct InspectionTests {
             ]
         ))
 
-        _ = createActor(
+        _ = await createActor(
             parentMachine,
             options: ActorOptions(inspect: collector.observe())
         ).start()
@@ -278,7 +279,7 @@ struct InspectionTests {
     }
 
     @Test("system.inspect receives events from existing actor")
-    func systemInspect() {
+    func systemInspect() async {
         let collector = InspectionCollector()
 
         let machine = createMachine(MachineConfig(
@@ -289,11 +290,11 @@ struct InspectionTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = await createActor(machine).start()
         _ = actor.actorSystem.inspect(collector.observe())
         collector.reset()
 
-        actor.send(Event("PING"))
+        await actor.send(Event("PING"))
 
         #expect(collector.recordedEvents().contains { $0.kind == .event && $0.event?.type == "PING" })
     }

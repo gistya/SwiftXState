@@ -29,8 +29,8 @@ You `send` these as values (`actor.send(Loaded(value: "…"))`), and transitions
 
 ## States and typed transitions
 
-Attach `@MachineStates` to the config to generate a checked state enum, then target states with
-`on(_:to:)`:
+Declare a `StateName` enum (one case per state) for a checked state namespace, then target states
+with `on(_:to:)`:
 
 ```swift
 "idle": StateNodeConfig(on: transitions(
@@ -112,7 +112,13 @@ enum Fetcher {
         var retries: Int = 0
     }
 
-    @MachineStates("State")
+    enum State: String, StateName {
+        case idle
+        case loading
+        case success
+        case failure
+    }
+
     static let config = MachineConfig(
         id: "fetcher",
         initial: "idle",

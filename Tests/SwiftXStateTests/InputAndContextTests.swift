@@ -40,7 +40,7 @@ struct InputAndContextTests {
     }
 
     @Test("createActor input builds context via contextFromInput")
-    func actorInputBuildsContext() {
+    func actorInputBuildsContext() async {
         let machine = counterMachine { input in
             LabeledCounterContext(
                 count: input?.get(CounterInput.self)?.startCount ?? 0,
@@ -48,17 +48,17 @@ struct InputAndContextTests {
             )
         }
 
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             input: CounterInput(startCount: 5, label: "main")
         ).start()
 
-        #expect(actor.snapshot.context.count == 5)
-        #expect(actor.snapshot.context.label == "main")
+        #expect(await actor.snapshot.context.count == 5)
+        #expect(await actor.snapshot.context.label == "main")
     }
 
     @Test("start(input:) overrides ActorOptions input")
-    func startInputOverridesOptions() {
+    func startInputOverridesOptions() async {
         let machine = counterMachine { input in
             LabeledCounterContext(
                 count: input?.get(Int.self) ?? 0,
@@ -66,30 +66,30 @@ struct InputAndContextTests {
             )
         }
 
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             options: ActorOptions(input: SendableValue(1))
         ).start(input: SendableValue(9))
 
-        #expect(actor.snapshot.context.count == 9)
+        #expect(await actor.snapshot.context.count == 9)
     }
 
     @Test("static context still works without input")
-    func staticContextBackwardCompat() {
+    func staticContextBackwardCompat() async {
         let machine = createMachine(MachineConfig(
             initial: "idle",
             context: LabeledCounterContext(count: 3, label: "static"),
             states: ["idle": StateNodeConfig()]
         ))
 
-        let actor = createActor(machine).start()
+        let actor = await createActor(machine).start()
 
-        #expect(actor.snapshot.context.count == 3)
-        #expect(actor.snapshot.context.label == "static")
+        #expect(await actor.snapshot.context.count == 3)
+        #expect(await actor.snapshot.context.label == "static")
     }
 
     @Test("explicit start(context:) overrides contextFromInput")
-    func explicitContextOverridesInput() {
+    func explicitContextOverridesInput() async {
         let machine = counterMachine { input in
             LabeledCounterContext(
                 count: input?.get(Int.self) ?? 0,
@@ -97,11 +97,11 @@ struct InputAndContextTests {
             )
         }
 
-        let actor = createActor(machine, input: 10)
+        let actor = await createActor(machine, input: 10)
             .start(context: LabeledCounterContext(count: 99, label: "override"))
 
-        #expect(actor.snapshot.context.count == 99)
-        #expect(actor.snapshot.context.label == "override")
+        #expect(await actor.snapshot.context.count == 99)
+        #expect(await actor.snapshot.context.label == "override")
     }
 
     @Test("invoked child uses machine contextFromInput")
@@ -147,11 +147,11 @@ struct InputAndContextTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = await createActor(parentMachine).start()
         await actor.waitForSnapshot { $0.matches("received") }
 
-        #expect(actor.snapshot.matches("received"))
-        #expect(actor.snapshot.context.childLabel == "user-42")
+        #expect(await actor.snapshot.matches("received"))
+        #expect(await actor.snapshot.context.childLabel == "user-42")
     }
 
     @Test("fromMachine uses machine contextFromInput")
@@ -185,10 +185,10 @@ struct InputAndContextTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = await createActor(parentMachine).start()
         await actor.waitForSnapshot { $0.children["child"]?.status == .done }
 
-        #expect(actor.snapshot.matches("waiting"))
-        #expect(actor.snapshot.children["child"]?.status == .done)
+        #expect(await actor.snapshot.matches("waiting"))
+        #expect(await actor.snapshot.children["child"]?.status == .done)
     }
 }

@@ -47,15 +47,15 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.send(Event("TICK"))
-        actor.send(Event("TICK"))
+        let actor = await createActor(parentMachine).start()
+        await actor.send(Event("TICK"))
+        await actor.send(Event("TICK"))
 
-        let child = actor.childActor(id: "counter")
-        child?.send(Event("INCREMENT"))
+        let child = await actor.childActor(id: "counter")
+        await child?.send(Event("INCREMENT"))
 
         #expect(child != nil)
-        #expect(actor.snapshot.matches("running"))
+        #expect(await actor.snapshot.matches("running"))
     }
 
     @Test("fromTransition onSnapshot syncs child context")
@@ -92,15 +92,15 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = await createActor(parentMachine).start()
 
         for _ in 0..<3 {
-            actor.childActor(id: "counter")?.send(Event("INCREMENT"))
+            await actor.childActor(id: "counter")?.send(Event("INCREMENT"))
         }
 
         await actor.waitForSnapshot { $0.context.count == 3 }
 
-        #expect(actor.snapshot.context.count == 3)
+        #expect(await actor.snapshot.context.count == 3)
     }
 
     @Test("fromObservable emits values and completes with onDone")
@@ -132,12 +132,12 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = await createActor(parentMachine).start()
         await actor.waitForSnapshot { $0.matches("finished") }
 
-        #expect(actor.snapshot.matches("finished"))
-        #expect(actor.snapshot.context.count == 3)
-        #expect(actor.snapshot.status == .done)
+        #expect(await actor.snapshot.matches("finished"))
+        #expect(await actor.snapshot.context.count == 3)
+        #expect(await actor.snapshot.status == .done)
     }
 
     @Test("fromObservable reports errors with onError")
@@ -171,11 +171,11 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
+        let actor = await createActor(parentMachine).start()
         await actor.waitForSnapshot { $0.matches("failed") }
 
-        #expect(actor.snapshot.matches("failed"))
-        #expect(actor.snapshot.context.step == "stream failed".count)
+        #expect(await actor.snapshot.matches("failed"))
+        #expect(await actor.snapshot.context.step == "stream failed".count)
     }
 
     @Test("fromObservable ignores sent events")
@@ -199,11 +199,11 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "stream")?.send(Event("IGNORED"))
+        let actor = await createActor(parentMachine).start()
+        await actor.childActor(id: "stream")?.send(Event("IGNORED"))
         await actor.waitForSnapshot { $0.matches("finished") }
 
-        #expect(actor.snapshot.matches("finished"))
+        #expect(await actor.snapshot.matches("finished"))
     }
 
     @Test("named fromTransition via setup")
@@ -248,12 +248,12 @@ struct TransitionObservableTests {
             ]
         ))
 
-        let actor = createActor(parentMachine).start()
-        actor.childActor(id: "counter")?.send(Event("INCREMENT"))
-        actor.childActor(id: "counter")?.send(Event("INCREMENT"))
+        let actor = await createActor(parentMachine).start()
+        await actor.childActor(id: "counter")?.send(Event("INCREMENT"))
+        await actor.childActor(id: "counter")?.send(Event("INCREMENT"))
 
         await actor.waitForSnapshot { $0.context.count == 2 }
 
-        #expect(actor.snapshot.context.count == 2)
+        #expect(await actor.snapshot.context.count == 2)
     }
 }

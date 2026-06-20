@@ -74,7 +74,7 @@ extension Actor {
     @discardableResult
     func waitForSnapshot(
         timeout: Duration = .seconds(5),
-        where predicate: @escaping (MachineSnapshot<Context>) -> Bool
+        where predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool
     ) async -> MachineSnapshot<Context>? {
         let oneShot = OneShot<MachineSnapshot<Context>?>()
         let subscription = subscribe { snapshot in

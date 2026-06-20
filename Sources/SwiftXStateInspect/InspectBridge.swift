@@ -31,7 +31,7 @@ public final class InspectBridge: Sendable {
     }
 
     /// Eagerly opens the transport session.
-    public func start() {
+    public func start() async {
         guard configuration.isEnabled else { return }
         Task { await state.ensureConnected() }
     }
@@ -167,7 +167,7 @@ public func createInspectObserver(
 ) -> @Sendable (InspectionEvent) -> Void {
     let bridge = InspectBridge(transport: transport, configuration: configuration)
     if startImmediately {
-        bridge.start()
+        Task { await bridge.start() }
     }
     return bridge.observe()
 }

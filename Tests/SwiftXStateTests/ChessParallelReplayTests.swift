@@ -70,33 +70,33 @@ struct ChessParallelReplayTests {
     }
 
     @Test("REPLAY_SCRUB updates context while in replaying")
-    func replayScrubInParallelMachine() {
+    func replayScrubInParallelMachine() async {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = await createActor(
             machine,
             options: ActorOptions(inspect: recorder.observe())
         ).start()
 
-        actor.send(Event("TAP.0"))
-        actor.send(Event("TAP.0"))
-        actor.send(Event("TAP.0"))
+        await actor.send(Event("TAP.0"))
+        await actor.send(Event("TAP.0"))
+        await actor.send(Event("TAP.0"))
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
             return
         }
 
-        actor.send(Event("ENTER_REPLAY"))
-        #expect(actor.snapshot.context.replayStep == 0)
-        #expect(actor.snapshot.matches("game.replaying"))
+        await actor.send(Event("ENTER_REPLAY"))
+        #expect(await actor.snapshot.context.replayStep == 0)
+        #expect(await actor.snapshot.matches("game.replaying"))
 
-        actor.send(Event("REPLAY_SCRUB.1"))
-        #expect(actor.snapshot.context.replayStep == 1)
-        #expect(actor.snapshot.context.moves == 1)
+        await actor.send(Event("REPLAY_SCRUB.1"))
+        #expect(await actor.snapshot.context.replayStep == 1)
+        #expect(await actor.snapshot.context.moves == 1)
 
-        actor.send(Event("REPLAY_SCRUB.0"))
-        #expect(actor.snapshot.context.replayStep == 0)
-        #expect(actor.snapshot.context.moves == 0)
+        await actor.send(Event("REPLAY_SCRUB.0"))
+        #expect(await actor.snapshot.context.replayStep == 0)
+        #expect(await actor.snapshot.context.moves == 0)
 
         let traveled = timeTravel(
             machine,

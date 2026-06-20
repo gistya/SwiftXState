@@ -36,12 +36,17 @@ struct InspectorMultiActorTests {
     }
 
     @Test("Inspectable child spawns all register in the store")
-    func childrenRegister() {
+    func childrenRegister() async {
         let store = InspectorStore()
+        // Children run on their own off-main executors, so their inspect events fire off-main too.
+        // Capture the whole system's stream with a thread-safe collector, then replay into the
+        // @MainActor store. `await start()` has fully spawned + started every child by the time it
+        // returns, so the collector holds all registration events.
+        let collector = InspectionCollector()
         let parent = parentMachine(childCount: 96)
-        _ = createActor(parent, options: ActorOptions(inspect: { event in
-            MainActor.assumeIsolated { store.ingest(event) }
-        })).start()
+        _ = await createActor(parent, options: ActorOptions(inspect: collector.observe())).start()
+
+        for event in collector.recordedEvents() { store.ingest(event) }
 
         // Parent + 96 children all show up in the actor list.
         #expect(store.actors.count == 97)

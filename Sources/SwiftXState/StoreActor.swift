@@ -58,8 +58,7 @@ final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildAct
 
     init(
         id: String,
-        systemId: String?,
-        input: SendableValue?,
+        systemId: String?,        input: SendableValue?,
         parent: any ActorParentRef,
         logic: StoreActorLogic<Context, E>,
         syncSnapshot: Bool
@@ -72,39 +71,39 @@ final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildAct
         self.syncSnapshot = syncSnapshot
     }
 
-    func start() {
+    func start() async {
         guard status == .stopped else { return }
         store = logic.logic.createStore(input: input)
         status = .active
-        publishSnapshot()
+        await publishSnapshot()
     }
 
-    func stop() {
+    func stop() async {
         store?.stop()
         status = .stopped
         emitListeners.removeAll()
     }
 
-    func send(_ event: any Eventable) {
+    func send(_ event: any Eventable) async {
         guard status == .active, let store else { return }
         guard let typed = event as? E else { return }
         store.send(typed)
-        publishSnapshot()
+        await publishSnapshot()
     }
 
     func on(
         _ eventType: String,
         handler: @escaping @Sendable (EmittedEvent) -> Void
-    ) -> Subscription {
+    ) async -> Subscription {
         if let store {
             return store.on(eventType, handler: handler)
         }
         return emitListeners.on(eventType, handler: handler)
     }
 
-    private func publishSnapshot() {
+    private func publishSnapshot() async {
         guard syncSnapshot, let store else { return }
-        parent?.enqueueFromChild(
+        await parent?.enqueueFromChild(
             SnapshotActorEvent(
                 actorId: id,
                 snapshot: ChildActorSnapshot(

@@ -2,14 +2,14 @@ import Foundation
 
 /// Reference from a child actor back to its parent interpreter.
 public protocol ActorParentRef: AnyObject, Sendable {
-    func enqueueFromChild(_ event: any Eventable)
+    func enqueueFromChild(_ event: any Eventable) async
     var actorSystem: ActorSystem { get }
-    func inspectSpawnedChild(_ child: any ChildActorRef, machineId: String?)
-    func persistedChildSnapshot(for id: String) -> PersistedChildSnapshot?
+    func inspectSpawnedChild(_ child: any ChildActorRef, machineId: String?) async
+    func persistedChildSnapshot(for id: String) async -> PersistedChildSnapshot?
 }
 
 extension ActorParentRef {
-    public func persistedChildSnapshot(for id: String) -> PersistedChildSnapshot? {
+    public func persistedChildSnapshot(for id: String) async -> PersistedChildSnapshot? {
         nil
     }
 }
@@ -23,10 +23,10 @@ public protocol ChildActorRef: ActorSystemRef, AnyObject, Sendable {
     var definitionJSON: String? { get }
     /// Whether Stately Inspector should receive events attributed to this child.
     var inspectable: Bool { get }
-    func start()
-    func stop()
-    func send(_ event: any Eventable)
-    func on(_ eventType: String, handler: @escaping @Sendable (EmittedEvent) -> Void) -> Subscription
+    func start() async
+    func stop() async
+    func send(_ event: any Eventable) async
+    func on(_ eventType: String, handler: @escaping @Sendable (EmittedEvent) -> Void) async -> Subscription
 }
 
 extension ChildActorRef {
@@ -177,6 +177,7 @@ public struct MachineActorLogicBox: Sendable {
         String,
         SendableValue?,
         any ActorParentRef,
+        String?,
         ActorOptions,
         Bool,
         PersistedChildSnapshot?
@@ -184,7 +185,7 @@ public struct MachineActorLogicBox: Sendable {
 
     /// Uses the child machine's `context` or `contextFromInput` to build initial context.
     public init<ChildContext: Sendable>(_ machine: StateMachine<ChildContext>) {
-        _spawn = { id, input, parent, options, syncSnapshot, persistedChild in
+        _spawn = { id, input, parent, systemId, options, syncSnapshot, persistedChild in
             let resolvedContext = resolveInitialContext(machine: machine, input: input)
             let persistedRestore = machinePersistedRestore(
                 from: persistedChild,
@@ -198,6 +199,7 @@ public struct MachineActorLogicBox: Sendable {
                     options: options,
                     parent: parent
                 ),
+                systemId: systemId,
                 parent: parent,
                 context: resolvedContext,
                 syncSnapshot: syncSnapshot,
@@ -209,7 +211,7 @@ public struct MachineActorLogicBox: Sendable {
     /// Uses the child machine's `context` or `contextFromInput` to build initial context.
     /// Child snapshots can be persisted and restored when `ChildContext` is `Codable`.
     public init<ChildContext: Codable & Sendable>(_ machine: StateMachine<ChildContext>) {
-        _spawn = { id, input, parent, options, syncSnapshot, persistedChild in
+        _spawn = { id, input, parent, systemId, options, syncSnapshot, persistedChild in
             let actor = Actor(
                 machine,
                 id: id,
@@ -224,11 +226,12 @@ public struct MachineActorLogicBox: Sendable {
             )
             return MachineChildRef(
                 actor: actor,
+                systemId: systemId,
                 parent: parent,
                 context: resolvedContext,
                 syncSnapshot: syncSnapshot,
                 persistedRestore: persistedRestore,
-                onRestore: { persisted in actor.start(from: persisted) }
+                onRestore: { persisted in await actor.start(from: persisted) }
             )
         }
     }
@@ -237,7 +240,7 @@ public struct MachineActorLogicBox: Sendable {
         _ machine: StateMachine<ChildContext>,
         context: @escaping @Sendable (SendableValue?) -> ChildContext
     ) {
-        _spawn = { id, input, parent, options, syncSnapshot, persistedChild in
+        _spawn = { id, input, parent, systemId, options, syncSnapshot, persistedChild in
             let persistedRestore = machinePersistedRestore(
                 from: persistedChild,
                 childId: id,
@@ -250,6 +253,7 @@ public struct MachineActorLogicBox: Sendable {
                     options: options,
                     parent: parent
                 ),
+                systemId: systemId,
                 parent: parent,
                 context: context(input),
                 syncSnapshot: syncSnapshot,
@@ -262,7 +266,7 @@ public struct MachineActorLogicBox: Sendable {
         _ machine: StateMachine<ChildContext>,
         context: @escaping @Sendable (SendableValue?) -> ChildContext
     ) {
-        _spawn = { id, input, parent, options, syncSnapshot, persistedChild in
+        _spawn = { id, input, parent, systemId, options, syncSnapshot, persistedChild in
             let actor = Actor(
                 machine,
                 id: id,
@@ -276,11 +280,12 @@ public struct MachineActorLogicBox: Sendable {
             )
             return MachineChildRef(
                 actor: actor,
+                systemId: systemId,
                 parent: parent,
                 context: context(input),
                 syncSnapshot: syncSnapshot,
                 persistedRestore: persistedRestore,
-                onRestore: { persisted in actor.start(from: persisted) }
+                onRestore: { persisted in await actor.start(from: persisted) }
             )
         }
     }
@@ -293,7 +298,7 @@ public struct MachineActorLogicBox: Sendable {
         syncSnapshot: Bool,
         persistedChild: PersistedChildSnapshot? = nil
     ) -> any ChildActorRef {
-        _spawn(id, input, parent, options, syncSnapshot, persistedChild)
+        _spawn(id, input, parent, options.systemId, options, syncSnapshot, persistedChild)
     }
 }
 

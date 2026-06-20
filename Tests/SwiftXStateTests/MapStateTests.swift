@@ -8,7 +8,7 @@ struct MapStateTests {
     }
 
     @Test("collects leaf mapper for active atomic state")
-    func leafMapper() {
+    func leafMapper() async {
         let machine = createMachine(MachineConfig(
             initial: "a",
             context: CounterContext(count: 0),
@@ -18,7 +18,7 @@ struct MapStateTests {
             ]
         ))
 
-        let snapshot = createActor(machine).start().snapshot
+        let snapshot = await createActor(machine).start().snapshot
         let mapper = StateMap<CounterContext, String>(
             states: [
                 "a": .mapped { _ in "in-a" },
@@ -30,7 +30,7 @@ struct MapStateTests {
     }
 
     @Test("returns parent and leaf mappers leaf-to-root")
-    func ancestorChain() {
+    func ancestorChain() async {
         let machine = createMachine(MachineConfig(
             initial: "parent",
             context: CounterContext(count: 0),
@@ -55,7 +55,7 @@ struct MapStateTests {
             ]
         )
 
-        let snapshot = createActor(machine).start().snapshot
+        let snapshot = await createActor(machine).start().snapshot
         let results = snapshot.mapState(mapper)
 
         #expect(results.map(\.result) == ["child", "parent"])
@@ -63,7 +63,7 @@ struct MapStateTests {
     }
 
     @Test("parallel regions collect independent leaf mappers")
-    func parallelRegions() {
+    func parallelRegions() async {
         let machine = createMachine(MachineConfig(
             context: CounterContext(count: 0),
             states: [
@@ -92,13 +92,13 @@ struct MapStateTests {
             ]
         )
 
-        let results = createActor(machine).start().snapshot.mapState(mapper)
+        let results = await createActor(machine).start().snapshot.mapState(mapper)
         let mapped = Set(results.map { $0.result })
         #expect(mapped == ["foo-on", "bar-on", "foo", "bar"])
     }
 
     @Test("maps a derived view-state struct that reflects the active state")
-    func derivedViewStateByPhase() {
+    func derivedViewStateByPhase() async {
         struct ViewState: Equatable {
             let label: String
             let isInteractive: Bool
@@ -120,10 +120,10 @@ struct MapStateTests {
             ]
         )
 
-        let actor = createActor(machine).start()
-        #expect(actor.snapshot.mapStateFirst(mapper) == ViewState(label: "playing", isInteractive: true))
+        let actor = await createActor(machine).start()
+        #expect(await actor.snapshot.mapStateFirst(mapper) == ViewState(label: "playing", isInteractive: true))
 
-        actor.send(Event("PAUSE"))
-        #expect(actor.snapshot.mapStateFirst(mapper) == ViewState(label: "paused", isInteractive: false))
+        await actor.send(Event("PAUSE"))
+        #expect(await actor.snapshot.mapStateFirst(mapper) == ViewState(label: "paused", isInteractive: false))
     }
 }

@@ -83,14 +83,14 @@ struct RaiseTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        #expect(actor.snapshot.matches("idle"))
+        let actor = await createActor(machine).start()
+        #expect(await actor.snapshot.matches("idle"))
 
-        actor.send(Event("ARM"))
+        await actor.send(Event("ARM"))
         await actor.waitForSnapshot { $0.matches("done") }
 
-        #expect(actor.snapshot.matches("done"))
-        #expect(actor.snapshot.context.step == 1)
+        #expect(await actor.snapshot.matches("done"))
+        #expect(await actor.snapshot.context.step == 1)
     }
 
     @Test("cancel prevents a delayed raise from firing")
@@ -115,12 +115,12 @@ struct RaiseTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("ARM"))
-        actor.send(Event("CANCEL"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("ARM"))
+        await actor.send(Event("CANCEL"))
         try? await Task.sleep(for: .milliseconds(150))
 
-        #expect(actor.snapshot.matches("idle"))
-        #expect(actor.snapshot.context.step == 0)
+        #expect(await actor.snapshot.matches("idle"))
+        #expect(await actor.snapshot.context.step == 0)
     }
 }

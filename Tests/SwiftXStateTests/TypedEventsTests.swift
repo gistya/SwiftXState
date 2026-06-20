@@ -34,21 +34,21 @@ struct TypedEventsTests {
     }
 
     @Test("typed action narrows the event and updates context")
-    func typedActionNarrows() {
-        let actor = createActor(machine()).start()
-        actor.send(Focus())
-        #expect(actor.snapshot.matches("active"))
+    func typedActionNarrows() async {
+        let actor = await createActor(machine()).start()
+        await actor.send(Focus())
+        #expect(await actor.snapshot.matches("active"))
 
-        actor.send(InputChange(searchInput: "be"))
-        #expect(actor.snapshot.context.searchInput == "be")   // narrowed payload applied
+        await actor.send(InputChange(searchInput: "be"))
+        #expect(await actor.snapshot.context.searchInput == "be")   // narrowed payload applied
 
-        actor.send(ItemClick(itemId: 1))
-        #expect(actor.snapshot.context.picked == "beta")      // c.items[e.itemId]
-        #expect(actor.snapshot.matches("inactive"))
+        await actor.send(ItemClick(itemId: 1))
+        #expect(await actor.snapshot.context.picked == "beta")      // c.items[e.itemId]
+        #expect(await actor.snapshot.matches("inactive"))
     }
 
     @Test("typed guard narrows the event to decide the branch")
-    func typedGuardNarrows() {
+    func typedGuardNarrows() async {
         // Only accept a click on a valid index; otherwise stay put.
         let m = createMachine(MachineConfig(
             id: "g", initial: "idle", context: SearchCtx(),
@@ -60,18 +60,18 @@ struct TypedEventsTests {
                 "picked": StateNodeConfig(),
             ]
         ))
-        let actor = createActor(m).start()
-        actor.send(ItemClick(itemId: 99))     // out of range -> guard false -> no transition
-        #expect(actor.snapshot.matches("idle"))
-        actor.send(ItemClick(itemId: 0))      // valid -> transition
-        #expect(actor.snapshot.matches("picked"))
+        let actor = await createActor(m).start()
+        await actor.send(ItemClick(itemId: 99))     // out of range -> guard false -> no transition
+        #expect(await actor.snapshot.matches("idle"))
+        await actor.send(ItemClick(itemId: 0))      // valid -> transition
+        #expect(await actor.snapshot.matches("picked"))
     }
 
     @Test("typed send only accepts StateEvents but works exactly like Tier 1")
-    func typedSend() {
-        let actor = createActor(machine()).start()
-        actor.send(Focus())                    // typed value; send<E: Eventable> accepts it directly
-        #expect(actor.snapshot.matches("active"))
+    func typedSend() async {
+        let actor = await createActor(machine()).start()
+        await actor.send(Focus())                    // typed value; send<E: Eventable> accepts it directly
+        #expect(await actor.snapshot.matches("active"))
     }
 
     @Test("Tier 2 compiles down to the same definition JSON as Tier 1")

@@ -385,14 +385,15 @@ public func replayActor<Context: Sendable>(
     session: ReplaySession,
     options: ActorOptions = ActorOptions(),
     decodeEvent: ReplayEventDecoder? = nil
-) -> (actor: Actor<Context>, verifications: [ReplayVerification]) {
-    let actor = createActor(machine, options: options).start(context: context)
+) async -> (actor: Actor<Context>, verifications: [ReplayVerification]) {
+    let actor = createActor(machine, options: options)
+    await actor.start(context: context)
     var verifications: [ReplayVerification] = []
 
     for step in session.steps where step.event.isReplayable {
-        actor.send(step.event.makeEvent(decoder: decodeEvent))
+        await actor.send(step.event.makeEvent(decoder: decodeEvent))
         let actual = InspectionSnapshot.from(
-            actor.snapshot,
+            await actor.snapshot,
             actor: InspectionActorRef(sessionId: actor.id, machineId: machine.id)
         )
         verifications.append(

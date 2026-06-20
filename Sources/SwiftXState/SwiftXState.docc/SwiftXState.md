@@ -40,10 +40,10 @@ maps 1:1 to XState's JSON for export, interop, and visualization. Ideal for lear
 prototyping.
 → Start at <doc:GettingStarted>, then <doc:CoreConcepts>.
 
-**🔵 Advanced — type-safe Swift API.** Model events as Swift types and let `@MachineStates` generate
-a compile-checked enum of state names. Transition targets, event handling, and even guard/action
-payloads become compiler-verified — autocomplete, rename-safety, and no stringly-typed bugs. This
-is the recommended path for production app logic.
+**🔵 Advanced — type-safe Swift API.** Model events as Swift types and declare a `StateName` enum
+of state names. Transition targets, event handling, and even guard/action payloads become
+compiler-verified — autocomplete, rename-safety, and no stringly-typed bugs. This is the
+recommended path for production app logic.
 → Start at <doc:TypeSafeGettingStarted>, then <doc:TypeSafeCoreConcepts>.
 
 Both paths produce an identical runnable machine and identical `definitionJSON()` / inspector
@@ -79,6 +79,7 @@ talk to one another.
 
 - <doc:RunningActors>
 - <doc:AsyncWork>
+- <doc:DrivingSwiftUI>
 - <doc:NamedImplementations>
 
 ### Building Machines

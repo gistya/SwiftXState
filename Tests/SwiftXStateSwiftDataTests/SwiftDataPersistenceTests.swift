@@ -36,21 +36,22 @@ struct SwiftDataPersistenceTests {
     }
 
     @Test("saves and restores actor snapshot from SwiftData")
-    func saveAndRestore() throws {
+    func saveAndRestore() async throws {
         let store = try makeStore()
-        let actor = createActor(cartMachine).start(context: CartContext(items: 0))
-        actor.send(Event("ADD"))
-        actor.send(Event("ADD"))
+        let actor = await createActor(cartMachine).start(context: CartContext(items: 0))
+        await actor.send(Event("ADD"))
+        await actor.send(Event("ADD"))
 
-        try store.save(actor, key: "session-1")
+        try await store.save(actor, key: "session-1")
 
-        let reloaded = try #require(try store.createActor(cartMachine, key: "session-1"))
+        let reloaded = try #require(try await store.createActor(cartMachine, key: "session-1"))
+        let snapshot = await reloaded.snapshot
+        #expect(snapshot.context.items == 2)
+        #expect(snapshot.matches("browsing"))
 
-        #expect(reloaded.snapshot.context.items == 2)
-        #expect(reloaded.snapshot.matches("browsing"))
-
-        reloaded.send(Event("ADD"))
-        #expect(reloaded.snapshot.context.items == 3)
+        await reloaded.send(Event("ADD"))
+        let snapshot2 = await reloaded.snapshot
+        #expect(snapshot2.context.items == 3)
     }
 
     @Test("load returns nil for missing key")
@@ -60,25 +61,25 @@ struct SwiftDataPersistenceTests {
     }
 
     @Test("delete removes persisted snapshot")
-    func deleteSnapshot() throws {
+    func deleteSnapshot() async throws {
         let store = try makeStore()
-        let actor = createActor(cartMachine).start()
-        try store.save(actor, key: "temp")
+        let actor = await createActor(cartMachine).start()
+        try await store.save(actor, key: "temp")
 
         try store.delete(key: "temp")
         #expect(try store.load(key: "temp") == nil)
     }
 
     @Test("upsert overwrites existing snapshot")
-    func upsert() throws {
+    func upsert() async throws {
         let store = try makeStore()
-        let actor = createActor(cartMachine).start(context: CartContext(items: 0))
+        let actor = await createActor(cartMachine).start(context: CartContext(items: 0))
 
-        actor.send(Event("ADD"))
-        try store.save(actor, key: "cart")
+        await actor.send(Event("ADD"))
+        try await store.save(actor, key: "cart")
 
-        actor.send(Event("ADD"))
-        try store.save(actor, key: "cart")
+        await actor.send(Event("ADD"))
+        try await store.save(actor, key: "cart")
 
         let loaded = try store.load(key: "cart")
         let restored = try restoreSnapshot(machine: cartMachine, persisted: loaded!)

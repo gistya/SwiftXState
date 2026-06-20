@@ -1,5 +1,6 @@
 import Testing
 @testable import SwiftXState
+import Foundation
 
 private struct DelayContext: Sendable, Equatable {
     var delay: Int
@@ -27,17 +28,18 @@ struct AfterTests {
     }
 
     @Test("transitions after delay")
-    func transitionsAfterDelay() {
+    func transitionsAfterDelay() async {
         let clock = SimulatedClock()
-        let actor = createActor(lightMachine, options: ActorOptions(clock: clock)).start()
+        let actor = await createActor(lightMachine, options: ActorOptions(clock: clock)).start()
 
-        #expect(actor.snapshot.matches("green"))
+        #expect(await actor.snapshot.matches("green"))
 
         clock.increment(500)
-        #expect(actor.snapshot.matches("green"))
+        #expect(await actor.snapshot.matches("green"))
 
         clock.increment(510)
-        #expect(actor.snapshot.matches("yellow"))
+        await actor.waitForSnapshot { $0.matches("yellow") }
+        #expect(await actor.snapshot.matches("yellow"))
     }
 
     @Test("registers after event types on state node")
@@ -49,7 +51,7 @@ struct AfterTests {
     }
 
     @Test("cancels timer when leaving state before delay elapses")
-    func cancelsOnExit() {
+    func cancelsOnExit() async {
         let clock = SimulatedClock()
         let machine = createMachine(MachineConfig(
             initial: "waiting",
@@ -64,17 +66,17 @@ struct AfterTests {
             ]
         ))
 
-        let actor = createActor(machine, options: ActorOptions(clock: clock)).start()
-        actor.send(Event("SKIP"))
+        let actor = await createActor(machine, options: ActorOptions(clock: clock)).start()
+        await actor.send(Event("SKIP"))
 
-        #expect(actor.snapshot.matches("skipped"))
+        #expect(await actor.snapshot.matches("skipped"))
 
         clock.increment(2000)
-        #expect(actor.snapshot.matches("skipped"))
+        #expect(await actor.snapshot.matches("skipped"))
     }
 
     @Test("reschedules timer when re-entering state")
-    func reschedulesOnReentry() {
+    func reschedulesOnReentry() async {
         let clock = SimulatedClock()
         let machine = createMachine(MachineConfig(
             initial: "waiting",
@@ -91,25 +93,26 @@ struct AfterTests {
             ]
         ))
 
-        let actor = createActor(machine, options: ActorOptions(clock: clock)).start()
+        let actor = await createActor(machine, options: ActorOptions(clock: clock)).start()
 
         clock.increment(500)
-        actor.send(Event("PAUSE"))
+        await actor.send(Event("PAUSE"))
 
         clock.increment(500)
-        #expect(actor.snapshot.matches("paused"))
+        #expect(await actor.snapshot.matches("paused"))
 
-        actor.send(Event("RESUME"))
+        await actor.send(Event("RESUME"))
 
         clock.increment(500)
-        #expect(actor.snapshot.matches("waiting"))
+        #expect(await actor.snapshot.matches("waiting"))
 
         clock.increment(510)
-        #expect(actor.snapshot.matches("done"))
+        await actor.waitForSnapshot { $0.matches("done") }
+        #expect(await actor.snapshot.matches("done"))
     }
 
     @Test("supports guarded after transitions")
-    func guardedAfterTransition() {
+    func guardedAfterTransition() async {
         let clock = SimulatedClock()
         let machine = setup(
             guards: [
@@ -130,14 +133,14 @@ struct AfterTests {
             ]
         ))
 
-        let actor = createActor(machine, options: ActorOptions(clock: clock)).start()
+        let actor = await createActor(machine, options: ActorOptions(clock: clock)).start()
         clock.increment(10)
-
-        #expect(actor.snapshot.matches("y"))
+        await actor.waitForSnapshot { $0.matches("y") }
+        #expect(await actor.snapshot.matches("y"))
     }
 
     @Test("supports named delay expressions")
-    func namedDelay() {
+    func namedDelay() async {
         let clock = SimulatedClock()
         let resolved = DelayBox()
 
@@ -162,19 +165,22 @@ struct AfterTests {
             )
         )
 
-        let actor = createActor(machine, options: ActorOptions(clock: clock)).start()
+        let actor = await createActor(machine, options: ActorOptions(clock: clock)).start()
         #expect(resolved.value == DelayContext(delay: 500))
-        #expect(actor.snapshot.matches("inactive"))
+        #expect(await actor.snapshot.matches("inactive"))
 
         clock.increment(300)
-        #expect(actor.snapshot.matches("inactive"))
+        // No timer is due at 300ms of a 500ms delay, so nothing is scheduled to fire — assert the
+        // non-transition directly (no need to wait for async work that won't happen).
+        #expect(await actor.snapshot.matches("inactive"))
 
         clock.increment(200)
-        #expect(actor.snapshot.matches("active"))
+        await actor.waitForSnapshot { $0.matches("active") }
+        #expect(await actor.snapshot.matches("active"))
     }
 
     @Test("pure transition handles after events")
-    func pureAfterTransition() {
+    func pureAfterTransition() async {
         let machine = createMachine(MachineConfig(
             initial: "a",
             context: EmptyContext(),

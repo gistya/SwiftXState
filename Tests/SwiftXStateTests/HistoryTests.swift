@@ -26,29 +26,29 @@ struct HistoryTests {
     }
 
     @Test("restores most recently visited state (explicit shallow)")
-    func shallowHistory() {
-        let actor = createActor(powerMachine(historyType: .shallow)).start()
+    func shallowHistory() async {
+        let actor = await createActor(powerMachine(historyType: .shallow)).start()
 
-        actor.send(Event("SWITCH"))
-        actor.send(Event("POWER"))
-        actor.send(Event("POWER"))
+        await actor.send(Event("SWITCH"))
+        await actor.send(Event("POWER"))
+        await actor.send(Event("POWER"))
 
-        #expect(actor.snapshot.value == .compound(["on": .atomic("second")]))
+        #expect(await actor.snapshot.value == .compound(["on": .atomic("second")]))
     }
 
     @Test("restores most recently visited state (default shallow)")
-    func defaultShallowHistory() {
-        let actor = createActor(powerMachine(historyType: nil)).start()
+    func defaultShallowHistory() async {
+        let actor = await createActor(powerMachine(historyType: nil)).start()
 
-        actor.send(Event("SWITCH"))
-        actor.send(Event("POWER"))
-        actor.send(Event("POWER"))
+        await actor.send(Event("SWITCH"))
+        await actor.send(Event("POWER"))
+        await actor.send(Event("POWER"))
 
-        #expect(actor.snapshot.value == .compound(["on": .atomic("second")]))
+        #expect(await actor.snapshot.value == .compound(["on": .atomic("second")]))
     }
 
     @Test("falls back to initial state when no history (explicit shallow)")
-    func shallowHistoryDefault() {
+    func shallowHistoryDefault() async {
         let machine = createMachine(MachineConfig(
             initial: "off",
             context: EmptyContext(),
@@ -65,14 +65,14 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("POWER"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("POWER"))
 
-        #expect(actor.snapshot.value == .compound(["on": .atomic("first")]))
+        #expect(await actor.snapshot.value == .compound(["on": .atomic("first")]))
     }
 
     @Test("falls back to initial state when no history (default shallow)")
-    func defaultShallowHistoryDefault() {
+    func defaultShallowHistoryDefault() async {
         let machine = createMachine(MachineConfig(
             initial: "off",
             context: EmptyContext(),
@@ -89,14 +89,13 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("POWER"))
-
-        #expect(actor.snapshot.value == .compound(["on": .atomic("first")]))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("POWER"))
+        #expect(await actor.snapshot.value == .compound(["on": .atomic("first")]))
     }
 
     @Test("uses configured default target when history is machine initial state")
-    func historyAsMachineInitial() {
+    func historyAsMachineInitial() async {
         let machine = createMachine(MachineConfig(
             initial: "foo",
             context: EmptyContext(),
@@ -106,12 +105,12 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        #expect(actor.snapshot.matches("bar"))
+        let actor = await createActor(machine).start()
+        #expect(await actor.snapshot.matches("bar"))
     }
 
     @Test("uses configured default target when history is region initial state")
-    func historyAsRegionInitial() {
+    func historyAsRegionInitial() async {
         let machine = createMachine(MachineConfig(
             initial: "foo",
             context: EmptyContext(),
@@ -127,14 +126,14 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("NEXT"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("NEXT"))
 
-        #expect(actor.snapshot.value == .compound(["bar": .atomic("qwe")]))
+        #expect(await actor.snapshot.value == .compound(["bar": .atomic("qwe")]))
     }
 
     @Test("deep history restores nested leaf state")
-    func deepHistory() {
+    func deepHistory() async {
         let machine = createMachine(MachineConfig(
             initial: "parent",
             context: EmptyContext(),
@@ -158,12 +157,12 @@ struct HistoryTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("GO"))
-        actor.send(Event("LEAVE"))
-        actor.send(Event("RETURN"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("GO"))
+        await actor.send(Event("LEAVE"))
+        await actor.send(Event("RETURN"))
 
-        #expect(actor.snapshot.value == .compound([
+        #expect(await actor.snapshot.value == .compound([
             "parent": .compound(["child": .atomic("deep")]),
         ]))
     }

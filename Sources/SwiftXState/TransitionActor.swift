@@ -1,17 +1,17 @@
 import Foundation
 
 /// Scope passed to transition-based actor logic (`fromTransition`).
-public struct TransitionActorScope: Sendable {
+public struct TransitionActorScope {
     public let input: SendableValue?
     public let system: ActorSystem
-    public let sendToParent: @Sendable (any Eventable) -> Void
-    public let emit: @Sendable (EmittedEvent) -> Void
+    public let sendToParent: (any Eventable) -> Void
+    public let emit: (EmittedEvent) -> Void
 
     public init(
         input: SendableValue?,
         system: ActorSystem,
-        sendToParent: @escaping @Sendable (any Eventable) -> Void,
-        emit: @escaping @Sendable (EmittedEvent) -> Void
+        sendToParent: @escaping (any Eventable) -> Void,
+        emit: @escaping (EmittedEvent) -> Void
     ) {
         self.input = input
         self.system = system
@@ -76,7 +76,6 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
     private let input: SendableValue?
     private let syncSnapshot: Bool
     private let emitListeners = EmitListeners()
-    private let lock = NSLock()
     private var context: Context
     private(set) var status: SnapshotStatus = .stopped
 
@@ -99,50 +98,46 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         self.context = logic.resolveInitialContext(input)
     }
 
-    func start() {
-        lock.lock()
-        guard status == .stopped else {
-            lock.unlock()
-            return
-        }
+    func start() async {
+        guard status == .stopped else { return }
         status = .active
         context = logic.resolveInitialContext(input)
         let snapshotValue = String(describing: context)
-        lock.unlock()
 
         if syncSnapshot {
-            parent?.enqueueFromChild(
-                SnapshotActorEvent(
-                    actorId: id,
-                    snapshot: ChildActorSnapshot(
-                        id: id,
-                        status: .active,
-                        value: snapshotValue
+            let parent = self.parent
+            Task {
+                await parent?.enqueueFromChild(
+                    SnapshotActorEvent(
+                        actorId: id,
+                        snapshot: ChildActorSnapshot(
+                            id: id,
+                            status: .active,
+                            value: snapshotValue
+                        )
                     )
                 )
-            )
+            }
         }
     }
 
-    func stop() {
-        lock.lock()
+    func stop() async {
         status = .stopped
-        lock.unlock()
         emitListeners.removeAll()
     }
 
-    func send(_ event: any Eventable) {
-        lock.lock()
-        guard status == .active else {
-            lock.unlock()
-            return
-        }
+    func send(_ event: any Eventable) async {
+        guard status == .active else { return }
 
+        let parent = self.parent
+        let system = parent?.actorSystem ?? ActorSystem()
         let scope = TransitionActorScope(
             input: input,
-            system: parent?.actorSystem ?? ActorSystem(),
-            sendToParent: { [weak self] childEvent in
-                self?.parent?.enqueueFromChild(childEvent)
+            system: system,
+            sendToParent: { childEvent in
+                Task {
+                    await parent?.enqueueFromChild(childEvent)
+                }
             },
             emit: { [emitListeners] emitted in
                 emitListeners.notify(emitted)
@@ -150,10 +145,9 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
         )
         context = logic.transition(context, event, scope)
         let snapshotValue = String(describing: context)
-        lock.unlock()
 
         if syncSnapshot {
-            parent?.enqueueFromChild(
+            await parent?.enqueueFromChild(
                 SnapshotActorEvent(
                     actorId: id,
                     snapshot: ChildActorSnapshot(
@@ -169,7 +163,7 @@ final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @u
     func on(
         _ eventType: String,
         handler: @escaping @Sendable (EmittedEvent) -> Void
-    ) -> Subscription {
+    ) async -> Subscription {
         emitListeners.on(eventType, handler: handler)
     }
 }

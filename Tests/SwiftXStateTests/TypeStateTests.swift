@@ -102,9 +102,9 @@ private func makePlayer() -> StateMachine<PlayerContext> {
 @Suite("TypeState-lite")
 struct TypeStateTests {
     @Test("TypedSnapshot matches StateID paths")
-    func typedSnapshotMatches() {
-        let actor = createActor(makePlayer()).start()
-        let typed = actor.snapshot.typed(as: Mode.self)
+    func typedSnapshotMatches() async {
+        let actor = await createActor(makePlayer()).start()
+        let typed = await actor.snapshot.typed(as: Mode.self)
 
         #expect(typed.inState(.playing))
         #expect(typed.matches(Mode.playing))
@@ -113,34 +113,45 @@ struct TypeStateTests {
     }
 
     @Test("TypedActor send returns branded snapshot")
-    func typedActorSend() {
+    func typedActorSend() async {
         let player = createActor(makePlayer()).typed(as: Mode.self)
 
-        #expect(player.start().inState(Mode.playing))
+        #expect(await player.start().inState(Mode.playing))
 
-        let paused = player.send(Event("PAUSE"))
+        let paused = await player.send(Event("PAUSE"))
+        #expect(paused.inState(Mode.paused))
+        #expect(paused.phase == .paused)
+    }
+
+    @Test("createActor(_:as:) brands at creation — no post-hoc .typed(as:)")
+    func createActorAsFactory() async {
+        let player = createActor(makePlayer(), as: Mode.self)   // TypedActor<_, Mode> directly
+
+        #expect(await player.start().inState(Mode.playing))
+
+        let paused = await player.send(Event("PAUSE"))
         #expect(paused.inState(Mode.paused))
         #expect(paused.phase == .paused)
     }
 
     @Test("MachineSnapshot matches StateID overload")
-    func snapshotStateIDOverload() {
-        let snapshot = createActor(makePlayer()).start().snapshot
+    func snapshotStateIDOverload() async {
+        let snapshot = await createActor(makePlayer()).start().snapshot
         #expect(snapshot.matches(Mode.playing))
         #expect(!snapshot.matches(Mode.stopped))
     }
 
     @Test("narrowed returns nil when state does not match")
-    func narrowedFiltering() {
-        let typed = createActor(makePlayer()).start().snapshot.typed(as: Mode.self)
+    func narrowedFiltering() async {
+        let typed = await createActor(makePlayer()).start().snapshot.typed(as: Mode.self)
 
         #expect(typed.narrowed(to: .playing) != nil)
         #expect(typed.narrowed(to: .stopped) == nil)
     }
 
     @Test("parallel region starts with all controls off")
-    func controlsInitialState() {
-        let controls = createActor(makePlayer()).start().snapshot.typed(as: Controls.self)
+    func controlsInitialState() async {
+        let controls = await createActor(makePlayer()).start().snapshot.typed(as: Controls.self)
 
         #expect(controls.inState(.region))
         for control in Control.allCases {
@@ -151,11 +162,11 @@ struct TypeStateTests {
     }
 
     @Test("toggling one control leaves the sibling parallel region untouched")
-    func controlsToggleIndependently() {
-        let actor = createActor(makePlayer()).start()
-        actor.send(Event("SHUFFLE"))
+    func controlsToggleIndependently() async {
+        let actor = await createActor(makePlayer()).start()
+        await actor.send(Event("SHUFFLE"))
 
-        let controls = actor.snapshot.typed(as: Controls.self)
+        let controls = await actor.snapshot.typed(as: Controls.self)
         #expect(controls.value(for: .shuffle) == .on)
         #expect(controls.value(for: .repeatMode) == .off)
         #expect(controls.inState(.control(.shuffle, .on)))
@@ -163,11 +174,11 @@ struct TypeStateTests {
     }
 
     @Test("domain value reconstructs from StateValue via typed paths")
-    func controlStatesFromStateValue() {
-        let actor = createActor(makePlayer()).start()
-        #expect(ControlStates(stateValue: actor.snapshot.value) == .allOff)
+    func controlStatesFromStateValue() async {
+        let actor = await createActor(makePlayer()).start()
+        #expect(ControlStates(stateValue: await actor.snapshot.value) == .allOff)
 
-        actor.send(Event("REPEAT"))
-        #expect(ControlStates(stateValue: actor.snapshot.value) == ControlStates(shuffle: false, repeatOn: true))
+        await actor.send(Event("REPEAT"))
+        #expect(ControlStates(stateValue: await actor.snapshot.value) == ControlStates(shuffle: false, repeatOn: true))
     }
 }

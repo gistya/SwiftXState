@@ -3,21 +3,6 @@ import Foundation
 import Dispatch
 #endif
 
-/// Serializes access to an actor's mutable state. On platforms with Dispatch this is a serial
-/// `DispatchQueue`; on single-threaded platforms without Dispatch (e.g. WebAssembly / WASI) there
-/// is no concurrency to guard against, so the work runs inline. The call sites are identical either
-/// way (`queue.sync { … }` / `queue.async { … }`).
-struct ActorQueue: Sendable {
-    #if canImport(Dispatch)
-    private let queue = DispatchQueue(label: "SwiftXState.Actor")
-    func sync<T>(_ body: () throws -> T) rethrows -> T { try queue.sync(execute: body) }
-    func async(_ body: @escaping @Sendable () -> Void) { queue.async(execute: body) }
-    #else
-    func sync<T>(_ body: () throws -> T) rethrows -> T { try body() }
-    func async(_ body: @escaping @Sendable () -> Void) { body() }
-    #endif
-}
-
 /// Options for creating an actor — clock, system id, input, and inspection wiring.
 public struct ActorOptions: Sendable {
     /// Clock used for `after:` delays and delayed `raise`/`sendTo` (override in tests).
@@ -30,19 +15,26 @@ public struct ActorOptions: Sendable {
     public var inspect: (@Sendable (InspectionEvent) -> Void)?
     /// When `false`, this actor does not emit inspection events (Stately graph / sequence).
     public var inspectable: Bool
+    /// When `true`, this actor runs on the `MainActor`'s serial executor instead of its own default
+    /// (background) executor. This eliminates the thread hop for `send`/`snapshot` calls made *from*
+    /// the main actor — useful for latency-sensitive UI — at the cost of running the actor's work on
+    /// the main thread. Has no effect on platforms without `Darwin` (the override is Apple-only).
+    public var useMainExecutor: Bool
 
     public init(
         clock: any Clock = DefaultClock(),
         systemId: String? = nil,
         input: SendableValue? = nil,
         inspect: (@Sendable (InspectionEvent) -> Void)? = nil,
-        inspectable: Bool = true
+        inspectable: Bool = true,
+        useMainExecutor: Bool = false
     ) {
         self.clock = clock
         self.systemId = systemId
         self.input = input
         self.inspect = inspect
         self.inspectable = inspectable
+        self.useMainExecutor = useMainExecutor
     }
 }
 
@@ -54,64 +46,98 @@ public struct ActorOptions: Sendable {
 /// actor.send(Event("TOGGLE"))
 /// actor.snapshot.matches("on")   // true
 /// ```
-public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef, ActorSystemRef {
+public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     private var _snapshot: MachineSnapshot<Context>?
-    private var observers: [(MachineSnapshot<Context>) -> Void] = []
+    private var observers: [(id: Int, handler: (MachineSnapshot<Context>) -> Void)] = []
+    private var nextObserverID = 0
     private let emitListeners = EmitListeners()
     private var scheduledTimers: [String: TimeoutHandle] = [:]
     private var children: [String: any ChildActorRef] = [:]
     private var stoppedChildIDs: Set<String> = []
     private var pendingChildSnapshots: [String: PersistedChildSnapshot] = [:]
     private var mailbox: [any Eventable] = []
+    /// True while a drain loop is processing the mailbox. Guards against actor reentrancy: an event
+    /// enqueued while we're mid-`processEvent` (e.g. a child's `sendParent` triggered by a `sendTo`
+    /// to that child, delivered during an `await`) is left for the active drain loop rather than
+    /// processed reentrantly — which would otherwise mutate `_snapshot` only to be clobbered when the
+    /// outer `processEvent` writes its now-stale result back.
+    private var isProcessing = false
     private weak var parent: (any ActorParentRef)?
-    private let queue = ActorQueue()
     private let clock: any Clock
-    private let system: ActorSystem
-    private let options: ActorOptions
-    private let inspectable: Bool
+    private nonisolated let system: ActorSystem
+    private nonisolated let options: ActorOptions
+    private nonisolated let inspectable: Bool
     /// The machine this actor runs.
-    public let machine: StateMachine<Context>
+    public nonisolated let machine: StateMachine<Context>
     /// This actor's session id (unique within its system).
-    public let id: String
+    public nonisolated let id: String
+
+    #if canImport(Darwin)
+    // Custom executor backing. When `ActorOptions.useMainExecutor` is set we run on the MainActor's
+    // serial executor (no thread hop from the main actor); otherwise we own a dedicated serial
+    // dispatch queue, which preserves the usual off-main serialization. `ownedExecutorQueue` retains
+    // the queue for the lifetime of the actor (an `UnownedSerialExecutor` does not retain).
+    private nonisolated let ownedExecutorQueue: DispatchSerialQueue?
+    private nonisolated let _unownedExecutor: UnownedSerialExecutor
+
+    public nonisolated var unownedExecutor: UnownedSerialExecutor { _unownedExecutor }
+    #endif
 
     /// The actor system this actor belongs to.
-    public var actorSystem: ActorSystem { system }
+    public nonisolated var actorSystem: ActorSystem { system }
     /// Alias for `id` — the session id used in inspection and cross-actor references.
-    public var sessionId: String { id }
+    public nonisolated var sessionId: String { id }
     /// The optional stable system id set via `ActorOptions.systemId`.
-    public var systemId: String? { options.systemId }
-    var isInspectable: Bool { inspectable }
+    public nonisolated var systemId: String? { options.systemId }
+    nonisolated var isInspectable: Bool { inspectable }
 
     /// Lifecycle status: `.active`, `.done` (reached a final state), `.error`, or `.stopped`.
     public var status: SnapshotStatus {
-        queue.sync { _snapshot?.status ?? .stopped }
+        _snapshot?.status ?? .stopped
     }
 
     public init(
         _ machine: StateMachine<Context>,
         id: String? = nil,
         options: ActorOptions = ActorOptions(),
-        parent: (any ActorParentRef)? = nil
+        parent: (any ActorParentRef)? = nil,
+        system: ActorSystem? = nil
     ) {
         self.machine = machine
         self.id = id ?? machine.id
         self.options = options
         self.inspectable = options.inspectable
         self.clock = options.clock
+        #if canImport(Darwin)
+        if options.useMainExecutor {
+            self.ownedExecutorQueue = nil
+            self._unownedExecutor = MainActor.sharedUnownedExecutor
+        } else {
+            let queue = DispatchSerialQueue(label: "SwiftXState.Actor")
+            self.ownedExecutorQueue = queue
+            self._unownedExecutor = queue.asUnownedSerialExecutor()
+        }
+        #endif
         self.parent = parent
-        self.system = parent?.actorSystem ?? ActorSystem()
+        self.system = system ?? parent?.actorSystem ?? ActorSystem()
         if parent == nil {
-            system.setRootIdIfNeeded(self.id)
+            self.system.setRootIdIfNeeded(self.id)
         }
         if inspectable, let inspect = options.inspect {
-            system.inspect(inspect)
+            self.system.inspect(inspect)
         }
+    }
+    
+    public nonisolated func typed<Brand: StateID>(as _: Brand.Type = Brand.self) -> TypedActor<Context, Brand> {
+        TypedActor(self)
     }
 
     private func emitInspection(_ event: InspectionEvent) {
         guard inspectable else { return }
         system.sendInspection(event)
     }
+    
+    public func getSnapshot() -> MachineSnapshot<Context> { snapshot }
 
     private var inspectionActorRef: InspectionActorRef {
         InspectionActorRef.from(self, machineId: machine.id)
@@ -229,23 +255,19 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
 
     /// The current snapshot of the actor.
     public var snapshot: MachineSnapshot<Context> {
-        queue.sync {
-            guard let snapshot = _snapshot else {
-                fatalError("Actor has not been started. Call start() first.")
-            }
-            return snapshot
+        guard let snapshot = _snapshot else {
+            fatalError("Actor has not been started. Call start() first.")
         }
+        return snapshot
     }
 
     /// Returns a persisted representation of the current actor state.
-    public func getPersistedSnapshot() throws -> PersistedSnapshot where Context: Codable {
-        try queue.sync {
-            guard let snapshot = _snapshot else {
-                throw PersistenceError.actorNotStarted
-            }
-            let childSnapshots = try collectPersistedChildSnapshots(from: children)
-            return try SwiftXState.getPersistedSnapshot(from: snapshot, children: childSnapshots)
+    public func getPersistedSnapshot() async throws -> PersistedSnapshot where Context: Codable {
+        guard let snapshot = _snapshot else {
+            throw PersistenceError.actorNotStarted
         }
+        let childSnapshots = try await collectPersistedChildSnapshots(from: children)
+        return try SwiftXState.getPersistedSnapshot(from: snapshot, children: childSnapshots)
     }
 
     /// Starts the actor by **restoring** a previously persisted snapshot (state + context +
@@ -254,46 +276,48 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
     public func start(
         from persisted: PersistedSnapshot,
         context: Context? = nil
-    ) -> Self where Context: Codable {
-        queue.sync {
-            pendingChildSnapshots = persisted.children
-            defer { pendingChildSnapshots = [:] }
+    ) async -> Self where Context: Codable {
+        // Treat startup as one processing cycle: child events raised during entry/restore queue and
+        // drain in order rather than reentering (see `isProcessing`).
+        isProcessing = true
+        defer { isProcessing = false }
+        pendingChildSnapshots = persisted.children
+        defer { pendingChildSnapshots = [:] }
 
-            do {
-                _snapshot = try restoreSnapshot(
-                    machine: machine,
-                    persisted: persisted,
-                    context: context
-                )
-            } catch {
-                fatalError("Failed to restore persisted snapshot: \(error)")
-            }
-
-            guard let snapshot = _snapshot else { return }
-
-            updateDelayedTransitions(
-                entered: StateNodeSet(snapshot._nodes),
-                exited: StateNodeSet(),
-                snapshot: snapshot,
-                event: SystemEvent.`init`
+        do {
+            _snapshot = try restoreSnapshot(
+                machine: machine,
+                persisted: persisted,
+                context: context
             )
-            updateChildActors(
-                entered: StateNodeSet(snapshot._nodes),
-                exited: StateNodeSet(),
-                snapshot: snapshot,
-                event: SystemEvent.`init`
-            )
-            restoreSpawnChildren(snapshot: snapshot, event: SystemEvent.`init`)
-            flushMailbox()
-            system.register(self)
-            if parent == nil {
-                system.setRootIdIfNeeded(id)
-                inspectActorRegistration(snapshot: snapshot)
-            }
-            inspectIncomingEvent(SystemEvent.`init`, source: nil)
-            inspectTransition(SystemEvent.`init`, snapshot: snapshot)
-            notify(snapshot, event: SystemEvent.`init`)
+        } catch {
+            fatalError("Failed to restore persisted snapshot: \(error)")
         }
+
+        guard let snapshot = _snapshot else { return self }
+
+        updateDelayedTransitions(
+            entered: StateNodeSet(snapshot._nodes),
+            exited: StateNodeSet(),
+            snapshot: snapshot,
+            event: SystemEvent.`init`
+        )
+        await updateChildActors(
+            entered: StateNodeSet(snapshot._nodes),
+            exited: StateNodeSet(),
+            snapshot: snapshot,
+            event: SystemEvent.`init`
+        )
+        await restoreSpawnChildren(snapshot: snapshot, event: SystemEvent.`init`)
+        await drainLoop()
+        system.register(self)
+        if parent == nil {
+            system.setRootIdIfNeeded(id)
+            inspectActorRegistration(snapshot: snapshot)
+        }
+        inspectIncomingEvent(SystemEvent.`init`, source: nil)
+        inspectTransition(SystemEvent.`init`, snapshot: snapshot)
+        notify(snapshot, event: SystemEvent.`init`)
         return self
     }
 
@@ -301,89 +325,97 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
     /// entry actions, and spawning invoked children). Returns `self` so you can chain
     /// `createActor(m).start()`. `input` feeds the machine's `contextFromInput`.
     @discardableResult
-    public func start(input: SendableValue? = nil, context: Context? = nil) -> Self {
-        queue.sync {
-            let resolvedInput = input ?? options.input
-            let (snapshot, actions) = initialTransition(machine, input: resolvedInput, context: context)
-            _snapshot = runSideEffectActions(snapshot: snapshot, actions: actions, event: SystemEvent.`init`)
-            updateDelayedTransitions(
-                entered: StateNodeSet(_snapshot!._nodes),
-                exited: StateNodeSet(),
-                snapshot: _snapshot!,
-                event: SystemEvent.`init`
-            )
-            updateChildActors(
-                entered: StateNodeSet(_snapshot!._nodes),
-                exited: StateNodeSet(),
-                snapshot: _snapshot!,
-                event: SystemEvent.`init`
-            )
-            flushMailbox()
-            system.register(self)
-            if parent == nil {
-                system.setRootIdIfNeeded(id)
-                inspectActorRegistration(snapshot: _snapshot!)
-            }
-            for action in actions where shouldInspectAction(action) {
-                inspectAction(action, event: SystemEvent.`init`)
-            }
-            inspectTransition(SystemEvent.`init`, snapshot: _snapshot!)
-            inspectIncomingEvent(SystemEvent.`init`, source: nil)
-            notify(_snapshot!, event: SystemEvent.`init`)
+    public func start(input: SendableValue? = nil, context: Context? = nil) async -> Self {
+        // Treat startup as one processing cycle (see `isProcessing`): entry-action sends to children
+        // that bounce back via `sendParent` queue and drain in order instead of reentering and
+        // clobbering the snapshot written below.
+        isProcessing = true
+        defer { isProcessing = false }
+        let resolvedInput = input ?? options.input
+        let (snapshot, actions) = initialTransition(machine, input: resolvedInput, context: context)
+        _snapshot = snapshot
+        _snapshot = await runSideEffectActions(snapshot: snapshot, actions: actions, event: SystemEvent.`init`)
+        updateDelayedTransitions(
+            entered: StateNodeSet(_snapshot!._nodes),
+            exited: StateNodeSet(),
+            snapshot: _snapshot!,
+            event: SystemEvent.`init`
+        )
+        await updateChildActors(
+            entered: StateNodeSet(_snapshot!._nodes),
+            exited: StateNodeSet(),
+            snapshot: _snapshot!,
+            event: SystemEvent.`init`
+        )
+        await drainLoop()
+        system.register(self)
+        if parent == nil {
+            system.setRootIdIfNeeded(id)
+            inspectActorRegistration(snapshot: _snapshot!)
         }
+        for action in actions where shouldInspectAction(action) {
+            inspectAction(action, event: SystemEvent.`init`)
+        }
+        inspectTransition(SystemEvent.`init`, snapshot: _snapshot!)
+        inspectIncomingEvent(SystemEvent.`init`, source: nil)
+        notify(_snapshot!, event: SystemEvent.`init`)
         return self
     }
 
     /// Stops the actor and all invoked children.
-    public func stop() {
-        queue.sync {
-            stopAllChildren()
-            system.unregister(self)
-            if var snapshot = _snapshot {
-                snapshot = MachineSnapshot(
-                    machine: snapshot.machine,
-                    value: snapshot.value,
-                    context: snapshot.context,
-                    nodes: snapshot._nodes,
-                    tags: snapshot.tags,
-                    status: .stopped,
-                    historyValue: snapshot.historyValue,
-                    output: snapshot.output,
-                    error: snapshot.error,
-                    children: [:]
-                )
-                _snapshot = snapshot
-                notify(snapshot, event: SystemEvent.stop)
-            }
+    public func stop() async {
+        await stopAllChildren()
+        system.unregister(self)
+        if var snapshot = _snapshot {
+            snapshot = MachineSnapshot(
+                machine: snapshot.machine,
+                value: snapshot.value,
+                context: snapshot.context,
+                nodes: snapshot._nodes,
+                tags: snapshot.tags,
+                status: .stopped,
+                historyValue: snapshot.historyValue,
+                output: snapshot.output,
+                error: snapshot.error,
+                children: [:]
+            )
+            _snapshot = snapshot
+            notify(snapshot, event: SystemEvent.stop)
         }
     }
 
     /// Sends an event to the actor.
-    public func send(_ event: any Eventable) {
-        queue.sync {
-            inspectIncomingEvent(event, source: nil)
-            processEvent(event)
-            flushMailbox()
-        }
+    public func send(_ event: any Eventable) async {
+        inspectIncomingEvent(event, source: nil)
+        mailbox.append(event)
+        await drain()
     }
 
-    public func enqueueFromChild(_ event: any Eventable) {
-        queue.async { [weak self] in
-            guard let self else { return }
-            self.inspectIncomingEvent(event, source: self.inspectionSource(for: event))
-            self.mailbox.append(event)
-            self.flushMailbox()
-        }
+    public func enqueueFromChild(_ event: any Eventable) async {
+        inspectIncomingEvent(event, source: inspectionSource(for: event))
+        mailbox.append(event)
+        await drain()
     }
 
-    private func flushMailbox() {
+    /// Processes the mailbox to completion, one event at a time. A reentrant call (an event enqueued
+    /// while a drain is already running) just leaves its event on the mailbox and returns — the active
+    /// loop picks it up after the current event finishes. This is what keeps run-to-completion
+    /// semantics and prevents the snapshot-clobber described on `isProcessing`.
+    private func drain() async {
+        guard !isProcessing else { return }
+        isProcessing = true
+        defer { isProcessing = false }
+        await drainLoop()
+    }
+
+    private func drainLoop() async {
         while !mailbox.isEmpty {
             let event = mailbox.removeFirst()
-            processEvent(event)
+            await processEvent(event)
         }
     }
 
-    private func processEvent(_ event: any Eventable) {
+    private func processEvent(_ event: any Eventable) async {
         guard let current = _snapshot else {
             fatalError("Actor has not been started. Call start() first.")
         }
@@ -395,7 +427,7 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
             event: event,
             isInitial: false
         )
-        _snapshot = runSideEffectActions(snapshot: nextSnapshot, actions: actions, event: event)
+        _snapshot = await runSideEffectActions(snapshot: nextSnapshot, actions: actions, event: event)
 
         for step in microsteps {
             inspectMicrostep(step.event, snapshot: step.snapshot, transitions: step.transitions)
@@ -423,7 +455,7 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
             snapshot: _snapshot!,
             event: event
         )
-        updateChildActors(
+        await updateChildActors(
             entered: entered,
             exited: exited,
             snapshot: _snapshot!,
@@ -466,10 +498,10 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
         exited: StateNodeSet<Context>,
         snapshot: MachineSnapshot<Context>,
         event: any Eventable
-    ) {
+    ) async {
         for node in exited {
             for invoke in node.invokeConfigs {
-                stopChild(id: invoke.id)
+                await stopChild(id: invoke.id)
             }
         }
 
@@ -477,7 +509,7 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
         for node in entered {
             for invoke in node.invokeConfigs {
                 let input = invoke.input?(args)
-                spawnChild(
+                if let child = makeChildActorRef(
                     from: invoke.src,
                     id: invoke.id,
                     systemId: invoke.systemId,
@@ -488,20 +520,26 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
                     implementations: machine.implementations,
                     options: ActorOptions(clock: clock),
                     persistedChild: pendingChildSnapshots[invoke.id],
-                    opaqueRestorePolicy: invoke.opaqueRestorePolicy,
-                    children: &children
-                )
+                    opaqueRestorePolicy: invoke.opaqueRestorePolicy
+                ) {
+                    children[invoke.id] = child
+                    system.register(child)
+                    if child.inspectable {
+                        inspectSpawnedChild(child, machineId: child.machineId)
+                    }
+                    await child.start()
+                }
             }
         }
 
         syncChildrenSnapshot()
     }
 
-    private func spawnFromAction(_ spawn: SpawnRef<Context>, args: ActionArgs<Context>) {
+    private func spawnFromAction(_ spawn: SpawnRef<Context>, args: ActionArgs<Context>) async {
         let childId = spawn.id ?? UUID().uuidString
         guard children[childId] == nil else { return }
         let input = spawn.input?(args)
-        spawnChild(
+        if let child = makeChildActorRef(
             from: spawn.src,
             id: childId,
             systemId: spawn.systemId,
@@ -512,9 +550,15 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
             implementations: machine.implementations,
             options: ActorOptions(clock: clock),
             persistedChild: pendingChildSnapshots[childId],
-            opaqueRestorePolicy: spawn.opaqueRestorePolicy,
-            children: &children
-        )
+            opaqueRestorePolicy: spawn.opaqueRestorePolicy
+        ) {
+            children[childId] = child
+            system.register(child)
+            if child.inspectable {
+                inspectSpawnedChild(child, machineId: child.machineId)
+            }
+            await child.start()
+        }
         syncChildrenSnapshot()
     }
 
@@ -522,29 +566,29 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
     private func restoreSpawnChildren(
         snapshot: MachineSnapshot<Context>,
         event: any Eventable
-    ) {
+    ) async {
         let args = ActionArgs(context: snapshot.context, event: event)
         for node in snapshot._nodes {
             for action in node.entry {
                 guard case let .spawn(spawn) = action else { continue }
-                spawnFromAction(spawn, args: args)
+                await spawnFromAction(spawn, args: args)
             }
         }
     }
 
-    private func stopChild(id: String) {
+    private func stopChild(id: String) async {
         guard let child = children.removeValue(forKey: id) else { return }
         stoppedChildIDs.insert(id)
         system.unregister(child)
-        child.stop()
+        await child.stop()
         syncChildrenSnapshot()
     }
 
-    private func stopAllChildren() {
+    private func stopAllChildren() async {
         stoppedChildIDs.formUnion(children.keys)
         for child in children.values {
             system.unregister(child)
-            child.stop()
+            await child.stop()
         }
         children.removeAll()
     }
@@ -582,7 +626,7 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
         cancelScheduledTimer(timerId)
 
         let handle = clock.setTimeout({ [weak self] in
-            self?.sendDelayed(Event(eventType), timerId: timerId)
+            Task { await self?.sendDelayed(Event(eventType), timerId: timerId) }
         }, delay: delay)
         scheduledTimers[timerId] = handle
     }
@@ -596,28 +640,24 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
         cancelScheduledTimer(timerId)
 
         let handle = clock.setTimeout({ [weak self] in
-            self?.sendDelayedToChild(childId: childId, event: event, timerId: timerId)
+            Task { await self?.sendDelayedToChild(childId: childId, event: event, timerId: timerId) }
         }, delay: delay)
         scheduledTimers[timerId] = handle
     }
 
-    private func sendDelayed(_ event: Event, timerId: String) {
-        queue.sync {
-            scheduledTimers.removeValue(forKey: timerId)
-            inspectIncomingEvent(event, source: nil)
-            processEvent(event)
-            flushMailbox()
-        }
+    private func sendDelayed(_ event: Event, timerId: String) async {
+        scheduledTimers.removeValue(forKey: timerId)
+        inspectIncomingEvent(event, source: nil)
+        mailbox.append(event)
+        await drain()
     }
 
-    private func sendDelayedToChild(childId: String, event: Event, timerId: String) {
-        queue.sync {
-            scheduledTimers.removeValue(forKey: timerId)
-            deliverToChild(id: childId, event: event)
-        }
+    private func sendDelayedToChild(childId: String, event: Event, timerId: String) async {
+        scheduledTimers.removeValue(forKey: timerId)
+        await deliverToChild(id: childId, event: event)
     }
 
-    private func deliverToChild(id childId: String, event: any Eventable) {
+    private func deliverToChild(id childId: String, event: any Eventable) async {
         guard let child = children[childId] else { return }
         if child.inspectable {
             emitInspection(.event(
@@ -627,7 +667,7 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
                 event: event
             ))
         }
-        child.send(event)
+        await child.send(event)
     }
 
     private func cancelScheduledTimer(_ timerId: String) {
@@ -643,7 +683,7 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
         snapshot: MachineSnapshot<Context>,
         actions: [ExecutableAction<Context>],
         event: any Eventable
-    ) -> MachineSnapshot<Context> {
+    ) async -> MachineSnapshot<Context> {
         var context = snapshot.context
         var result = snapshot
 
@@ -659,15 +699,15 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
                 notifyEmitted(resolveEmitEvent(emitAction, args: args))
             case let .spawn(spawn):
                 let args = ActionArgs(context: context, event: event)
-                spawnFromAction(spawn, args: args)
+                await spawnFromAction(spawn, args: args)
                 result = _snapshot ?? result
             case let .stopChild(target):
                 let args = ActionArgs(context: context, event: event)
-                stopChild(id: resolveChildTarget(target, args: args))
+                await stopChild(id: resolveChildTarget(target, args: args))
                 result = _snapshot ?? result
             case let .forwardTo(target):
                 let args = ActionArgs(context: context, event: event)
-                deliverToChild(id: resolveChildTarget(target, args: args), event: event)
+                await deliverToChild(id: resolveChildTarget(target, args: args), event: event)
             case let .sendTo(sendToAction):
                 let args = ActionArgs(context: context, event: event)
                 let resolved = resolveSendTo(
@@ -683,10 +723,10 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
                         timerId: resolved.id ?? "sendTo.\(resolved.childId).\(resolved.event.type)"
                     )
                 } else {
-                    deliverToChild(id: resolved.childId, event: resolved.event)
+                    await deliverToChild(id: resolved.childId, event: resolved.event)
                 }
             case let .sendParent(parentEvent):
-                parent?.enqueueFromChild(parentEvent)
+                await parent?.enqueueFromChild(parentEvent)
             case .raise:
                 if let delayedEvent = action.delayedEvent,
                    let delayMs = action.delayMs,
@@ -729,28 +769,29 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
 
     /// Observe every snapshot. The handler fires immediately with the current snapshot, then on
     /// each subsequent transition. Retain the returned `Subscription` and `cancel()` to stop.
-    public func subscribe(_ handler: @escaping (MachineSnapshot<Context>) -> Void) -> Subscription {
-        queue.sync {
-            if let snapshot = _snapshot {
-                handler(snapshot)
-            }
-            observers.append(handler)
+    public func subscribe(_ handler: @escaping @Sendable (MachineSnapshot<Context>) -> Void) -> Subscription {
+        if let snapshot = _snapshot {
+            handler(snapshot)
         }
-        let index = queue.sync { observers.count - 1 }
+        // Key the subscription by a stable id, not an array index: cancelling an earlier
+        // subscription shifts the array, so an index-based remove would drop the wrong observer.
+        let id = nextObserverID
+        nextObserverID += 1
+        observers.append((id: id, handler: handler))
 
         return Subscription { [weak self] in
-            self?.queue.sync {
-                if index < self?.observers.count ?? 0 {
-                    self?.observers.remove(at: index)
-                }
-            }
+            Task { await self?.removeObserver(id: id) }
         }
+    }
+
+    private func removeObserver(id: Int) {
+        observers.removeAll { $0.id == id }
     }
 
     private func notify(_ snapshot: MachineSnapshot<Context>, event: any Eventable) {
         inspectSnapshot(event, snapshot: snapshot)
         for observer in observers {
-            observer(snapshot)
+            observer.handler(snapshot)
         }
     }
 
@@ -768,7 +809,7 @@ public final class Actor<Context: Sendable>: @unchecked Sendable, ActorParentRef
     }
 
     func childActor(id: String) -> (any ChildActorRef)? {
-        queue.sync { children[id] }
+        children[id]
     }
 }
 
@@ -792,6 +833,21 @@ public func createActor<Context: Sendable>(
     return Actor(machine, id: id, options: resolvedOptions)
 }
 
+/// Creates an actor branded with a compile-time state family `Brand`, returning a `TypedActor`
+/// whose `snapshot` / `start` / `send` yield `Brand`-typed `TypedSnapshot`s (`inState(_:)` /
+/// `narrowed(to:)`). Brand at creation instead of the post-hoc `createActor(machine).typed(as:)`
+/// two-step; otherwise identical to `createActor(_:)`.
+public func createActor<Context: Sendable, Brand: StateID>(
+    _ machine: StateMachine<Context>,
+    as _: Brand.Type,
+    id: String? = nil,
+    options: ActorOptions = ActorOptions(),
+    input: SendableValue? = nil,
+    inspect: (@Sendable (InspectionEvent) -> Void)? = nil
+) -> TypedActor<Context, Brand> {
+    TypedActor(createActor(machine, id: id, options: options, input: input, inspect: inspect))
+}
+
 /// Creates an actor and hydrates it from a persisted snapshot in one step.
 ///
 /// The returned actor is already started — equivalent to
@@ -804,14 +860,37 @@ public func createActor<Context: Codable & Sendable>(
     options: ActorOptions = ActorOptions(),
     context: Context? = nil,
     inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) -> Actor<Context> {
+) async -> Actor<Context> {
     var resolvedOptions = options
     if let inspect {
         resolvedOptions.inspect = inspect
     }
     let actor = Actor(machine, id: id, options: resolvedOptions)
-    actor.start(from: snapshot, context: context)
+    await actor.start(from: snapshot, context: context)
     return actor
+}
+
+/// Brand-tagged variant of `createActor(_:snapshot:)`; the hydrated actor is wrapped in a
+/// `Brand`-typed `TypedActor`.
+public func createActor<Context: Codable & Sendable, Brand: StateID>(
+    _ machine: StateMachine<Context>,
+    as _: Brand.Type,
+    snapshot: PersistedSnapshot,
+    id: String? = nil,
+    options: ActorOptions = ActorOptions(),
+    context: Context? = nil,
+    inspect: (@Sendable (InspectionEvent) -> Void)? = nil
+) async -> TypedActor<Context, Brand> {
+    TypedActor(
+        await createActor(
+            machine,
+            snapshot: snapshot,
+            id: id,
+            options: options,
+            context: context,
+            inspect: inspect
+        )
+    )
 }
 
 /// Creates an actor with typed `input` (any `Sendable & Equatable`), wrapped into the machine's
@@ -830,6 +909,18 @@ public func createActor<Context: Sendable, Input: Sendable & Equatable>(
         input: SendableValue(input),
         inspect: inspect
     )
+}
+
+/// Brand-tagged variant of `createActor(_:input:)`.
+public func createActor<Context: Sendable, Input: Sendable & Equatable, Brand: StateID>(
+    _ machine: StateMachine<Context>,
+    as _: Brand.Type,
+    input: Input,
+    id: String? = nil,
+    options: ActorOptions = ActorOptions(),
+    inspect: (@Sendable (InspectionEvent) -> Void)? = nil
+) -> TypedActor<Context, Brand> {
+    TypedActor(createActor(machine, input: input, id: id, options: options, inspect: inspect))
 }
 
 /// A handle returned by `Actor.subscribe(_:)`. Call `cancel()` to stop receiving snapshots.

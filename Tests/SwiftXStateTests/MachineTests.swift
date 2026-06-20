@@ -48,30 +48,30 @@ struct MachineTests {
     }
 
     @Test("transitions through states")
-    func transitions() {
-        let actor = createActor(lightMachine).start()
+    func transitions() async {
+        let actor = await createActor(lightMachine).start()
 
-        #expect(actor.snapshot.matches("green"))
+        #expect(await actor.snapshot.matches("green"))
 
-        actor.send(Event("TIMER"))
-        #expect(actor.snapshot.matches("yellow"))
+        await actor.send(Event("TIMER"))
+        #expect(await actor.snapshot.matches("yellow"))
 
-        actor.send(Event("TIMER"))
-        #expect(actor.snapshot.matches("red"))
+        await actor.send(Event("TIMER"))
+        #expect(await actor.snapshot.matches("red"))
 
-        actor.send(Event("TIMER"))
-        #expect(actor.snapshot.matches("green"))
+        await actor.send(Event("TIMER"))
+        #expect(await actor.snapshot.matches("green"))
     }
 
     @Test("nested states")
-    func nestedStates() {
-        let actor = createActor(lightMachine).start()
+    func nestedStates() async {
+        let actor = await createActor(lightMachine).start()
 
-        actor.send(Event("TIMER"))
-        actor.send(Event("TIMER"))
-        #expect(actor.snapshot.matches("red"))
+        await actor.send(Event("TIMER"))
+        await actor.send(Event("TIMER"))
+        #expect(await actor.snapshot.matches("red"))
 
-        actor.send(Event("PED_COUNTDOWN"))
-        #expect(actor.snapshot.matches(StateValue.compound(["red": .atomic("wait")])))
+        await actor.send(Event("PED_COUNTDOWN"))
+        #expect(await actor.snapshot.matches(StateValue.compound(["red": .atomic("wait")])))
     }
 }

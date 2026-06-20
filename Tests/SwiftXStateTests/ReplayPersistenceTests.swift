@@ -24,15 +24,15 @@ struct ReplayPersistenceTests {
         ))
     }
 
-    private func recordSession() -> ReplaySession {
+    private func recordSession() async -> ReplaySession {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = await createActor(
             counterMachine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: ReplayPersistContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        await actor.send(Event("INC"))
+        await actor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             fatalError("Expected recorded session")
@@ -41,8 +41,8 @@ struct ReplayPersistenceTests {
     }
 
     @Test("ReplaySession survives JSON encode and decode")
-    func jsonRoundTrip() throws {
-        let session = recordSession()
+    func jsonRoundTrip() async throws {
+        let session = await recordSession()
         let data = try session.encodeJSON()
         let decoded = try ReplaySession.decodeJSON(data)
 
@@ -55,8 +55,8 @@ struct ReplayPersistenceTests {
     }
 
     @Test("decoded session still verifies with pure replay")
-    func verifyAfterDecode() throws {
-        let session = recordSession()
+    func verifyAfterDecode() async throws {
+        let session = await recordSession()
         let decoded = try ReplaySession.decodeJSON(try session.encodeJSON())
 
         let verifications = verifyReplay(

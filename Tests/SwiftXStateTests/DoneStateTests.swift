@@ -8,7 +8,7 @@ private struct WorkflowContext: Sendable, Equatable {
 @Suite("xstate.done.state")
 struct DoneStateTests {
     @Test("nested final raises done.state and parent onDone transitions")
-    func nestedFinalOnDone() {
+    func nestedFinalOnDone() async {
         let machine = createMachine(MachineConfig(
             id: "workflow",
             initial: "running",
@@ -46,17 +46,17 @@ struct DoneStateTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("NEXT"))
-        actor.send(Event("DONE"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("NEXT"))
+        await actor.send(Event("DONE"))
 
-        #expect(actor.snapshot.status == .active)
-        #expect(actor.snapshot.matches("running.finished"))
-        #expect(actor.snapshot.context.result == "ok")
+        #expect(await actor.snapshot.status == .active)
+        #expect(await actor.snapshot.matches("running.finished"))
+        #expect(await actor.snapshot.context.result == "ok")
     }
 
     @Test("parallel regions complete before parallel onDone fires")
-    func parallelOnDone() {
+    func parallelOnDone() async {
         let machine = createMachine(MachineConfig(
             id: "parallel-workflow",
             initial: "work",
@@ -86,18 +86,18 @@ struct DoneStateTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("FOO_DONE"))
-        #expect(actor.snapshot.matches("work"))
-        #expect(actor.snapshot.status == .active)
+        let actor = await createActor(machine).start()
+        await actor.send(Event("FOO_DONE"))
+        #expect(await actor.snapshot.matches("work"))
+        #expect(await actor.snapshot.status == .active)
 
-        actor.send(Event("BAR_DONE"))
-        #expect(actor.snapshot.matches("completed"))
-        #expect(actor.snapshot.status == .done)
+        await actor.send(Event("BAR_DONE"))
+        #expect(await actor.snapshot.matches("completed"))
+        #expect(await actor.snapshot.status == .done)
     }
 
     @Test("top-level final completes machine with output")
-    func topLevelFinalOutput() {
+    func topLevelFinalOutput() async {
         let machine = createMachine(MachineConfig(
             initial: "go",
             context: EmptyContext(),
@@ -110,15 +110,15 @@ struct DoneStateTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("FINISH"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("FINISH"))
 
-        #expect(actor.snapshot.status == .done)
-        #expect(actor.snapshot.output?.get(Int.self) == 42)
+        #expect(await actor.snapshot.status == .done)
+        #expect(await actor.snapshot.output?.get(Int.self) == 42)
     }
 
     @Test("machine output resolver receives done.state event")
-    func rootOutputFromDoneStateEvent() {
+    func rootOutputFromDoneStateEvent() async {
         let machine = createMachine(MachineConfig(
             id: "root-output",
             initial: "go",
@@ -133,10 +133,10 @@ struct DoneStateTests {
             }
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("FINISH"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("FINISH"))
 
-        #expect(actor.snapshot.status == .done)
-        #expect(actor.snapshot.output?.get(String.self) == "root-output.done")
+        #expect(await actor.snapshot.status == .done)
+        #expect(await actor.snapshot.output?.get(String.self) == "root-output.done")
     }
 }

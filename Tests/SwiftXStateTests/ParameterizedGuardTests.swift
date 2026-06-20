@@ -32,7 +32,7 @@ private struct MarkGuard: ActionSpec {
 @Suite("Parameterized guards and actions")
 struct ParameterizedGuardTests {
     @Test("typed guardRef selects transition using registered params")
-    func typedGuardRef() {
+    func typedGuardRef() async {
         let machine = setup()
             .registerGuard(MinAmountGuard.self) { args, params in
                 args.context.value >= params.min
@@ -55,17 +55,17 @@ struct ParameterizedGuardTests {
                 ]
             ))
 
-        let low = createActor(machine).start(context: ThresholdContext(value: 5))
-        low.send(Event("CHECK"))
-        #expect(low.snapshot.matches("rejected"))
+        let low = await createActor(machine).start(context: ThresholdContext(value: 5))
+        await low.send(Event("CHECK"))
+        #expect(await low.snapshot.matches("rejected"))
 
-        let high = createActor(machine).start(context: ThresholdContext(value: 25))
-        high.send(Event("CHECK"))
-        #expect(high.snapshot.matches("approved"))
+        let high = await createActor(machine).start(context: ThresholdContext(value: 25))
+        await high.send(Event("CHECK"))
+        #expect(await high.snapshot.matches("approved"))
     }
 
     @Test("dynamicGuard supports XState-style params objects")
-    func dynamicGuard() {
+    func dynamicGuard() async {
         let machine = MachineSetup(
             guards: [
                 "minAmount": { args, box in
@@ -93,13 +93,13 @@ struct ParameterizedGuardTests {
             ]
         ))
 
-        let actor = createActor(machine).start(context: ThresholdContext(value: 12))
-        actor.send(Event("CHECK"))
-        #expect(actor.snapshot.matches("approved"))
+        let actor = await createActor(machine).start(context: ThresholdContext(value: 12))
+        await actor.send(Event("CHECK"))
+        #expect(await actor.snapshot.matches("approved"))
     }
 
     @Test("registerAction runs with typed params")
-    func typedActionRef() {
+    func typedActionRef() async {
         final class Box: @unchecked Sendable {
             var labels: [String] = []
         }
@@ -123,14 +123,14 @@ struct ParameterizedGuardTests {
                 ]
             ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("GO"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("GO"))
         #expect(box.labels == ["ok"])
-        #expect(actor.snapshot.matches("done"))
+        #expect(await actor.snapshot.matches("done"))
     }
 
     @Test("composite guards compose with parameterized refs")
-    func compositeParameterizedGuard() {
+    func compositeParameterizedGuard() async {
         let machine = setup()
             .registerGuard(MinAmountGuard.self) { args, params in
                 args.context.value >= params.min
@@ -152,9 +152,9 @@ struct ParameterizedGuardTests {
                 ]
             ))
 
-        let actor = createActor(machine).start(context: ThresholdContext(value: 12))
-        actor.send(Event("CHECK"))
-        #expect(actor.snapshot.matches("approved"))
+        let actor = await createActor(machine).start(context: ThresholdContext(value: 12))
+        await actor.send(Event("CHECK"))
+        #expect(await actor.snapshot.matches("approved"))
     }
 
     @Test("definition JSON exports parameterized guard shape")

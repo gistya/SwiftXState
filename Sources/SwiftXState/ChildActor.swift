@@ -1,16 +1,42 @@
 import Foundation
 
+/// Serializes a child's deliveries to its parent. Each delivery awaits the previous one, so the
+/// events a child sends keep their order — and, crucially, a `DoneActorEvent`/`ErrorActorEvent`
+/// enqueued right after the child's work finishes lands *after* any event the work sent just before
+/// returning. (Without this, the deliveries are detached tasks that race, so the parent can transition
+/// on the done event before it ever processes the earlier `sendToParent`.)
+final class ParentDeliveryChain: @unchecked Sendable {
+    private let lock = NSLock()
+    private var tail: Task<Void, Never>?
+
+    func deliver(to parent: (any ActorParentRef)?, _ event: any Eventable) {
+        lock.lock()
+        let previous = tail
+        tail = Task { [weak parent] in
+            await previous?.value
+            await parent?.enqueueFromChild(event)
+        }
+        lock.unlock()
+    }
+
+    /// Waits until everything queued so far has been enqueued to the parent.
+    func drain() async {
+        let task = lock.withLock { tail }
+        await task?.value
+    }
+}
+
 protocol PersistedChildSnapshotProviding {
-    func makePersistedChildSnapshot() throws -> PersistedChildSnapshot?
+    func makePersistedChildSnapshot() async throws -> PersistedChildSnapshot?
 }
 
 func collectPersistedChildSnapshots(
     from children: [String: any ChildActorRef]
-) throws -> [String: PersistedChildSnapshot] {
+) async throws -> [String: PersistedChildSnapshot] {
     var result: [String: PersistedChildSnapshot] = [:]
     for (id, child) in children {
         guard let provider = child as? any PersistedChildSnapshotProviding else { continue }
-        if let snapshot = try provider.makePersistedChildSnapshot() {
+        if let snapshot = try await provider.makePersistedChildSnapshot() {
             result[id] = snapshot
         }
     }
@@ -21,32 +47,36 @@ final class MachineChildRef<ChildContext: Sendable>: ChildActorRef, @unchecked S
     let actor: Actor<ChildContext>
     private weak var parent: (any ActorParentRef)?
     private var subscription: Subscription?
+    private var lastSnapshot: MachineSnapshot<ChildContext>?
     private var doneSent = false
     private let initialContext: ChildContext
     private let syncSnapshot: Bool
     private let persistedRestore: PersistedSnapshot?
-    private let onRestore: (@Sendable (PersistedSnapshot) -> Void)?
+    private let onRestore: (@Sendable (PersistedSnapshot) async -> Void)?
 
-    var id: String { actor.id }
-    var systemId: String? { actor.systemId }
+    let id: String
+    let systemId: String?
     var inspectable: Bool { actor.isInspectable }
     var machineId: String? { actor.machine.id }
     var definitionJSON: String? { try? actor.machine.definitionJSON() }
-    var snapshotValue: String? { actor.snapshot.value.description }
+    var snapshotValue: String? { lastSnapshot?.value.description }
 
     var status: SnapshotStatus {
-        actor.status
+        lastSnapshot?.status ?? .stopped
     }
 
     init(
         actor: Actor<ChildContext>,
+        systemId: String?,
         parent: any ActorParentRef,
         context: ChildContext,
         syncSnapshot: Bool = false,
         persistedRestore: PersistedSnapshot? = nil,
-        onRestore: (@Sendable (PersistedSnapshot) -> Void)? = nil
+        onRestore: (@Sendable (PersistedSnapshot) async -> Void)? = nil
     ) {
         self.actor = actor
+        self.id = actor.id
+        self.systemId = systemId
         self.parent = parent
         self.initialContext = context
         self.syncSnapshot = syncSnapshot
@@ -54,63 +84,71 @@ final class MachineChildRef<ChildContext: Sendable>: ChildActorRef, @unchecked S
         self.onRestore = onRestore
     }
 
-    func start() {
+    func start() async {
         if let persistedRestore, let onRestore {
-            onRestore(persistedRestore)
+            await onRestore(persistedRestore)
             if persistedRestore.status == .done {
                 doneSent = true
             }
         } else {
-            actor.start(context: initialContext)
+            await actor.start(context: initialContext)
         }
-        subscription = actor.subscribe { [weak self] snapshot in
+        lastSnapshot = await actor.snapshot
+        subscription = await actor.subscribe { [weak self] snapshot in
             guard let self else { return }
+            lastSnapshot = snapshot
 
             if syncSnapshot, snapshot.status == .active {
-                parent?.enqueueFromChild(
-                    SnapshotActorEvent(
-                        actorId: id,
-                        snapshot: ChildActorSnapshot(
-                            id: id,
-                            status: snapshot.status,
-                            value: snapshot.value.description
+                Task { [weak parent] in
+                    await parent?.enqueueFromChild(
+                        SnapshotActorEvent(
+                            actorId: id,
+                            snapshot: ChildActorSnapshot(
+                                id: id,
+                                status: snapshot.status,
+                                value: snapshot.value.description
+                            )
                         )
                     )
-                )
+                }
             }
 
             guard !doneSent, snapshot.status == .done else { return }
             doneSent = true
-            parent?.enqueueFromChild(
-                DoneActorEvent(
-                    actorId: id,
-                    output: snapshot.output
+            Task { [weak parent] in
+                await parent?.enqueueFromChild(
+                    DoneActorEvent(
+                        actorId: id,
+                        output: snapshot.output
+                    )
                 )
-            )
+            }
         }
     }
 
-    func stop() {
+    func stop() async {
         subscription?.cancel()
         subscription = nil
-        actor.stop()
+        await actor.stop()
+        lastSnapshot = await actor.status == .stopped ? lastSnapshot : await actor.snapshot
     }
 
-    func send(_ event: any Eventable) {
-        actor.send(event)
+    func send(_ event: any Eventable) async {
+        await actor.send(event)
+        lastSnapshot = await actor.snapshot
     }
 
     func on(
         _ eventType: String,
         handler: @escaping @Sendable (EmittedEvent) -> Void
-    ) -> Subscription {
-        actor.on(eventType, handler: handler)
+    ) async -> Subscription {
+        await actor.on(eventType, handler: handler)
     }
 }
 
 extension MachineChildRef: PersistedChildSnapshotProviding where ChildContext: Codable {
-    func makePersistedChildSnapshot() throws -> PersistedChildSnapshot? {
-        .machine(try actor.getPersistedSnapshot())
+    func makePersistedChildSnapshot() async throws -> PersistedChildSnapshot? {
+        .machine(try await actor.getPersistedSnapshot())
     }
 }
 
@@ -121,6 +159,7 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
     private let logic: TaskActorLogic<Output>
     private let input: SendableValue?
     private let emitListeners = EmitListeners()
+    private let parentDeliveries = ParentDeliveryChain()
     private var task: Task<Void, Never>?
     private var cleanup: AsyncCancelCleanup?
     private(set) var status: SnapshotStatus = .stopped
@@ -143,7 +182,7 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
         self.logic = logic
     }
 
-    func start() {
+    func start() async {
         guard task == nil else { return }
         status = .active
         lastError = nil
@@ -162,9 +201,10 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
                 )
                 guard !Task.isCancelled else { return }
                 status = .done
-                parent?.enqueueFromChild(
-                    DoneActorEvent(actorId: id, output: SendableValue(output))
-                )
+                // Deliver done on the same chain as `sendToParent`, so an event the task sent just
+                // before returning is enqueued (and processed) ahead of this done event.
+                parentDeliveries.deliver(to: parent, DoneActorEvent(actorId: id, output: SendableValue(output)))
+                await parentDeliveries.drain()
             } catch is CancellationError {
                 return
             } catch {
@@ -172,14 +212,13 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
                 let message = String(describing: error)
                 status = .error
                 lastError = message
-                parent?.enqueueFromChild(
-                    ErrorActorEvent(actorId: id, error: message)
-                )
+                parentDeliveries.deliver(to: parent, ErrorActorEvent(actorId: id, error: message))
+                await parentDeliveries.drain()
             }
         }
     }
 
-    func stop() {
+    func stop() async {
         task?.cancel()
         cleanup?.schedule()
         task = nil
@@ -193,7 +232,8 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
         TaskActorScope(
             input: input,
             sendToParent: { [weak self] event in
-                self?.parent?.enqueueFromChild(event)
+                guard let self else { return }
+                self.parentDeliveries.deliver(to: self.parent, event)
             },
             emit: { [emitListeners] event in
                 emitListeners.notify(event)
@@ -201,18 +241,18 @@ final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecke
         )
     }
 
-    func send(_: any Eventable) {}
+    func send(_: any Eventable) async {}
 
     func on(
         _ eventType: String,
         handler: @escaping @Sendable (EmittedEvent) -> Void
-    ) -> Subscription {
+    ) async -> Subscription {
         emitListeners.on(eventType, handler: handler)
     }
 }
 
 extension TaskChildRef: PersistedChildSnapshotProviding {
-    func makePersistedChildSnapshot() throws -> PersistedChildSnapshot? {
+    func makePersistedChildSnapshot() async throws -> PersistedChildSnapshot? {
         guard status != .stopped else { return nil }
         return .opaque(
             PersistedOpaqueChildSnapshot(status: status, error: lastError)
@@ -228,6 +268,7 @@ final class CallbackChildRef: ChildActorRef, @unchecked Sendable {
     private let input: SendableValue?
     private let system: ActorSystem
     private let emitListeners = EmitListeners()
+    private let parentDeliveries = ParentDeliveryChain()
     private var receivers: [@Sendable (any Eventable) -> Void] = []
     private var dispose: (@Sendable () -> Void)?
     private let lock = NSLock()
@@ -250,19 +291,20 @@ final class CallbackChildRef: ChildActorRef, @unchecked Sendable {
         self.system = system
     }
 
-    func start() {
+    func start() async {
         guard dispose == nil else { return }
         status = .active
 
         let scope = CallbackActorScope(
             input: input,
             sendToParent: { [weak self] event in
-                self?.parent?.enqueueFromChild(event)
+                guard let self else { return }
+                self.parentDeliveries.deliver(to: self.parent, event)
             },
             receive: { [weak self] listener in
-                self?.lock.lock()
-                self?.receivers.append(listener)
-                self?.lock.unlock()
+                self?.lock.withLock {
+                    self?.receivers.append(listener)
+                }
             },
             emit: { [emitListeners] event in
                 emitListeners.notify(event)
@@ -273,20 +315,20 @@ final class CallbackChildRef: ChildActorRef, @unchecked Sendable {
         dispose = logic.run(scope)
     }
 
-    func stop() {
+    func stop() async {
         dispose?()
         dispose = nil
-        lock.lock()
-        receivers.removeAll()
-        lock.unlock()
+        lock.withLock {
+            receivers.removeAll()
+        }
         status = .stopped
         emitListeners.removeAll()
     }
 
-    func send(_ event: any Eventable) {
-        lock.lock()
-        let listeners = receivers
-        lock.unlock()
+    func send(_ event: any Eventable) async {
+        let listeners = lock.withLock {
+            receivers
+        }
         for listener in listeners {
             listener(event)
         }
@@ -295,13 +337,13 @@ final class CallbackChildRef: ChildActorRef, @unchecked Sendable {
     func on(
         _ eventType: String,
         handler: @escaping @Sendable (EmittedEvent) -> Void
-    ) -> Subscription {
+    ) async -> Subscription {
         emitListeners.on(eventType, handler: handler)
     }
 }
 
 extension CallbackChildRef: PersistedChildSnapshotProviding {
-    func makePersistedChildSnapshot() throws -> PersistedChildSnapshot? {
+    func makePersistedChildSnapshot() async throws -> PersistedChildSnapshot? {
         guard status != .stopped else { return nil }
         return .opaque(PersistedOpaqueChildSnapshot(status: status))
     }
@@ -314,6 +356,7 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unc
     private let logic: TaskGroupActorLogic<Output>
     private let input: SendableValue?
     private let emitListeners = EmitListeners()
+    private let parentDeliveries = ParentDeliveryChain()
     private var task: Task<Void, Never>?
     private var cleanup: AsyncCancelCleanup?
     private(set) var status: SnapshotStatus = .stopped
@@ -336,7 +379,7 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unc
         self.logic = logic
     }
 
-    func start() {
+    func start() async {
         guard task == nil else { return }
         status = .active
         lastError = nil
@@ -355,9 +398,8 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unc
                 )
                 guard !Task.isCancelled else { return }
                 status = .done
-                parent?.enqueueFromChild(
-                    DoneActorEvent(actorId: id, output: SendableValue(outputs))
-                )
+                parentDeliveries.deliver(to: parent, DoneActorEvent(actorId: id, output: SendableValue(outputs)))
+                await parentDeliveries.drain()
             } catch is CancellationError {
                 return
             } catch {
@@ -365,14 +407,13 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unc
                 let message = String(describing: error)
                 status = .error
                 lastError = message
-                parent?.enqueueFromChild(
-                    ErrorActorEvent(actorId: id, error: message)
-                )
+                parentDeliveries.deliver(to: parent, ErrorActorEvent(actorId: id, error: message))
+                await parentDeliveries.drain()
             }
         }
     }
 
-    func stop() {
+    func stop() async {
         task?.cancel()
         cleanup?.schedule()
         task = nil
@@ -386,7 +427,8 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unc
         TaskGroupScope(
             input: input,
             sendToParent: { [weak self] event in
-                self?.parent?.enqueueFromChild(event)
+                guard let self else { return }
+                self.parentDeliveries.deliver(to: self.parent, event)
             },
             emit: { [emitListeners] event in
                 emitListeners.notify(event)
@@ -394,18 +436,18 @@ final class TaskGroupChildRef<Output: Sendable & Equatable>: ChildActorRef, @unc
         )
     }
 
-    func send(_: any Eventable) {}
+    func send(_: any Eventable) async {}
 
     func on(
         _ eventType: String,
         handler: @escaping @Sendable (EmittedEvent) -> Void
-    ) -> Subscription {
+    ) async -> Subscription {
         emitListeners.on(eventType, handler: handler)
     }
 }
 
 extension TaskGroupChildRef: PersistedChildSnapshotProviding {
-    func makePersistedChildSnapshot() throws -> PersistedChildSnapshot? {
+    func makePersistedChildSnapshot() async throws -> PersistedChildSnapshot? {
         guard status != .stopped else { return nil }
         return .opaque(
             PersistedOpaqueChildSnapshot(status: status, error: lastError)

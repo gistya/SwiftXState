@@ -4,7 +4,7 @@ import Testing
 @Suite("State meta")
 struct StateMetaTests {
     @Test("getMeta returns meta for the active atomic state")
-    func activeStateMeta() {
+    func activeStateMeta() async {
         let machine = createMachine(MachineConfig(
             id: "traffic",
             initial: "green",
@@ -16,15 +16,15 @@ struct StateMetaTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        let meta = actor.snapshot.getMeta()
+        let actor = await createActor(machine).start()
+        let meta = await actor.snapshot.getMeta()
 
         #expect(meta.count == 1)
         #expect(meta["traffic.green"]?["color"]?.get(String.self) == "green")
     }
 
     @Test("getMeta updates after transition")
-    func metaAfterTransition() {
+    func metaAfterTransition() async {
         let machine = createMachine(MachineConfig(
             id: "traffic",
             initial: "green",
@@ -38,16 +38,16 @@ struct StateMetaTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        actor.send(Event("NEXT"))
+        let actor = await createActor(machine).start()
+        await actor.send(Event("NEXT"))
 
-        let meta = actor.snapshot.getMeta()
+        let meta = await actor.snapshot.getMeta()
         #expect(meta.count == 1)
         #expect(meta["traffic.yellow"]?["color"]?.get(String.self) == "yellow")
     }
 
     @Test("getMeta merges parallel region metas")
-    func parallelRegionMeta() {
+    func parallelRegionMeta() async {
         let machine = createMachine(MachineConfig(
             id: "app",
             context: EmptyContext(),
@@ -58,8 +58,8 @@ struct StateMetaTests {
             type: .parallel
         ))
 
-        let actor = createActor(machine).start()
-        let meta = actor.snapshot.getMeta()
+        let actor = await createActor(machine).start()
+        let meta = await actor.snapshot.getMeta()
 
         #expect(meta.count == 2)
         #expect(meta["app.walk"]?["signal"]?.get(String.self) == "walk")
@@ -67,7 +67,7 @@ struct StateMetaTests {
     }
 
     @Test("getMeta includes ancestor compound state meta")
-    func nestedStateMeta() {
+    func nestedStateMeta() async {
         let machine = createMachine(MachineConfig(
             id: "traffic",
             initial: "light",
@@ -84,8 +84,8 @@ struct StateMetaTests {
             ]
         ))
 
-        let actor = createActor(machine).start()
-        let meta = actor.snapshot.getMeta()
+        let actor = await createActor(machine).start()
+        let meta = await actor.snapshot.getMeta()
 
         #expect(meta.count == 2)
         #expect(meta["traffic.light"]?["scope"]?.get(String.self) == "light")

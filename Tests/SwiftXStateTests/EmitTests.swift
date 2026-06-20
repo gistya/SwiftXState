@@ -44,7 +44,7 @@ struct EmitTests {
     }
 
     @Test("actor.on receives statically emitted events")
-    func staticEmit() {
+    func staticEmit() async {
         let machine = createMachine(MachineConfig(
             initial: "idle",
             context: EmitContext(message: ""),
@@ -58,10 +58,10 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createActor(machine).start()
-        _ = actor.on("notification") { collector.append($0) }
+        let actor = await createActor(machine).start()
+        _ = await actor.on("notification") { collector.append($0) }
 
-        actor.send(Event("GO"))
+        await actor.send(Event("GO"))
 
         let recorded = collector.recorded()
         #expect(recorded.count == 1)
@@ -70,7 +70,7 @@ struct EmitTests {
     }
 
     @Test("actor.on wildcard receives all emitted events")
-    func wildcardEmit() {
+    func wildcardEmit() async {
         let machine = createMachine(MachineConfig(
             initial: "idle",
             context: EmitContext(message: ""),
@@ -85,16 +85,16 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createActor(machine).start()
-        _ = actor.on("*") { collector.append($0) }
+        let actor = await createActor(machine).start()
+        _ = await actor.on("*") { collector.append($0) }
 
-        actor.send(Event("GO"))
+        await actor.send(Event("GO"))
 
         #expect(collector.recorded().map(\.type) == ["first", "second"])
     }
 
     @Test("emit expression resolves from context")
-    func dynamicEmit() {
+    func dynamicEmit() async {
         let machine = createMachine(MachineConfig(
             initial: "idle",
             context: EmitContext(message: "dynamic"),
@@ -114,16 +114,16 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createActor(machine).start()
-        _ = actor.on("notification") { collector.append($0) }
+        let actor = await createActor(machine).start()
+        _ = await actor.on("notification") { collector.append($0) }
 
-        actor.send(Event("GO"))
+        await actor.send(Event("GO"))
 
         #expect(collector.recorded().first?.get("message", as: String.self) == "dynamic")
     }
 
     @Test("on subscription unsubscribe stops delivery")
-    func unsubscribe() {
+    func unsubscribe() async {
         let machine = createMachine(MachineConfig(
             initial: "idle",
             context: EmitContext(message: ""),
@@ -135,12 +135,12 @@ struct EmitTests {
         ))
 
         let collector = EmittedEventCollector()
-        let actor = createActor(machine).start()
-        let subscription = actor.on("ping") { collector.append($0) }
+        let actor = await createActor(machine).start()
+        let subscription = await actor.on("ping") { collector.append($0) }
 
-        actor.send(Event("GO"))
+        await actor.send(Event("GO"))
         subscription.cancel()
-        actor.send(Event("GO"))
+        await actor.send(Event("GO"))
 
         #expect(collector.recorded().count == 1)
     }
@@ -170,8 +170,8 @@ struct EmitTests {
 
         let collector = EmittedEventCollector()
         let received = TestSignal()
-        let actor = createActor(parentMachine).start()
-        _ = actor.childActor(id: "worker")?.on("progress") {
+        let actor = await createActor(parentMachine).start()
+        _ = await actor.childActor(id: "worker")?.on("progress") {
             collector.append($0)
             received.fire()
         }
@@ -207,13 +207,13 @@ struct EmitTests {
 
         let collector = EmittedEventCollector()
         let received = TestSignal()
-        let actor = createActor(parentMachine).start()
-        _ = actor.childActor(id: "listener")?.on("armed") {
+        let actor = await createActor(parentMachine).start()
+        _ = await actor.childActor(id: "listener")?.on("armed") {
             collector.append($0)
             received.fire()
         }
 
-        actor.childActor(id: "listener")?.send(Event("ARM"))
+        await actor.childActor(id: "listener")?.send(Event("ARM"))
         await received.wait()
 
         #expect(collector.recorded().map(\.type) == ["armed"])
@@ -247,8 +247,8 @@ struct EmitTests {
 
         let collector = EmittedEventCollector()
         let received = TestSignal()
-        let actor = createActor(parentMachine).start()
-        _ = actor.childActor(id: "group")?.on("progress") {
+        let actor = await createActor(parentMachine).start()
+        _ = await actor.childActor(id: "group")?.on("progress") {
             collector.append($0)
             received.fire()
         }
@@ -259,7 +259,7 @@ struct EmitTests {
     }
 
     @Test("emit emits inspection action events from actors")
-    func inspectionAction() {
+    func inspectionAction() async {
         let collector = InspectionCollector()
         let machine = createMachine(MachineConfig(
             initial: "idle",
@@ -271,7 +271,7 @@ struct EmitTests {
             ]
         ))
 
-        createActor(machine, options: ActorOptions(inspect: collector.observe())).start().send(Event("GO"))
+        await createActor(machine, options: ActorOptions(inspect: collector.observe())).start().send(Event("GO"))
 
         #expect(collector.recordedEvents().contains { $0.kind == .action && $0.actionType == "xstate.emit" })
     }

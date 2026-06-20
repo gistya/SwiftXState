@@ -2,6 +2,14 @@
 import SwiftUI
 import SwiftXState
 
+private final class WeakMachineDriverBox<Object: AnyObject>: @unchecked Sendable {
+    weak var object: Object?
+
+    init(_ object: Object) {
+        self.object = object
+    }
+}
+
 /// Observable wrapper that drives a state machine actor in SwiftUI views.
 /// Mirrors XState React's `useMachine()`.
 @MainActor
@@ -10,19 +18,38 @@ public final class MachineDriver<Context: Sendable> {
     public private(set) var snapshot: MachineSnapshot<Context>
     public let actor: Actor<Context>
 
+    @ObservationIgnored private var subscription: Subscription?
+
     public init(_ machine: StateMachine<Context>, input: SendableValue? = nil) {
         self.actor = createActor(machine, input: input)
-        self.snapshot = actor.start().snapshot
-        _ = actor.subscribe { [weak self] snapshot in
-            Task { @MainActor in
-                self?.snapshot = snapshot
+        self.snapshot = initialTransition(machine, input: input).snapshot
+
+        let box = WeakMachineDriverBox(self)
+        Task { [box, actor, input] in
+            await actor.start(input: input)
+            let subscription = await actor.subscribe { snapshot in
+                Task { @MainActor [box] in
+                    box.object?.snapshot = snapshot
+                }
+            }
+            await MainActor.run { [box] in
+                box.object?.subscription = subscription
             }
         }
     }
 
+    deinit {
+        subscription?.cancel()
+    }
+
     public func send(_ event: any Eventable) {
-        actor.send(event)
-        snapshot = actor.snapshot
+        Task { [weak self, actor] in
+            await actor.send(event)
+            let snapshot = await actor.snapshot
+            await MainActor.run {
+                self?.snapshot = snapshot
+            }
+        }
     }
 }
 

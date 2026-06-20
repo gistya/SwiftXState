@@ -37,15 +37,15 @@ struct ReplaySwiftDataTests {
         return ReplayPersistenceStore(modelContext: ModelContext(container))
     }
 
-    private func recordSession() -> (InspectionRecorder, ReplaySession) {
+    private func recordSession() async -> (InspectionRecorder, ReplaySession) {
         let recorder = InspectionRecorder()
-        let actor = createActor(
+        let actor = await createActor(
             counterMachine,
             options: ActorOptions(inspect: recorder.observe())
         ).start(context: ReplayPersistContext(count: 0))
 
-        actor.send(Event("INC"))
-        actor.send(Event("GO"))
+        await actor.send(Event("INC"))
+        await actor.send(Event("GO"))
 
         guard let session = recorder.session() else {
             fatalError("Expected recorded session")
@@ -54,9 +54,9 @@ struct ReplaySwiftDataTests {
     }
 
     @Test("saves and loads replay session from SwiftData")
-    func saveAndLoad() throws {
+    func saveAndLoad() async throws {
         let store = try makeStore()
-        let (_, session) = recordSession()
+        let (_, session) = await recordSession()
 
         try store.save(session, key: "run-1")
         let loaded = try store.load(key: "run-1")
@@ -68,9 +68,9 @@ struct ReplaySwiftDataTests {
     }
 
     @Test("save recorder persists current session")
-    func saveFromRecorder() throws {
+    func saveFromRecorder() async throws {
         let store = try makeStore()
-        let (recorder, _) = recordSession()
+        let (recorder, _) = await recordSession()
 
         try store.save(recorder, key: "run-2")
         let loaded = try store.load(key: "run-2")
@@ -80,27 +80,28 @@ struct ReplaySwiftDataTests {
     }
 
     @Test("loaded session replays on live actor")
-    func replayAfterLoad() throws {
+    func replayAfterLoad() async throws {
         let store = try makeStore()
-        let (_, session) = recordSession()
+        let (_, session) = await recordSession()
         try store.save(session, key: "run-3")
 
         let loaded = try store.load(key: "run-3")!
-        let (actor, verifications) = replayActor(
+        let (actor, verifications) = await replayActor(
             counterMachine,
             context: ReplayPersistContext(count: 0),
             session: loaded
         )
 
         #expect(verifications.filter { !$0.matches }.isEmpty)
-        #expect(actor.snapshot.matches("done"))
-        #expect(actor.snapshot.context.count == 1)
+        let snapshot = await actor.snapshot
+        #expect(snapshot.matches("done"))
+        #expect(snapshot.context.count == 1)
     }
 
     @Test("delete removes stored replay session")
-    func deleteSession() throws {
+    func deleteSession() async throws {
         let store = try makeStore()
-        let (_, session) = recordSession()
+        let (_, session) = await recordSession()
         try store.save(session, key: "temp")
 
         try store.delete(key: "temp")
