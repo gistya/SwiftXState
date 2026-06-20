@@ -106,11 +106,11 @@ This setup is much lighter and faster than full VirtualBox/UTM for server-style 
 
 Recommended: mount the host repo (already active on your swift-test instance):
 
-`multipass mount (path_to)/swift-xstate swift-test:/home/ubuntu/swift-xstate`
+`multipass mount (path_to)/SwiftXState swift-test:/home/ubuntu/SwiftXState`
 
 That gives you live edits on the Mac reflected in the VM — no copy/rsync step. multipass info swift-test should show:
 
-Mounts: (path_to)/swift-xstate => /home/ubuntu/swift-xstate
+Mounts: (path_to)/SwiftXState => /home/ubuntu/SwiftXState
 
 After a VM reboot, remount with the same command.
 
@@ -118,11 +118,11 @@ Alternatives if you don’t want a mount:
 
 ```
 # rsync once (or whenever you want a snapshot)
-multipass transfer -r (path_to_)/swift-xstate swift-test:/home/ubuntu/
+multipass transfer -r (path_to_)/SwiftXState swift-test:/home/ubuntu/
 
 # or clone inside the VM if the repo is on GitHub
 multipass shell swift-test
-git clone <your-repo-url> ~/swift-xstate
+git clone <your-repo-url> ~/SwiftXState
 ```
 
 ## Running tests
@@ -130,14 +130,14 @@ git clone <your-repo-url> ~/swift-xstate
 From the host (no interactive shell):
 
 ```
-multipass exec swift-test -- bash -lc 'cd /home/ubuntu/swift-xstate && ./Scripts/linux-smoke-test.sh'
+multipass exec swift-test -- bash -lc 'cd /home/ubuntu/SwiftXState && ./Scripts/linux-smoke-test.sh'
 ```
 
 Or interactively:
 
 ```
 multipass shell swift-test
-cd /home/ubuntu/swift-xstate
+cd /home/ubuntu/SwiftXState
 ./Scripts/linux-smoke-test.sh
 ```
 
@@ -146,8 +146,8 @@ cd /home/ubuntu/swift-xstate
 Multipass mounts are effectively read-only for Swift’s .build directory (Operation not permitted). The smoke script now uses a build path outside the mount:
 
 ```
-# default: ~/swift-build/swift-xstate inside the VM
-SWIFTXSTATE_LINUX_BUILD_PATH=~/swift-build/swift-xstate ./Scripts/linux-smoke-test.sh
+# default: ~/swift-build/SwiftXState inside the VM
+SWIFTXSTATE_LINUX_BUILD_PATH=~/swift-build/SwiftXState ./Scripts/linux-smoke-test.sh
 ```
 
 ### Linux smoke test (Ubuntu)

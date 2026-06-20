@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/Sample.csproj": {}
+    "/Users/shad/dev/phy/SwiftXState/Interop/csharp/Sample/Sample.csproj": {}
   },
   "projects": {
-    "/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/Sample.csproj": {
+    "/Users/shad/dev/phy/SwiftXState/Interop/csharp/Sample/Sample.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/Sample.csproj",
+        "projectUniqueName": "/Users/shad/dev/phy/SwiftXState/Interop/csharp/Sample/Sample.csproj",
         "projectName": "SwiftXStateSample",
-        "projectPath": "/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/Sample.csproj",
+        "projectPath": "/Users/shad/dev/phy/SwiftXState/Interop/csharp/Sample/Sample.csproj",
         "packagesPath": "/Users/shad/.nuget/packages/",
-        "outputPath": "/Users/shad/dev/phy/swift-xstate/Interop/csharp/Sample/obj/",
+        "outputPath": "/Users/shad/dev/phy/SwiftXState/Interop/csharp/Sample/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/shad/.nuget/NuGet/NuGet.Config"
