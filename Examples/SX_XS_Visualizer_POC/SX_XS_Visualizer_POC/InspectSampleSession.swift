@@ -15,8 +15,13 @@ protocol DemoRuntime: AnyObject {
     var stateLine: String { get }
     var contextLine: String { get }
     var eventButtons: [DemoEventButton] { get }
-    func start()
-    func stop()
+    /// Called on the main actor whenever the runtime's mirrored state changes (e.g. after the
+    /// actor confirms an event), so the owning session can re-publish into its `@Observable` props.
+    /// Needed because `Actor.send` is async: a button's `action()` returns before the snapshot
+    /// updates, so the view can't rely on a synchronous refresh right after the tap.
+    var onUpdate: (@MainActor () -> Void)? { get set }
+    func start() async
+    func stop() async
     func stopInspect() async
 }
 
@@ -56,7 +61,7 @@ final class InspectSampleSession {
 
     private func switchDemo(to demo: SampleDemoID) async {
         if let runtime {
-            runtime.stop()
+            await runtime.stop()
             await runtime.stopInspect()
         }
         connectionStatus = "Connecting…"
@@ -84,7 +89,8 @@ final class InspectSampleSession {
         }
 
         runtime = newRuntime
-        newRuntime.start()
+        newRuntime.onUpdate = { [weak self] in self?.syncFromRuntime() }
+        await newRuntime.start()
         connectionStatus = "Connected → Stately Inspector"
         syncFromRuntime()
     }
@@ -104,7 +110,7 @@ private func makeInspectBridge<Context: Sendable>(
     machine: StateMachine<Context>,
     transport: URLSessionInspectTransport,
     endpoint: InspectEndpoint
-) throws -> (InspectBridge, @Sendable (InspectionEvent) -> Void) {
+) async throws -> (InspectBridge, @Sendable (InspectionEvent) -> Void) {
     let configuration = InspectClientConfiguration(
         policy: .localhostOnly(ports: .only([endpoint.port])),
         endpoint: endpoint,
@@ -114,7 +120,7 @@ private func makeInspectBridge<Context: Sendable>(
         machineDefinitions: [try InspectMachineRegistration(machine)]
     )
     let bridge = InspectBridge(transport: transport, configuration: configuration)
-    bridge.start()
+    await bridge.start()
     return (bridge, bridge.observe())
 }
 
@@ -126,6 +132,7 @@ private final class ToggleRuntime: DemoRuntime {
     private let endpoint: InspectEndpoint
     private var actor: Actor<EmptyContext>?
     private var bridge: InspectBridge?
+    var onUpdate: (@MainActor () -> Void)?
     private(set) var stateLine = "inactive"
     private(set) var contextLine = "—"
     private(set) var eventButtons: [DemoEventButton] = []
@@ -142,23 +149,24 @@ private final class ToggleRuntime: DemoRuntime {
 
     func start() async {
         do {
-            let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
+            let (bridge, inspect) = try await makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
             let actor = createActor(machine, inspect: inspect)
             self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            _ = await actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            await actor.start()
+            apply(await actor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
+            onUpdate?()
         }
     }
 
-    func stop() {
-        actor?.stop()
+    func stop() async {
+        await actor?.stop()
         actor = nil
     }
 
@@ -173,10 +181,10 @@ private final class ToggleRuntime: DemoRuntime {
         stateLine = snapshot.value.description
         eventButtons = [
             DemoEventButton(id: "toggle", label: "toggle") { [weak self] in
-                self?.actor?.send(Event("toggle"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("toggle")) }
             },
         ]
+        onUpdate?()
     }
 }
 
@@ -188,6 +196,7 @@ private final class CounterRuntime: DemoRuntime {
     private let endpoint: InspectEndpoint
     private var actor: Actor<CounterContext>?
     private var bridge: InspectBridge?
+    var onUpdate: (@MainActor () -> Void)?
     private(set) var stateLine = "ready"
     private(set) var contextLine = "count: 0"
     private(set) var eventButtons: [DemoEventButton] = []
@@ -204,23 +213,24 @@ private final class CounterRuntime: DemoRuntime {
 
     func start() async {
         do {
-            let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
+            let (bridge, inspect) = try await makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
             let actor = createActor(machine, inspect: inspect)
             self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            _ = await actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            await actor.start()
+            apply(await actor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
+            onUpdate?()
         }
     }
 
-    func stop() {
-        actor?.stop()
+    func stop() async {
+        await actor?.stop()
         actor = nil
     }
 
@@ -236,10 +246,10 @@ private final class CounterRuntime: DemoRuntime {
         contextLine = "count: \(snapshot.context.count)"
         eventButtons = [
             DemoEventButton(id: "increase", label: "increase") { [weak self] in
-                self?.actor?.send(Event("increase"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("increase")) }
             },
         ]
+        onUpdate?()
     }
 }
 
@@ -252,6 +262,7 @@ private final class FeedbackRuntime: DemoRuntime {
     private var actor: Actor<FeedbackContext>?
     private var bridge: InspectBridge?
     private var draftFeedback = ""
+    var onUpdate: (@MainActor () -> Void)?
     private(set) var stateLine = "prompt"
     private(set) var contextLine = "feedback: \"\""
     private(set) var eventButtons: [DemoEventButton] = []
@@ -268,23 +279,24 @@ private final class FeedbackRuntime: DemoRuntime {
 
     func start() async {
         do {
-            let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
+            let (bridge, inspect) = try await makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
             let actor = createActor(machine, inspect: inspect)
             self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            _ = await actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            await actor.start()
+            apply(await actor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
+            onUpdate?()
         }
     }
 
-    func stop() {
-        actor?.stop()
+    func stop() async {
+        await actor?.stop()
         actor = nil
     }
 
@@ -296,8 +308,8 @@ private final class FeedbackRuntime: DemoRuntime {
     }
 
     func sendDraft() {
-        actor?.send(FeedbackUpdateEvent(value: draftFeedback))
-        if let snapshot = actor?.snapshot { apply(snapshot) }
+        let value = draftFeedback
+        Task { @MainActor in await self.actor?.send(FeedbackUpdateEvent(value: value)) }
     }
 
     private func apply(_ snapshot: MachineSnapshot<FeedbackContext>) {
@@ -307,34 +319,28 @@ private final class FeedbackRuntime: DemoRuntime {
 
         eventButtons = [
             DemoEventButton(id: "good", label: "feedback.good") { [weak self] in
-                self?.actor?.send(Event("feedback.good"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("feedback.good")) }
             },
             DemoEventButton(id: "bad", label: "feedback.bad") { [weak self] in
-                self?.actor?.send(Event("feedback.bad"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("feedback.bad")) }
             },
             DemoEventButton(id: "update", label: "feedback.update (demo)") { [weak self] in
-                self?.actor?.send(FeedbackUpdateEvent(value: "Needs more examples"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(FeedbackUpdateEvent(value: "Needs more examples")) }
             },
             DemoEventButton(id: "submit", label: "submit") { [weak self] in
-                self?.actor?.send(Event("submit"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("submit")) }
             },
             DemoEventButton(id: "back", label: "back") { [weak self] in
-                self?.actor?.send(Event("back"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("back")) }
             },
             DemoEventButton(id: "close", label: "close") { [weak self] in
-                self?.actor?.send(Event("close"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("close")) }
             },
             DemoEventButton(id: "restart", label: "restart") { [weak self] in
-                self?.actor?.send(Event("restart"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("restart")) }
             },
         ]
+        onUpdate?()
     }
 }
 
@@ -346,6 +352,7 @@ private final class TrafficLightRuntime: DemoRuntime {
     private let endpoint: InspectEndpoint
     private var actor: Actor<EmptyContext>?
     private var bridge: InspectBridge?
+    var onUpdate: (@MainActor () -> Void)?
     private(set) var stateLine = "green"
     private(set) var contextLine = "Nested pedestrian states under red"
     private(set) var eventButtons: [DemoEventButton] = []
@@ -362,23 +369,24 @@ private final class TrafficLightRuntime: DemoRuntime {
 
     func start() async {
         do {
-            let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
+            let (bridge, inspect) = try await makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
             let actor = createActor(machine, inspect: inspect)
             self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            _ = await actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            await actor.start()
+            apply(await actor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
+            onUpdate?()
         }
     }
 
-    func stop() {
-        actor?.stop()
+    func stop() async {
+        await actor?.stop()
         actor = nil
     }
 
@@ -393,18 +401,16 @@ private final class TrafficLightRuntime: DemoRuntime {
         stateLine = snapshot.value.description
         eventButtons = [
             DemoEventButton(id: "timer", label: "TIMER") { [weak self] in
-                self?.actor?.send(Event("TIMER"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("TIMER")) }
             },
             DemoEventButton(id: "ped", label: "PED_COUNTDOWN") { [weak self] in
-                self?.actor?.send(Event("PED_COUNTDOWN"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("PED_COUNTDOWN")) }
             },
             DemoEventButton(id: "outage", label: "POWER_OUTAGE") { [weak self] in
-                self?.actor?.send(Event("POWER_OUTAGE"))
-                if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                Task { @MainActor in await self?.actor?.send(Event("POWER_OUTAGE")) }
             },
         ]
+        onUpdate?()
     }
 }
 
@@ -416,6 +422,7 @@ private final class CheckoutRuntime: DemoRuntime {
     private let endpoint: InspectEndpoint
     private var actor: Actor<CheckoutContext>?
     private var bridge: InspectBridge?
+    var onUpdate: (@MainActor () -> Void)?
     private(set) var stateLine = "idle"
     private(set) var contextLine = "order ORD-1001 · $149.99"
     private(set) var eventButtons: [DemoEventButton] = []
@@ -431,11 +438,11 @@ private final class CheckoutRuntime: DemoRuntime {
     }
 
     func start() async {
-        bootActor()
+        await bootActor()
     }
 
-    func stop() {
-        actor?.stop()
+    func stop() async {
+        await actor?.stop()
         actor = nil
     }
 
@@ -446,15 +453,15 @@ private final class CheckoutRuntime: DemoRuntime {
         bridge = nil
     }
 
-    private func bootActor() {
-        actor?.stop()
+    private func bootActor() async {
+        await actor?.stop()
         actor = nil
         do {
             let inspect: @Sendable (InspectionEvent) -> Void
             if let bridge {
                 inspect = bridge.observe()
             } else {
-                let (newBridge, newInspect) = try makeInspectBridge(
+                let (newBridge, newInspect) = try await makeInspectBridge(
                     machine: machine,
                     transport: transport,
                     endpoint: endpoint
@@ -464,14 +471,15 @@ private final class CheckoutRuntime: DemoRuntime {
             }
             let actor = createActor(machine, inspect: inspect)
             self.actor = actor
-            _ = actor.subscribe { [weak self] snapshot in
+            _ = await actor.subscribe { [weak self] snapshot in
                 Task { @MainActor in self?.apply(snapshot) }
             }
-            actor.start()
-            apply(actor.snapshot)
+            await actor.start()
+            apply(await actor.snapshot)
         } catch {
             stateLine = "Inspect error"
             contextLine = String(describing: error)
+            onUpdate?()
         }
     }
 
@@ -496,27 +504,26 @@ private final class CheckoutRuntime: DemoRuntime {
 
         var buttons: [DemoEventButton] = [
             DemoEventButton(id: "restart", label: "Restart") { [weak self] in
-                self?.bootActor()
+                Task { @MainActor in await self?.bootActor() }
             },
         ]
 
         if snapshot.status == .active {
             buttons.insert(
                 DemoEventButton(id: "submit", label: "Submit Order") { [weak self] in
-                    self?.actor?.send(Event("SUBMIT"))
-                    if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                    Task { @MainActor in await self?.actor?.send(Event("SUBMIT")) }
                 },
                 at: 0
             )
             buttons.insert(
                 DemoEventButton(id: "declined", label: "Submit Declined Card") { [weak self] in
-                    self?.actor?.send(Event("SUBMIT_DECLINED"))
-                    if let snapshot = self?.actor?.snapshot { self?.apply(snapshot) }
+                    Task { @MainActor in await self?.actor?.send(Event("SUBMIT_DECLINED")) }
                 },
                 at: 1
             )
         }
 
         eventButtons = buttons
+        onUpdate?()
     }
 }

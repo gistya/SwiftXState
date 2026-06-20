@@ -2,21 +2,12 @@
   "originHash" : "e00817d6e74e9ce6917977746e50e45aa2df874077a1611d952afee23f9d06cd",
   "pins" : [
     {
-      "identity" : "swift-syntax",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-syntax.git",
-      "state" : {
-        "revision" : "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
-        "version" : "603.0.2"
-      }
-    },
-    {
       "identity" : "swiftxstate",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/SwiftXState",
       "state" : {
-        "revision" : "a81fa9ba0200e9e59e9eda902d968cd8be0002fa",
-        "version" : "0.9.10"
+        "revision" : "99cdfc6e6e406d21fed5793ca0d6f58089b1939c",
+        "version" : "1.0.0"
       }
     }
   ],

@@ -1,5 +1,5 @@
 {
-  "originHash" : "48f7fd2e2cd83f40fce6db6dece587c7ad66e0e62a562ec285017f711a4a6211",
+  "originHash" : "1725d421995fba68ec1a84d63ce96e59d9752a065813447a4123053d6423dccf",
   "pins" : [
     {
       "identity" : "chesskit-swift",
@@ -11,21 +11,12 @@
       }
     },
     {
-      "identity" : "swift-syntax",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-syntax.git",
-      "state" : {
-        "revision" : "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
-        "version" : "603.0.2"
-      }
-    },
-    {
       "identity" : "swiftxstate",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/SwiftXState.git",
       "state" : {
-        "branch" : "swift-actor",
-        "revision" : "f6fd8c5fb2b1c31639faa32c7be7cc36027be91d"
+        "revision" : "99cdfc6e6e406d21fed5793ca0d6f58089b1939c",
+        "version" : "1.0.0"
       }
     }
   ],

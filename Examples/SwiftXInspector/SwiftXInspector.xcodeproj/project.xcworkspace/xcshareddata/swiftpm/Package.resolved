@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/SwiftXState",
       "state" : {
-        "branch" : "swift-actor",
-        "revision" : "5bebbda993324efd5b1c51769d386b2fdef7f40c"
+        "revision" : "99cdfc6e6e406d21fed5793ca0d6f58089b1939c",
+        "version" : "1.0.0"
       }
     }
   ],

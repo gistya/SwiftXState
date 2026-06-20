@@ -1,5 +1,5 @@
 {
-  "originHash" : "8e3f34020f30f920cac0cff906a66919d4c85262ef4a7ad514da1222084cf6c2",
+  "originHash" : "308b1f1af0759b4dbb4523222bd34ba1c915d0d8631c8887dab26fdb66cc181f",
   "pins" : [
     {
       "identity" : "javascriptkit",
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/SwiftXState.git",
       "state" : {
-        "revision" : "a81fa9ba0200e9e59e9eda902d968cd8be0002fa",
-        "version" : "0.9.10"
+        "revision" : "99cdfc6e6e406d21fed5793ca0d6f58089b1939c",
+        "version" : "1.0.0"
       }
     }
   ],

@@ -657,7 +657,7 @@
 			repositoryURL = "https://github.com/gistya/SwiftXState";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.10;
+				minimumVersion = 1.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
