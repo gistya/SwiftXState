@@ -158,12 +158,13 @@ from a networked source, that is your transport choice and the connectivity guid
 
 ## Dependencies and supply chain
 
-The shipped core library has **no third-party runtime dependencies**. Package-level dependencies are
-build/tooling only:
+The shipped core library has **no third-party runtime dependencies**. The only package-level
+dependency is build/tooling:
 
-- `swift-syntax` — used by the `@WinC`/macro compiler plugin at build time; nothing from it is linked
-  into a consumer binary.
 - `swift-docc-plugin` — documentation generation only.
+
+There are no macro / compiler-plugin dependencies (no `swift-syntax`), so consumers get no
+macro-trust prompts and no build-time SwiftSyntax compilation.
 
 `JavaScriptKit` and `swift-webgpu` appear only in the WebAssembly **example** packages
 (`Examples/Wasm*`), not in any library product you'd depend on. Foundation (system) is used for JSON

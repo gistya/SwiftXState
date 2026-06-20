@@ -17,6 +17,15 @@
 
 # ~ click(for: [Documentation](https://gistya.github.io/SwiftXState/documentation/swiftxstate/)) ~
 
+<br>
+
+---
+
+
+## SwiftXState adapts the popular XState.js actor-as-state-machine-owner model to Swift's concurrency-based actor model, where actors are threadsafe, isolated background contexts and UI can update seamlessly from their @MainActor store.
+
+<br>
+
 --- 
 <br>
 
@@ -62,16 +71,17 @@
 2. Track it live with built-in JSON streams & 2D/3D visualizer. 
 3. Rewind/replay your whole program with snapshots. 
 4. Load statecharts from JSON at runtime to tweak behavior.
+5. Offload business logic to threadsafe background executors with asynchronous Swift `actor`s, which gain deterministic behavior thanks to XState wizardry.
 
 ## Where can I run it?
 
 1. Server or client.
-2. Web: use [Stately.a's XState.js](https://github.com/statelyai/xstate) 
-3. WebAssembly: *experimental* SwiftXState for [wasm](https://github.com/gistya/swiftxstate/Examples/WasmDemo)/[WebGPU](https://github.com/gistya/swiftxstate/Examples/WasmGPUDemo)
+2. Node.js: use [Stately.a's XState.js](https://github.com/statelyai/xstate).
+3. WebAssembly: *experimental* — the [browser inspector](https://github.com/gistya/swiftxstate/tree/main/Examples/WasmInspector) runs SwiftXState in wasm with a WebGPU state-graph
 4. Linux ([Linux build README](LINUX_SETUP.md), or get prebuilt NuGet)
 5. Windows ([Windows build README](WINDOWS_SETUP.md), or get prebuilt NuGet)
 6. macOS/iPadOS ([sample Chess app](https://github.com/gistya/swiftxstate/Examples/SwiftXChess), [sample visualizer app](https://github.com/gistya/swiftxstate/Examples/SwiftXInspector))
-7. iOS/visionOS/watchOS/tvOS 
+7. iOS/visionOS/watchOS/tvOS: also supported, no sample apps yet.
 
 ## How secure is SwiftXState?
 
@@ -92,14 +102,12 @@ Every effort has been made to ensure you can trust this library. For details, se
 - Feature-complete beta phase (see roadmap items below). 
 - Now with documentation (thanks to the awesome [swift-docc](https://github.com/swiftlang/swift-docc))
 
-## Why are your "`Actor`s" not "Swift `actor`s"?
+## "Actor" vs. Swift `actor`
 
 - Swift's `actor` is about asynchronous isolation and data-race safety.
-- XState.js's `Actor` is about synchronous deterministic transitions and replayability.
-- SwiftXState implements compatibility with XState.js, where `Actor`s deterministically orchestrate run-to-completion events, so we kept their terminology.
-- We do use `Swift actor` for suitable roles, such as `InspectBridgeState`, which handles serialized asynchronous communication.
-
-
+- XState.js's `Actor` is about state machines running synchronous, deterministic transitions with replayability.
+- The initial beta of SwiftXState used Swift's `class` to implement `Actor` for compatibility with XState.js, where `Actor`s deterministically orchestrate run-to-completion events on the main thread.
+- Now, since 1.0, SwiftXState uses `Swift actor` for our `Actor`. 
 
 ## Acknowledgments
 
@@ -113,18 +121,18 @@ Every effort has been made to ensure you can trust this library. For details, se
 - SwiftXState/Inspect/URLSession: Foundation
 - SwiftUI and/or SwiftData modules require Apple platforms
 - WebAssembly requires [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit) 
+- Since 1.0, we dropped `swift-syntax` as a dependency and transitioned away from macros.
 
 ## Quick start
 
 We offer two main API paths:
 
 - Text mode, for compatibility with [XState.js](https://github.com/statelyai/xstate) and prototyping, ease of juming in, etc.
-- Typesafe mode, the true Swift way, using generics for compile-time guarantees and fewer bugs
+- Typesafe mode, which models events as `StateEvent` types and states as `StateName` enums for additional compile-time safety.
 - Documentation linked above has guides for both
 
 ---
 <br>
-
 
 # Code Examples
 
@@ -145,22 +153,25 @@ We offer two main API paths:
         ]
     ))
 
-    let actor = createActor(toggle).start()
-    actor.send(Event("toggle"))
-    print(actor.snapshot.matches("active")) // true
+    let actor = await createActor(toggle).start()
+    await actor.send(Event("toggle"))
+    print(await actor.snapshot.matches("active")) // true
     ```
 
-- Use `@MachineStates` macro to generate `StateName` enums from the strings in the machine declarations.
-- That way, you still get autocomplete and protection against typos and name drift:
+- Declare a `StateName` enum (one `String`-backed case per state) for autocomplete and protection
+  against typos and name drift. Nested states get a compound case name with a dotted raw value:
 
     ```swift
-    @MachineStates("AppState")
+    enum AppState: String, StateName {
+        case idle
+        case active
+        case activeFast = "active.fast"   // AppState.activeFast → "#active.fast" (absolute target)
+    }
+
     let config = MachineConfig(id: "app", initial: "idle", context: Ctx(), states: [
         "idle":    StateNodeConfig(on: transitions(on(Focus.self, to: AppState.active))),
         "active":  StateNodeConfig(states: ["fast": StateNodeConfig(), "slow": StateNodeConfig()]),
     ])
-    // generates: enum AppState: String, StateName { case idle; case active; case activeFast = "active.fast"; … }
-    // AppState.activeFast → "#active.fast"  (absolute target, resolves regardless of nesting)
     ```
 
 - Set the legal transition rules for a each node in your state graph: 
@@ -186,7 +197,17 @@ We offer two main API paths:
         actions: [assign { (ctx: inout Ctx, e: InputChange) in ctx.searchInput = e.searchInput }])
     ))
 
-    actor.send(InputChange(searchInput: "be"))   // typed at the call site
+    await actor.send(InputChange(searchInput: "be"))   // typed at the call site
+    ```
+
+- You can also brand an actor with its state family at creation. If your state enum conforms to `StateID`, `createActor(_:as:)` hands back a `TypedActor` whose snapshots are typed — so state checks like `inState(_:)` are compile-checked and autocompleted instead of stringly-typed:
+
+    ```swift
+    enum SearchState: String, StateID { case active, debouncing }
+
+    let search = createActor(searchMachine, as: SearchState.self)   // TypedActor<Ctx, SearchState>
+    let snapshot = await search.start()
+    print(snapshot.inState(.debouncing))   // ← checked at the call site, no "debouncing" string
     ```
 
 - As the library matures, we plan to increase the type-safe surface area of SwiftXState.
@@ -257,7 +278,7 @@ XState.js users considering SwiftXState as a native-code solution might benefit 
 | `setup({ actions, guards, delays, actors })` | `setup(actions:guards:delays:actors:)` |
 | `setup({ types: { events, context } })` | typed `Context` generic + Tier-2 `StateEvent` types |
 | `on: { EVENT: 'target' }` | `on: ["EVENT": .to("target")]` (Tier 1) / `on(EventType.self, target: "target")` (Tier 2) |
-| `target: 'someState'` (string) | `to: AppState.someState` — compile-checked via `@MachineStates` |
+| `target: 'someState'` (string) | `to: AppState.someState` — compile-checked via a `StateName` enum |
 | `assign({ x: ({ event }) => … })` | `assign { (ctx: inout C, e: EventType) in ctx.x = … }` (Tier 2) |
 | `assertEvent(event, "…")` | not needed — the Tier-2 handler is already typed to the event |
 | `guard: 'name'` / `({ context, event }) => …` | `guard: .named("name")` / `guarded { (c, e: EventType) in … }` |
@@ -302,7 +323,7 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 
 | Capability | Status | Notes |
 |------------|--------|-------|
-| `createActor` + mailbox + `send` | ✅ Parity | See [Concurrency](#concurrency-swiftxstate-actor-vs-swift-actor) |
+| `createActor` + mailbox + `send` | ✅ Parity | See ["Actor" vs. Swift `actor`](#actor-vs-swift-actor) |
 | `invoke` / `spawnChild` | ✅ Parity | |
 | `fromMachine` (child state machines) | ✅ Parity | |
 | `fromTask` (`fromPromise`) | ✅ Parity | `async throws` with structured scope |
@@ -346,7 +367,7 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 | Capability | Status | Notes |
 |------------|--------|-------|
 | `setup(actions:guards:delays:actors:)` | ✅ Parity | |
-| `setup({ types: { events, context } })` inference | ✅ Parity | Context is statically typed (`MachineConfig<Context>`). The **Tier-2 typed API** models each event as its own `StateEvent` type and keys transitions on it, so guard/action closures receive the **concrete, narrowed event** — no cast, no `assertEvent`. The **`@MachineStates` macro** generates a `StateName` enum from a machine's own declarations, giving compile-checked, autocompleted, rename-safe **targets** (`to: AppState.running`) with zero drift. Achieves XState's typing outcomes through Swift's type identity + macros rather than TS literal inference. |
+| `setup({ types: { events, context } })` inference | ✅ Parity | Context is statically typed (`MachineConfig<Context>`). The **Tier-2 typed API** models each event as its own `StateEvent` type and keys transitions on it, so guard/action closures receive the **concrete, narrowed event** — no cast, no `assertEvent`. A hand-declared **`StateName` enum** gives compile-checked, autocompleted, rename-safe **targets** (`to: AppState.running`). Achieves XState's typing outcomes through Swift's type identity rather than TS literal inference. |
 | `mapState` | ✅ Parity | Nested `StateMap` → `[MapStateEntry]`; `mapStateFirst` for view models |
 | `getNextSnapshot` alias | 📋 Planned | `transition()` already provides this |
 | **SwiftUI bindings** (`useMachine`, `useSelector`, `useMapState`) | ➕ SwiftXState only | Apple platforms; parallel to `@xstate/react` |
