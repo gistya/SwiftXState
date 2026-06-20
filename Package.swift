@@ -1,11 +1,10 @@
 // swift-tools-version: 6.1
 import PackageDescription
-import CompilerPluginSupport
 import Foundation
 
 // The Windows/C# bridge emits `@_cdecl` C exports only when SWIFTXWIN is set at build time. The
-// manifest (unlike macro plugins) does see the environment, so it turns the env var into a `-D
-// SWIFTXWIN` define; the @WinC macro's generated peers are wrapped in `#if SWIFTXWIN`.
+// manifest turns the env var into a `-D SWIFTXWIN` define; the hand-written `@_cdecl` peers in the
+// bridge sources are wrapped in `#if SWIFTXWIN`.
 let winBridgeSwiftSettings: [SwiftSetting] =
     ProcessInfo.processInfo.environment["SWIFTXWIN"] != nil ? [.define("SWIFTXWIN")] : []
 
@@ -65,23 +64,11 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "603.0.0"),
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0"),
     ],
     targets: [
-        // Compiler-plugin macro target — SwiftSyntax is a *build-time* dependency only; nothing
-        // from it is linked into a consumer's binary.
-        .macro(
-            name: "SwiftXStateMacros",
-            dependencies: [
-                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
-            ],
-            path: "Sources/SwiftXStateMacros"
-        ),
         .target(
             name: "SwiftXState",
-            dependencies: ["SwiftXStateMacros"],
             path: "Sources/SwiftXState",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
@@ -148,42 +135,10 @@ let package = Package(
             path: "Sources/SwiftXStateWinBridge",
             swiftSettings: winBridgeSwiftSettings
         ),
-        // Tool that scans @WinC functions and generates the C# P/Invoke bridge. Run via the
-        // `generate-csharp-bridge` command plugin (or directly).
-        .executableTarget(
-            name: "WinCBridgeGen",
-            dependencies: [
-                .product(name: "SwiftSyntax", package: "swift-syntax"),
-                .product(name: "SwiftParser", package: "swift-syntax"),
-            ],
-            path: "Sources/WinCBridgeGen"
-        ),
-        .plugin(
-            name: "GenerateCSharpBridge",
-            capability: .command(
-                intent: .custom(
-                    verb: "generate-csharp-bridge",
-                    description: "Regenerate the C# P/Invoke bridge from the @WinC functions"
-                ),
-                permissions: [
-                    .writeToPackageDirectory(reason: "Writes Interop/csharp/SwiftXStateWinBridge.cs"),
-                ]
-            ),
-            dependencies: [.target(name: "WinCBridgeGen")],
-            path: "Plugins/GenerateCSharpBridge"
-        ),
         .testTarget(
             name: "SwiftXStateTests",
             dependencies: ["SwiftXState"],
             path: "Tests/SwiftXStateTests",
-        ),
-        .testTarget(
-            name: "SwiftXStateMacrosTests",
-            dependencies: [
-                "SwiftXStateMacros",
-                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
-            ],
-            path: "Tests/SwiftXStateMacrosTests"
         ),
         .testTarget(
             name: "SwiftXStateWinBridgeTests",
