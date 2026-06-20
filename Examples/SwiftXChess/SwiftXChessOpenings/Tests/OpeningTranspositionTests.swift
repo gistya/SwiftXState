@@ -6,7 +6,7 @@ import Testing
 struct OpeningTranspositionTests {
     @Test("one-move-away probes return sorted candidates")
     func sortedCandidates() async throws {
-        let session = try OpeningTreeSession()
+        let session = try await OpeningTreeSession()
         await session.sendAndWait(san: "e4")
         let reports = await session.reports()
         guard let first = reports.first else {
@@ -18,7 +18,7 @@ struct OpeningTranspositionTests {
 
     @Test("transposition DAG accumulates edges")
     func dagEdges() async throws {
-        let session = try OpeningTreeSession()
+        let session = try await OpeningTreeSession()
         await session.sendAndWait(san: "e4")
         await session.sendAndWait(san: "e5")
         let dag = await session.transpositionDAG()
@@ -30,7 +30,7 @@ struct OpeningTranspositionTests {
         let moves = ["e4", "e5", "Nf3", "Nc6", "Bb5"]
         var baseline: [PlyReport]?
         for _ in 0..<20 {
-            let session = try OpeningTreeSession()
+            let session = try await OpeningTreeSession()
             for move in moves { await session.sendAndWait(san: move) }
             let reports = await session.reports()
             if let baseline {
@@ -47,7 +47,7 @@ struct OpeningTranspositionTests {
         let moves = ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6"]
         var baseline: [PlyReport]?
         for _ in 0..<20 {
-            let session = try OpeningTreeSession()
+            let session = try await OpeningTreeSession()
             for move in moves { await session.sendAndWait(san: move) }
             let reports = await session.reports()
             if let baseline {

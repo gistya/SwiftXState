@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "73321F5E2FD7998200A66D36"
-               BuildableName = "SwiftXInspector.app"
-               BlueprintName = "SwiftXInspector"
-               ReferencedContainer = "container:SwiftXInspector.xcodeproj">
+               BlueprintIdentifier = "73A838832FD52A28009E47EE"
+               BuildableName = "SwiftXChess.app"
+               BlueprintName = "SwiftXChess"
+               ReferencedContainer = "container:SwiftXChess.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,10 +35,10 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "73321F6D2FD7998300A66D36"
-               BuildableName = "SwiftXInspectorTests.xctest"
-               BlueprintName = "SwiftXInspectorTests"
-               ReferencedContainer = "container:SwiftXInspector.xcodeproj">
+               BlueprintIdentifier = "73A838962FD52A29009E47EE"
+               BuildableName = "SwiftXChessTests.xctest"
+               BlueprintName = "SwiftXChessTests"
+               ReferencedContainer = "container:SwiftXChess.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -46,10 +46,10 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "73321F772FD7998300A66D36"
-               BuildableName = "SwiftXInspectorUITests.xctest"
-               BlueprintName = "SwiftXInspectorUITests"
-               ReferencedContainer = "container:SwiftXInspector.xcodeproj">
+               BlueprintIdentifier = "73A838A02FD52A29009E47EE"
+               BuildableName = "SwiftXChessUITests.xctest"
+               BlueprintName = "SwiftXChessUITests"
+               ReferencedContainer = "container:SwiftXChess.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -69,10 +69,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "73321F5E2FD7998200A66D36"
-            BuildableName = "SwiftXInspector.app"
-            BlueprintName = "SwiftXInspector"
-            ReferencedContainer = "container:SwiftXInspector.xcodeproj">
+            BlueprintIdentifier = "73A838832FD52A28009E47EE"
+            BuildableName = "SwiftXChess.app"
+            BlueprintName = "SwiftXChess"
+            ReferencedContainer = "container:SwiftXChess.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -86,10 +86,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "73321F5E2FD7998200A66D36"
-            BuildableName = "SwiftXInspector.app"
-            BlueprintName = "SwiftXInspector"
-            ReferencedContainer = "container:SwiftXInspector.xcodeproj">
+            BlueprintIdentifier = "73A838832FD52A28009E47EE"
+            BuildableName = "SwiftXChess.app"
+            BlueprintName = "SwiftXChess"
+            ReferencedContainer = "container:SwiftXChess.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

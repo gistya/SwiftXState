@@ -20,10 +20,10 @@ npx --yes esbuild "$OUT/index.js" --bundle --format=esm --outfile=site/bundle.js
 cp "$OUT/WasmInspector.wasm" site/
 cp index.html site/
 
-# MSDF atlas for the Graph tab (generated offline in the WasmGPUDemo example). The graph falls back
-# to a runtime-built SDF if it's missing, so this is best-effort.
-if [ -f ../WasmGPUDemo/assets/msdf.png ]; then
-    cp ../WasmGPUDemo/assets/msdf.png ../WasmGPUDemo/assets/msdf.json site/
+# MSDF atlas for the Graph tab (generated offline). The graph falls back to a runtime-built SDF if
+# it's missing, so this is best-effort.
+if [ -f assets/msdf.png ]; then
+    cp assets/msdf.png assets/msdf.json site/
 else
     echo "  (no MSDF atlas — the Graph tab will fall back to runtime SDF)"
 fi

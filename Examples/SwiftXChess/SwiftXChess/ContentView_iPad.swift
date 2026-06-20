@@ -260,8 +260,7 @@ private struct IPadSplitLayout: View {
         if inspectorMode, let store {
             InspectorGraphView(store: store, graphStyle: inspectorGraphStyle)
         } else {
-            MachineGraphView(actor: session.actor, machine: session.machine)
-                .graphStyle(.dark)
+            LiveMachineGraph(session: session)
         }
     }
 
@@ -270,6 +269,29 @@ private struct IPadSplitLayout: View {
         guard let store else { return }
         if let watcher = store.actors.first(where: { $0.machineID == GameWatcherMachine.id }) {
             store.selectedSessionID = watcher.sessionID
+        }
+    }
+}
+
+/// The live game-watcher graph. `MachineGraphView`'s actor-driven initializer is now async, so it's
+/// built in a `.task` and swapped in once ready (showing a spinner until then).
+private struct LiveMachineGraph: View {
+    let session: DistributedChessSession
+    @State private var graph: MachineGraphView<GameWatcherContext>?
+
+    var body: some View {
+        Group {
+            if let graph {
+                graph.graphStyle(.dark)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            if graph == nil {
+                graph = await MachineGraphView(actor: session.actor, machine: session.machine)
+            }
         }
     }
 }
@@ -345,17 +367,19 @@ private struct IPadControlsCard: View {
         if session.canReplay {
             if session.context.isReplayMode {
                 Slider(value: $scrubberStep, in: 0...Double(max(session.replayStepCount, 1)), step: 1)
-                    .onChange(of: scrubberStep) { _, step in session.scrubReplay(to: Int(step)) }
+                    .onChange(of: scrubberStep) { _, step in Task { await session.scrubReplay(to: Int(step)) } }
                 Text("Step \(session.context.replayStep) of \(session.replayStepCount)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button("Exit replay") { session.exitReplay() }
+                Button("Exit replay") { Task { await session.exitReplay() } }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
             } else {
                 Button("Enter replay") {
-                    session.enterReplay()
-                    scrubberStep = Double(session.context.replayStep)
+                    Task {
+                        await session.enterReplay()
+                        scrubberStep = Double(session.context.replayStep)
+                    }
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)

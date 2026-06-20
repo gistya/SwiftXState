@@ -17,6 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "733D43B02FDBCF3900DD6932"
                BuildableName = "XConway.app"
+               BlueprintName = "XConway"
                ReferencedContainer = "container:XConway.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -36,6 +37,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "733D43BF2FDBCF3A00DD6932"
                BuildableName = "XConwayTests.xctest"
+               BlueprintName = "XConwayTests"
                ReferencedContainer = "container:XConway.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -46,6 +48,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "733D43C92FDBCF3A00DD6932"
                BuildableName = "XConwayUITests.xctest"
+               BlueprintName = "XConwayUITests"
                ReferencedContainer = "container:XConway.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -68,6 +71,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "733D43B02FDBCF3900DD6932"
             BuildableName = "XConway.app"
+            BlueprintName = "XConway"
             ReferencedContainer = "container:XConway.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -84,6 +88,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "733D43B02FDBCF3900DD6932"
             BuildableName = "XConway.app"
+            BlueprintName = "XConway"
             ReferencedContainer = "container:XConway.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

@@ -1,5 +1,5 @@
 {
-  "name": "swift-xstate-inspector-relay",
+  "name": "SwiftXState-inspector-relay",
   "private": true,
   "type": "module",
   "scripts": {

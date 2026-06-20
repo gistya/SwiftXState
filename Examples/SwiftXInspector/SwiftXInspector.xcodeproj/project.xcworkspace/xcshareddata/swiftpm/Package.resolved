@@ -1,13 +1,13 @@
 {
-  "originHash" : "7107d1ef104ea77b99707272fed3e2aaa63845907cd64ffea4954e5fc5686823",
+  "originHash" : "e00817d6e74e9ce6917977746e50e45aa2df874077a1611d952afee23f9d06cd",
   "pins" : [
     {
-      "identity" : "swift-syntax",
+      "identity" : "swiftxstate",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "location" : "https://github.com/gistya/SwiftXState",
       "state" : {
-        "revision" : "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
-        "version" : "603.0.2"
+        "branch" : "swift-actor",
+        "revision" : "5bebbda993324efd5b1c51769d386b2fdef7f40c"
       }
     }
   ],

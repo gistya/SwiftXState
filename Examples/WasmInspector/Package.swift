@@ -5,10 +5,12 @@ import Foundation
 // A browser build of the SwiftXState inspector (Swift → WebAssembly), mirroring the native
 // Stately-style inspector but rendered with the DOM via JavaScriptKit.
 //
+//   • WebGPUGraph    — a reusable GPU state-machine graph renderer (definition JSON + a <canvas>
+//                      id → animated nodes/edges/arrowheads/active-state highlight). Depends only
+//                      on swift-webgpu + JavaScriptKit, not SwiftXState.
 //   • WebInspector   — a reusable toolkit: give it a `WebInspectorStore` (fed from any actor's
 //                      inspection stream) and a container element id, and it renders the actor
-//                      sidebar + State / Events / Sequence / Graph tabs. The Graph tab reuses the
-//                      GPU `WebGPUGraph` renderer from the sibling WasmGPUDemo package.
+//                      sidebar + State / Events / Sequence / Graph tabs (the Graph tab uses WebGPUGraph).
 //   • WasmInspector  — a thin demo: spins up a few SwiftXState actors and points the toolkit at them.
 //
 // Build:  ./build.sh   (uses the PackageToJS plugin + the swift.org WebAssembly SDK)
@@ -17,7 +19,7 @@ import Foundation
 /// In this project, SWIFTXDEV=1 is only set in the .xcproj User-Defined settings for DEBUG config.
 let useLocal = ProcessInfo.processInfo.environment["SWIFTXDEV"] != nil
 let repo = "https://github.com/gistya/SwiftXState.git"
-let swiftXMinVersion: Version = "0.9.10"
+let swiftXMinVersion: Version = "1.0.0"
 
 let package = Package(
     name: "WasmInspector",
@@ -28,19 +30,30 @@ let package = Package(
         useLocal
             ? .package(
                 name: "SwiftXState",
-                path: "../../.."
+                path: "../.."
             )
             : .package(url: repo, from: swiftXMinVersion),
-        .package(name: "WasmGPUDemo", path: "../WasmGPUDemo"),
+        .package(url: "https://github.com/1amageek/swift-webgpu", branch: "main"),
         .package(url: "https://github.com/swiftwasm/JavaScriptKit", .upToNextMinor(from: "0.53.0")),
     ],
     targets: [
+        // GPU state-machine graph renderer (formerly the WasmGPUDemo example). Reusable on its own:
+        // give it a machine-definition JSON + a <canvas> id. Depends only on swift-webgpu +
+        // JavaScriptKit, not on SwiftXState.
+        .target(
+            name: "WebGPUGraph",
+            dependencies: [
+                .product(name: "SwiftWebGPU", package: "swift-webgpu"),
+                .product(name: "JavaScriptKit", package: "JavaScriptKit"),
+                .product(name: "JavaScriptEventLoop", package: "JavaScriptKit"),
+            ]
+        ),
         .target(
             name: "WebInspector",
             dependencies: [
                 .product(name: "SwiftXState", package: "SwiftXState"),
                 .product(name: "SwiftXStateInspectorCore", package: "SwiftXState"),
-                .product(name: "WebGPUGraph", package: "WasmGPUDemo"),
+                "WebGPUGraph",
                 .product(name: "JavaScriptKit", package: "JavaScriptKit"),
                 .product(name: "JavaScriptEventLoop", package: "JavaScriptKit"),
             ]

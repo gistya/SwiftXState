@@ -5,64 +5,72 @@ import SwiftXStateInspectorUI
 
 @main
 struct SwiftXChessApp: App {
-    /// One shared inspector store, fed by the shared session's actors. The main window's
-    /// board drives the session; the Inspector window observes the same stream live.
-    @State private var store: InspectorStore
-    /// One shared session for the whole app.
-    @State private var session: DistributedChessSession?
-
-    init() {
-        let store = InspectorStore()
-        _store = State(initialValue: store)
-        // Route every inspection event into the store so the Inspector window is live.
-        _session = State(initialValue: try? DistributedChessSession(extraInspect: store.observe()))
-    }
+    @State private var bootstrap = AppBootstrap()
 
     var body: some Scene {
-        #if canImport(AppKit)
         WindowGroup {
-            ContentView(session: session)
+            BootstrappedView(bootstrap: bootstrap) { model in
+                ContentView(session: model.session, store: model.store)
+            }
+            .task {
+                await bootstrap.start()
+            }
         }
-
-        // A native Stately-style inspector over the shared session.
+#if canImport(AppKit)
         Window("Inspector", id: "state-graph") {
-            InspectorWindow(store: store, hasSession: session != nil)
-                .frame(minWidth: 760, minHeight: 600)
+            BootstrappedView(bootstrap: bootstrap) { model in
+                InspectorWindow(
+                    store: model.store,
+                    hasSession: model.session != nil
+                )
+            }
         }
         .defaultSize(width: 1180, height: 820)
-        #endif
-        #if os(iOS)
-        // iPad/iPhone: a single window. The inspector lives inside ContentView (a tab in
-        // layout A, a sheet in layout B) rather than stacked into the window group.
-        WindowGroup {
-            ContentView(session: session, store: store)
-        }
-        #endif
+#endif
     }
 }
 
-struct InspectorWindow: View {
-    let store: InspectorStore
-    let hasSession: Bool
+@MainActor
+@Observable
+final class AppBootstrap {
+    private(set) var phase: Phase = .loading
 
-    /// Dark graph theme + a custom layout that renders the board-inspector's 64 square
-    /// states as an actual 8×8 board (other machines stay auto-laid-out).
-    private var graphStyle: GraphStyle {
-        var style = GraphStyle.dark
-        style.nodeLayoutOverride = BoardInspectorMachine.gridLayoutOverride()
-        return style
+    enum Phase {
+        case loading
+        case ready(SessionModel)
+        case failed(Error)
     }
 
+    func start() async {
+        if case .ready = phase { return }
+
+        do {
+            let model = try await SessionModel.bootstrap()
+            phase = .ready(model)
+        } catch {
+            phase = .failed(error)
+        }
+    }
+}
+
+struct BootstrappedView<Content: View>: View {
+    let bootstrap: AppBootstrap
+
+    let content: (SessionModel) -> Content
+
     var body: some View {
-        if hasSession {
-            MachineInspectorView(store: store, graphStyle: graphStyle)
-                .inspectorStyle(.dark)
-        } else {
-            ContentUnavailableView(
-                "Inspector unavailable",
-                systemImage: "point.3.connected.trianglepath.dotted",
-                description: Text("The chess session could not be started.")
-            )
+        switch bootstrap.phase {
+        case .loading:
+            ProgressView("Loading…")
+
+        case .ready(let model):
+            content(model)
+
+        case .failed(let error):
+            VStack {
+                Text("Couldn’t start app")
+                Text(error.localizedDescription)
+            }
         }
     }
 }

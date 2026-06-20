@@ -38,8 +38,8 @@ let player = createMachine(MachineConfig(
 ))
 
 let store = WebInspectorStore()
-let light = createActor(trafficLight, inspect: store.observe()).start()
-let media = createActor(player, inspect: store.observe()).start()
+let light = createActor(trafficLight, inspect: store.observe())
+let media = createActor(player, inspect: store.observe())
 
 // Text mode for the Graph tab: defaults to the embedded true-MSDF atlas; `?text=sdf` uses runtime SDF.
 let search = (JSObject.global.location.search.string ?? "")
@@ -50,11 +50,13 @@ WebInspector.mount(containerId: "app", store: store, graphTextMode: textMode)
 // Auto-drive the actors so the feed, pills and graph animate without interaction.
 let playerCycle = ["LOAD", "READY", "PLAY", "PAUSE", "PLAY", "STOP"]
 Task { @MainActor in
+    await light.start()
+    await media.start()
     var i = 0
     while true {
         try? await Task.sleep(for: .seconds(1.3))
-        light.send(Event("TIMER"))
-        media.send(Event(playerCycle[i % playerCycle.count]))
+        await light.send(Event("TIMER"))
+        await media.send(Event(playerCycle[i % playerCycle.count]))
         i += 1
     }
 }

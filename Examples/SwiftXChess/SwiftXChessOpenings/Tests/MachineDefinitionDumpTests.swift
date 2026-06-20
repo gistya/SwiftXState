@@ -86,10 +86,10 @@ struct MachineDefinitionDumpTests {
     }
 
     @Test("attachInspect replays opening tree actor registration")
-    func attachInspectReplaysActorRegistration() throws {
+    func attachInspectReplaysActorRegistration() async throws {
         let collector = InspectionCollector()
-        let treeSession = try OpeningTreeSession()
-        treeSession.attachInspect(collector.observe())
+        let treeSession = try await OpeningTreeSession()
+        await treeSession.attachInspect(collector.observe())
 
         let actorEvents = collector.recordedEvents().filter { $0.kind == .actor }
         #expect(actorEvents.count == 1)

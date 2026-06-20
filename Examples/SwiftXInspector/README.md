@@ -24,7 +24,7 @@ The reusable pieces live in the package, not here:
 1. **File ▸ New ▸ Project… ▸ macOS ▸ App.** Name it `InspectorPasteApp`, interface **SwiftUI**,
    language **Swift**. Delete the auto-generated `ContentView.swift` and `…App.swift`.
 2. **Add the SwiftXState package**: File ▸ Add Package Dependencies… ▸ *Add Local…* and pick this
-   repo's root (`swift-xstate/`). Add these three library products to the app target:
+   repo's root (`SwiftXState/`). Add these three library products to the app target:
    - `SwiftXState`
    - `SwiftXStateGraph`
    - `SwiftXStateInspectorUI`

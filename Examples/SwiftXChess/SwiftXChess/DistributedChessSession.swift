@@ -35,9 +35,16 @@ final class DistributedChessSession {
         return max(session.steps.count - 1, 0)
     }
 
-    var availableOpeningMoves: [String] {
-        guard openingActive, !atPlyLimit else { return [] }
-        return treeSession.availableMoves()
+    /// Opening-tree edges from the current node. Mirrored into an observable property and refreshed
+    /// after each move, since Observation can't track the async opening-tree actor directly.
+    private(set) var availableOpeningMoves: [String] = []
+
+    private func refreshOpeningMoves() async {
+        guard openingActive, !atPlyLimit else {
+            availableOpeningMoves = []
+            return
+        }
+        availableOpeningMoves = await treeSession.availableMoves()
     }
 
     var latestReport: PlyReport? { reports.last }
@@ -68,7 +75,7 @@ final class DistributedChessSession {
         host: String = "127.0.0.1",
         port: Int = 8080,
         extraInspect: (@Sendable (InspectionEvent) -> Void)? = nil
-    ) throws {
+    ) async throws {
         let endpoint = InspectEndpoint(host: host, port: port)
         inspectorEndpoint = endpoint.url?.absoluteString ?? "ws://\(host):\(port)"
         let transport = URLSessionInspect.transport(
@@ -76,9 +83,8 @@ final class DistributedChessSession {
             runtime: InspectRuntimeContext(isDebugBuild: true)
         )
 
-        let treeSession = try OpeningTreeSession()
-        self.treeSession = treeSession
-        treeSnapshot = treeSession.snapshot()
+        self.treeSession = try await OpeningTreeSession()
+        treeSnapshot = await treeSession.snapshot()
 
         // Stream the 96 per-square/piece board actors too — a deliberate stress test for the
         // inspector (this actor count kills the web client; the native one handles it).
@@ -113,80 +119,82 @@ final class DistributedChessSession {
                 ]
             )
             let bridge = InspectBridge(transport: transport, configuration: configuration)
-            bridge.start()
+            await bridge.start()
             let bridgeInspect = bridge.observe()
             let combined = Self.combineInspect(recordingGate.observe(recorder), bridgeInspect)
             let inspect = Self.combineInspect(combined, extraInspect ?? { _ in })
-            let actor = createActor(gameMachine, options: ActorOptions(inspect: inspect)).start()
-            treeSession.attachInspect(Self.combineInspect(bridgeInspect, extraInspect ?? { _ in }))
+            let actor = await createActor(gameMachine, options: ActorOptions(inspect: inspect)).start()
+            await treeSession.attachInspect(Self.combineInspect(bridgeInspect, extraInspect ?? { _ in }))
             self.actor = actor
             self.bridge = bridge
             connectionStatus = "Connected → Stately Inspector"
-            snapshot = actor.snapshot
+            snapshot = await actor.snapshot
             syncRecordingState()
         } catch {
             let inspect = Self.combineInspect(recordingGate.observe(recorder), extraInspect ?? { _ in })
-            let actor = createActor(
+            let actor = await createActor(
                 gameMachine,
                 options: ActorOptions(inspect: inspect)
             ).start()
             self.actor = actor
             connectionStatus = "Inspect unavailable"
             inspectorEndpoint = String(describing: error)
-            snapshot = actor.snapshot
+            snapshot = await actor.snapshot
             syncRecordingState()
         }
+        await refreshOpeningMoves()
     }
 
     func tap(row: Int, col: Int) async {
         guard !context.isReplayMode, context.outcome == nil else { return }
         let event = ChessEvent.tap(Square(row: row, col: col))
-        actor.send(event)
-        snapshot = actor.snapshot
+        await actor.send(event)
+        snapshot = await actor.snapshot
         syncRecordingState()
         await syncOpeningTree()
     }
 
     func promote(to kind: PieceKind) async {
         guard !context.isReplayMode, context.pendingPromotion != nil else { return }
-        actor.send(ChessEvent.promote(kind))
-        snapshot = actor.snapshot
+        await actor.send(ChessEvent.promote(kind))
+        snapshot = await actor.snapshot
         syncRecordingState()
         await syncOpeningTree()
     }
 
-    func enterReplay() {
+    func enterReplay() async {
         guard let session = recorder.session() else { return }
         recordingGate.setEnabled(false)
         ChessReplayBridge.setPendingSession(session)
-        actor.send(ChessEvent.enterReplay)
-        snapshot = actor.snapshot
+        await actor.send(ChessEvent.enterReplay)
+        snapshot = await actor.snapshot
     }
 
-    func exitReplay() {
-        actor.send(ChessEvent.exitReplay)
-        snapshot = actor.snapshot
+    func exitReplay() async {
+        await actor.send(ChessEvent.exitReplay)
+        snapshot = await actor.snapshot
         recordingGate.setEnabled(true)
     }
 
-    func scrubReplay(to step: Int) {
+    func scrubReplay(to step: Int) async {
         guard context.isReplayMode else { return }
         let clamped = min(max(step, 0), replayStepCount)
         guard clamped != context.replayStep else { return }
-        actor.send(ChessEvent.replayScrub(clamped))
-        snapshot = actor.snapshot
+        await actor.send(ChessEvent.replayScrub(clamped))
+        snapshot = await actor.snapshot
     }
 
     func newGame() async throws {
         recordingGate.setEnabled(true)
-        actor.send(ChessEvent.newGame)
-        snapshot = actor.snapshot
+        await actor.send(ChessEvent.newGame)
+        snapshot = await actor.snapshot
         syncRecordingState()
         try await treeSession.reset()
-        treeSnapshot = treeSession.snapshot()
+        treeSnapshot = await treeSession.snapshot()
         reports = []
         openingActive = true
         lastSyncedPly = 0
+        await refreshOpeningMoves()
     }
 
     func stopInspect() async {
@@ -217,17 +225,20 @@ final class DistributedChessSession {
 
         guard openingActive, !atPlyLimit, let san = context.lastSAN, !san.isEmpty else {
             if atPlyLimit { openingActive = false }
+            await refreshOpeningMoves()
             return
         }
 
-        let legalInTree = treeSession.availableMoves()
+        let legalInTree = await treeSession.availableMoves()
         guard legalInTree.contains(san) else {
             openingActive = false
+            await refreshOpeningMoves()
             return
         }
 
         await treeSession.sendAndWait(san: san)
-        treeSnapshot = treeSession.snapshot()
+        treeSnapshot = await treeSession.snapshot()
         reports = await treeSession.reports()
+        await refreshOpeningMoves()
     }
 }

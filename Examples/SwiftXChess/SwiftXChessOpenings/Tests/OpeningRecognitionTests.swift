@@ -6,7 +6,7 @@ import Testing
 struct OpeningRecognitionTests {
     @Test("e4 is recognized from starting position")
     func e4Opening() async throws {
-        let session = try OpeningTreeSession()
+        let session = try await OpeningTreeSession()
         await session.sendAndWait(san: "e4")
         let reports = await session.reports()
         #expect(reports.count == 1)
@@ -17,7 +17,7 @@ struct OpeningRecognitionTests {
     @Test("Sicilian line reaches Najdorf territory by ply 5")
     func sicilianNajdorf() async throws {
         let moves = ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6"]
-        let session = try OpeningTreeSession()
+        let session = try await OpeningTreeSession()
         for move in moves {
             await session.sendAndWait(san: move)
         }
@@ -34,7 +34,7 @@ struct OpeningRecognitionTests {
     func deterministicTraceFold() async throws {
         let moves = ["e4", "c5", "Nf3"]
         func run() async throws -> [PlyReport] {
-            let session = try OpeningTreeSession()
+            let session = try await OpeningTreeSession()
             for move in moves { await session.sendAndWait(san: move) }
             return await session.reports()
         }
@@ -46,7 +46,7 @@ struct OpeningRecognitionTests {
     @Test("processTrace matches live inspect reports")
     func traceReplayMatchesLive() async throws {
         let moves = ["d4", "Nf6", "c4", "e6"]
-        let session = try OpeningTreeSession()
+        let session = try await OpeningTreeSession()
         for move in moves { await session.sendAndWait(san: move) }
         let live = await session.reports()
         let replayed = try await session.processTrace()

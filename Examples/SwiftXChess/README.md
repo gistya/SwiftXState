@@ -266,7 +266,7 @@ Open the `https://stately.ai/registry/inspect/…` URL printed in the terminal, 
 The app target holds the chess engine + UI. The **opening-recognition** engine is split into a
 small local Swift package, `SwiftXChessOpenings/`, purely so its pure-logic tests can run under
 `swift test` instead of an app test bundle. The Xcode project links that package as a local
-dependency; it in turn depends on the main `swift-xstate` package at the repo root.
+dependency; it in turn depends on the main `SwiftXState` package at the repo root.
 
 ```
 Examples/SwiftXChess/
@@ -287,7 +287,7 @@ Examples/SwiftXChess/
 │   └── OpeningDemo*/OpeningPanelView.swift  # Opening-tree demo UI
 │
 └── SwiftXChessOpenings/              # Local Swift package — opening recognition only
-    ├── Package.swift                 # depends on ../../.. (swift-xstate) + chesskit-swift
+    ├── Package.swift                 # depends on ../../.. (SwiftXState) + chesskit-swift
     ├── Sources/SwiftXChessOpenings/  # OpeningMoveTreeMachine, recognition, transposition DAG
     └── Tests/                        # swift test → 13 tests, 4 suites
 ```
@@ -303,6 +303,6 @@ The app target links:
 - **SwiftXStateSwiftUI** — available for additional helpers (this sample uses manual `@Observable` bridging)
 - **SwiftXStateInspect** / **SwiftXStateInspectURLSession** — Stately WebSocket bridge
 
-`SwiftXChessOpenings/Package.swift` declares the package's own dependencies: the main `swift-xstate`
+`SwiftXChessOpenings/Package.swift` declares the package's own dependencies: the main `SwiftXState`
 package (`.package(path: "../../..")`) and `chesskit-swift`. The machine definition is registered for
 inspection via `InspectMachineRegistration(machine)` so the live graph matches the running app.

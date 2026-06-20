@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 # Multipass (and some other) mounts are read-only for .build — keep artifacts in $HOME.
-BUILD_PATH="${SWIFTXSTATE_LINUX_BUILD_PATH:-$HOME/swift-build/swift-xstate}"
+BUILD_PATH="${SWIFTXSTATE_LINUX_BUILD_PATH:-$HOME/swift-build/SwiftXState}"
 mkdir -p "$BUILD_PATH"
 SWIFT_BUILD=(swift build --build-path "$BUILD_PATH")
 SWIFT_TEST=(swift test --build-path "$BUILD_PATH")

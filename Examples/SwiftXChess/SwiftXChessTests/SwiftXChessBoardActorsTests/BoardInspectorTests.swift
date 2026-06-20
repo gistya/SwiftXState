@@ -37,26 +37,28 @@ struct BoardInspectorTests {
 
     @Test("e4 opening flips the boards' square states")
     func mirrorsOpeningMove() async {
-        let actor = createActor(GameWatcherMachine.make()).start()
+        let actor = await createActor(GameWatcherMachine.make()).start()
         try? await Task.sleep(for: .milliseconds(100))
 
-        actor.send(Event("TAP.1.4"))
+        await actor.send(Event("TAP.1.4"))
         try? await Task.sleep(for: .milliseconds(30))
-        actor.send(Event("TAP.3.4"))
+        await actor.send(Event("TAP.3.4"))
         try? await Task.sleep(for: .milliseconds(80))
 
-        guard let occupancy = actor.childActor(id: BoardInspectorMachine.childId(.occupancy)) as? MachineChildRef<BoardInspectorContext>,
-              let pieces = actor.childActor(id: BoardInspectorMachine.childId(.pieces)) as? MachineChildRef<BoardInspectorContext> else {
+        guard let occupancy = await actor.childActor(id: BoardInspectorMachine.childId(.occupancy)) as? MachineChildRef<BoardInspectorContext>,
+              let pieces = await actor.childActor(id: BoardInspectorMachine.childId(.pieces)) as? MachineChildRef<BoardInspectorContext> else {
             Issue.record("board-inspector children missing")
             return
         }
 
         // Occupancy board: e2 cleared, e4 occupied.
-        #expect(occupancy.actor.snapshot.value.matches("e2.empty"))
-        #expect(occupancy.actor.snapshot.value.matches("e4.occupied"))
+        let occupancySnapshot = await occupancy.actor.snapshot
+        #expect(occupancySnapshot.value.matches("e2.empty"))
+        #expect(occupancySnapshot.value.matches("e4.occupied"))
 
         // Pieces board: e4 now holds the white pawn, e2 is empty.
-        #expect(pieces.actor.snapshot.value.matches("e2.empty"))
-        #expect(pieces.actor.snapshot.value.matches("e4.wP"))
+        let piecesSnapshot = await pieces.actor.snapshot
+        #expect(piecesSnapshot.value.matches("e2.empty"))
+        #expect(piecesSnapshot.value.matches("e4.wP"))
     }
 }

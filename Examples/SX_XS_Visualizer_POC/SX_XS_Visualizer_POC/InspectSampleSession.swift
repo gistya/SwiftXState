@@ -140,7 +140,7 @@ private final class ToggleRuntime: DemoRuntime {
         self.endpoint = endpoint
     }
 
-    func start() {
+    func start() async {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
@@ -202,7 +202,7 @@ private final class CounterRuntime: DemoRuntime {
         self.endpoint = endpoint
     }
 
-    func start() {
+    func start() async {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
@@ -266,7 +266,7 @@ private final class FeedbackRuntime: DemoRuntime {
         self.endpoint = endpoint
     }
 
-    func start() {
+    func start() async {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
@@ -360,7 +360,7 @@ private final class TrafficLightRuntime: DemoRuntime {
         self.endpoint = endpoint
     }
 
-    func start() {
+    func start() async {
         do {
             let (bridge, inspect) = try makeInspectBridge(machine: machine, transport: transport, endpoint: endpoint)
             self.bridge = bridge
@@ -430,7 +430,7 @@ private final class CheckoutRuntime: DemoRuntime {
         self.endpoint = endpoint
     }
 
-    func start() {
+    func start() async {
         bootActor()
     }
 

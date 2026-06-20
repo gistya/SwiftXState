@@ -25,11 +25,11 @@ final class ChessSession {
     var context: ChessContext { snapshot.context }
 
     /// TypeState-lite view of the `game` region (`game.playing`, `game.replaying`, …).
-    var gameSnapshot: TypedSnapshot<ChessContext, ChessGameState> {
-        typedActor.snapshot
+    func gameSnapshot() async -> TypedSnapshot<ChessContext, ChessGameState> {
+        await typedActor.snapshot
     }
 
-    var gamePhase: ChessGameState? { gameSnapshot.gamePhase }
+    func gamePhase() async -> ChessGameState? { (await gameSnapshot()).gamePhase }
 
     /// Derived SwiftUI/view state from the active `game.*` region.
     var viewState: ChessViewState? { snapshot.mapStateFirst(ChessViewStateMapper.mapper) }
@@ -56,7 +56,7 @@ final class ChessSession {
     init(
         host: String = "127.0.0.1",
         port: Int = 8080
-    ) {
+    ) async {
         endpoint = InspectEndpoint(host: host, port: port)
         inspectorEndpoint = endpoint.url?.absoluteString ?? "ws://\(host):\(port)"
         transport = URLSessionInspect.transport(
@@ -66,7 +66,7 @@ final class ChessSession {
 
         let actor: Actor<ChessContext>
         do {
-            let (bridge, statelyInspect) = try Self.makeInspectBridge(
+            let (bridge, statelyInspect) = try await Self.makeInspectBridge(
                 machine: machine,
                 transport: transport,
                 endpoint: endpoint
@@ -89,43 +89,43 @@ final class ChessSession {
 
         self.actor = actor
         typedActor = actor.typed(as: ChessGameState.self)
-        snapshot = typedActor.start(context: ChessContext.initial()).raw
+        snapshot = await typedActor.start(context: ChessContext.initial()).raw
     }
 
-    func tap(row: Int, col: Int) {
-        send(.tap(Square(row: row, col: col)))
+    func tap(row: Int, col: Int) async {
+        await send(.tap(Square(row: row, col: col)))
     }
 
-    func promote(to kind: PieceKind) {
-        send(.promote(kind))
+    func promote(to kind: PieceKind) async {
+        await send(.promote(kind))
     }
 
-    func newGame() {
+    func newGame() async {
         recordingGate.setEnabled(true)
-        send(.newGame)
+        await send(.newGame)
     }
 
-    func enterReplay() {
+    func enterReplay() async {
         guard let session = recorder.session() else { return }
         recordingGate.setEnabled(false)
         ChessReplayBridge.setPendingSession(session)
-        send(.enterReplay)
+        await send(.enterReplay)
     }
 
-    func exitReplay() {
-        send(.exitReplay)
+    func exitReplay() async {
+        await send(.exitReplay)
         recordingGate.setEnabled(true)
     }
 
-    func scrubReplay(to step: Int) {
+    func scrubReplay(to step: Int) async {
         guard context.isReplayMode else { return }
         let clamped = min(max(step, 0), replayStepCount)
         guard clamped != context.replayStep else { return }
-        send(.replayScrub(clamped))
+        await send(.replayScrub(clamped))
     }
 
-    func send(_ event: ChessEvent) {
-        snapshot = typedActor.send(event).raw
+    func send(_ event: ChessEvent) async {
+        snapshot = await typedActor.send(event).raw
     }
 
     func verifyRecording() -> Bool {
@@ -156,7 +156,7 @@ final class ChessSession {
         machine: StateMachine<ChessContext>,
         transport: URLSessionInspectTransport,
         endpoint: InspectEndpoint
-    ) throws -> (InspectBridge, @Sendable (InspectionEvent) -> Void) {
+    ) async throws -> (InspectBridge, @Sendable (InspectionEvent) -> Void) {
         let configuration = InspectClientConfiguration(
             policy: .localhostOnly(ports: .only([endpoint.port])),
             endpoint: endpoint,
@@ -166,7 +166,7 @@ final class ChessSession {
             machineDefinitions: [try InspectMachineRegistration(machine)]
         )
         let bridge = InspectBridge(transport: transport, configuration: configuration)
-        bridge.start()
+        await bridge.start()
         return (bridge, bridge.observe())
     }
 }
