@@ -109,6 +109,59 @@ struct InspectionTests {
         #expect(microsteps.contains { $0.transitions?.isEmpty == false })
     }
 
+    @Test("inspectable forces microstep recording even with snapshotMicrosteps: false")
+    func snapshotMicrostepsGatedByInspectable() async {
+        let collector = InspectionCollector()
+
+        let machine = createMachine(MachineConfig(
+            initial: "idle",
+            context: EmptyContext(),
+            states: [
+                "idle": StateNodeConfig(on: ["GO": .to("done")]),
+                "done": StateNodeConfig(type: .final),
+            ]
+        ))
+
+        // An inspect sink is attached, so `inspectable` defaults to true. `snapshotMicrosteps: false`
+        // must be ignored — inspection is meaningless without the microsteps.
+        let actor = await createActor(
+            machine,
+            options: ActorOptions(inspect: collector.observe(), snapshotMicrosteps: false)
+        ).start()
+        collector.reset()
+
+        await actor.send(Event("GO"))
+
+        let microsteps = collector.recordedEvents().filter { $0.kind == .microstep }
+        #expect(!microsteps.isEmpty)   // still recorded — inspectable overrode the flag
+    }
+
+    @Test("snapshotMicrosteps: false preserves run-to-completion behavior")
+    func snapshotMicrostepsPreservesBehavior() async {
+        // Multiple eventless (`always`) microsteps per event — exactly what the flag skips recording.
+        let machine = createMachine(MachineConfig(
+            initial: "idle",
+            context: EmptyContext(),
+            states: [
+                "idle": StateNodeConfig(on: ["GO": .to("b")]),
+                "b": StateNodeConfig(always: [TransitionConfig(target: "c")]),
+                "c": StateNodeConfig(always: [TransitionConfig(target: "done")]),
+                "done": StateNodeConfig(type: .final),
+            ]
+        ))
+
+        let actor = await createActor(
+            machine,
+            options: ActorOptions(inspectable: false, snapshotMicrosteps: false)
+        ).start()
+
+        await actor.send(Event("GO"))
+
+        // The intermediate microstep snapshots aren't retained, but the run still completes correctly.
+        #expect(await actor.snapshot.matches("done"))
+        #expect(await actor.snapshot.status == .done)
+    }
+
     @Test("emits actor event with machineId for invoked child machine")
     func spawnedMachineInspection() async {
         let collector = InspectionCollector()

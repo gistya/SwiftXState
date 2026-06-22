@@ -437,7 +437,8 @@ func macrostep<Context: Sendable>(
     event: any Eventable,
     isInitial: Bool = false,
     pendingActions: [ExecutableAction<Context>] = [],
-    maxIterations: Int = defaultMaxMacrostepIterations
+    maxIterations: Int = defaultMaxMacrostepIterations,
+    recordMicrosteps: Bool = true
 ) -> (
     snapshot: MachineSnapshot<Context>,
     actions: [ExecutableAction<Context>],
@@ -458,7 +459,7 @@ func macrostep<Context: Sendable>(
         event: any Eventable,
         transitions: [ResolvedTransition<Context>]
     ) {
-        guard !transitions.isEmpty else { return }
+        guard recordMicrosteps, !transitions.isEmpty else { return }
         recordedMicrosteps.append(
             MacrostepMicrostep(
                 snapshot: next,

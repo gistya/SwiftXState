@@ -20,6 +20,16 @@ public struct ActorOptions: Sendable {
     /// the main actor — useful for latency-sensitive UI — at the cost of running the actor's work on
     /// the main thread. Has no effect on platforms without `Darwin` (the override is Apple-only).
     public var useMainExecutor: Bool
+    /// When `false`, the engine does **not** retain an intermediate snapshot for every microstep of a
+    /// run-to-completion step — it keeps only the final macrostep snapshot. A run with many eventless
+    /// (`always`) / `raise` microsteps otherwise holds one `MachineSnapshot` (and, for a value-typed
+    /// `Context`, one distinct context copy) per microstep — O(microsteps × context) per event. Turn
+    /// this off for large-`Context` / high-microstep workloads (e.g. simulation reducers).
+    ///
+    /// **Only takes effect when `inspectable` is `false`.** With `inspectable: true` the microstep
+    /// snapshots are always retained, because inspection (Stately microstep/sequence views) is
+    /// meaningless without them.
+    public var snapshotMicrosteps: Bool
 
     public init(
         clock: any Clock = DefaultClock(),
@@ -27,7 +37,8 @@ public struct ActorOptions: Sendable {
         input: SendableValue? = nil,
         inspect: (@Sendable (InspectionEvent) -> Void)? = nil,
         inspectable: Bool = true,
-        useMainExecutor: Bool = false
+        useMainExecutor: Bool = false,
+        snapshotMicrosteps: Bool = true
     ) {
         self.clock = clock
         self.systemId = systemId
@@ -35,6 +46,7 @@ public struct ActorOptions: Sendable {
         self.inspect = inspect
         self.inspectable = inspectable
         self.useMainExecutor = useMainExecutor
+        self.snapshotMicrosteps = snapshotMicrosteps
     }
 }
 
@@ -67,6 +79,9 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     private nonisolated let system: ActorSystem
     private nonisolated let options: ActorOptions
     private nonisolated let inspectable: Bool
+    /// Whether intermediate microstep snapshots are retained per run-to-completion step. Forced on
+    /// when `inspectable` (inspection needs them); otherwise honors `ActorOptions.snapshotMicrosteps`.
+    private nonisolated let recordsMicrosteps: Bool
     /// The machine this actor runs.
     public nonisolated let machine: StateMachine<Context>
     /// This actor's session id (unique within its system).
@@ -107,6 +122,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         self.id = id ?? machine.id
         self.options = options
         self.inspectable = options.inspectable
+        self.recordsMicrosteps = options.inspectable || options.snapshotMicrosteps
         self.clock = options.clock
         #if canImport(Darwin)
         if options.useMainExecutor {
@@ -132,9 +148,13 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         TypedActor(self)
     }
 
-    private func emitInspection(_ event: InspectionEvent) {
-        guard inspectable else { return }
-        system.sendInspection(event)
+    /// `event` is an `@autoclosure` so the (potentially expensive) `InspectionEvent` — which
+    /// `Mirror`-encodes the whole `Context` via `InspectionSnapshot.from` — is only built when an
+    /// inspector is actually listening. Without this, a per-microstep `inspect*` call reflects the
+    /// entire context graph even with `inspectable: false`, which is O(context) per microstep.
+    private func emitInspection(_ event: @autoclosure () -> InspectionEvent) {
+        guard inspectable, system.hasInspectors else { return }
+        system.sendInspection(event())
     }
     
     public func getSnapshot() -> MachineSnapshot<Context> { snapshot }
@@ -425,7 +445,8 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         let (nextSnapshot, actions, microsteps) = macrostep(
             snapshot: current,
             event: event,
-            isInitial: false
+            isInitial: false,
+            recordMicrosteps: recordsMicrosteps
         )
         _snapshot = await runSideEffectActions(snapshot: nextSnapshot, actions: actions, event: event)
 
