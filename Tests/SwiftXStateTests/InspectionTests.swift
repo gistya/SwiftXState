@@ -25,7 +25,7 @@ struct InspectionTests {
         #expect(kinds.contains(.transition))
         #expect(kinds.contains(.snapshot))
         #expect(kinds.contains(.action))
-        #expect(await actor.actorSystem.rootSessionId == actor.id)
+        #expect(actor.actorSystem.rootSessionId == actor.id)
     }
 
     @Test("root actor registration carries the machine definition JSON")
@@ -44,7 +44,7 @@ struct InspectionTests {
         ))
 
         let actor = await createActor(machine, options: ActorOptions(inspect: collector.observe())).start()
-        let id = await actor.id
+        let id = actor.id
         let registration = collector.recordedEvents().first {
             $0.kind == .actor && $0.actor.sessionId == id
         }
@@ -275,7 +275,7 @@ struct InspectionTests {
         ).start()
 
         let events = collector.recordedEvents()
-        let id = await actor.id
+        let id = actor.id
         let actorIndex = events.firstIndex { $0.kind == .actor && $0.actor.sessionId == id }
         let spawnActionIndices = events.enumerated().compactMap { index, event in
             event.kind == .action && event.actionType == "xstate.spawnChild" ? index : nil

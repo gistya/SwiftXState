@@ -147,6 +147,48 @@ public final class StateNode<Context: Sendable>: @unchecked Sendable {
             child.bind(machine: machine)
         }
     }
+    
+    private func processOnDoneConfig(
+        _ onDone: TransitionInput<Context>,
+        stateNode: StateNode<Context>
+    ) {
+        let eventType = createDoneStateEventType(stateNode.id)
+        let transitions = resolveTransitionConfigs(onDone)
+        stateNode.transitions[eventType, default: []].append(
+            contentsOf: transitions.map { ResolvedTransition(config: $0, source: stateNode) }
+        )
+    }
+    
+    private func processInvokeConfig(
+        _ invoke: [InvokeConfig<Context>],
+        stateNode: StateNode<Context>
+    ) {
+        for config in invoke {
+            if let onDone = config.onDone {
+                let eventType = createDoneActorEventType(config.id)
+                let transitions = resolveTransitionConfigs(onDone)
+                stateNode.transitions[eventType, default: []].append(
+                    contentsOf: transitions.map { ResolvedTransition(config: $0, source: stateNode) }
+                )
+            }
+
+            if let onError = config.onError {
+                let eventType = createErrorActorEventType(config.id)
+                let transitions = resolveTransitionConfigs(onError)
+                stateNode.transitions[eventType, default: []].append(
+                    contentsOf: transitions.map { ResolvedTransition(config: $0, source: stateNode) }
+                )
+            }
+
+            if let onSnapshot = config.onSnapshot {
+                let eventType = createSnapshotActorEventType(config.id)
+                let transitions = resolveTransitionConfigs(onSnapshot)
+                stateNode.transitions[eventType, default: []].append(
+                    contentsOf: transitions.map { ResolvedTransition(config: $0, source: stateNode) }
+                )
+            }
+        }
+    }
 }
 
 /// A resolved transition with source state node reference.

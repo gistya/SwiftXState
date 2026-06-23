@@ -1,11 +1,5 @@
 import Foundation
 
-/// Any actor that can be registered in an actor system.
-public protocol ActorSystemRef: AnyObject, Sendable {
-    var sessionId: String { get }
-    var systemId: String? { get }
-}
-
 /// Registry for actors within a state machine system, mirroring XState's `system`.
 public final class ActorSystem: @unchecked Sendable {
     private var keyedActors: [String: any ActorSystemRef] = [:]

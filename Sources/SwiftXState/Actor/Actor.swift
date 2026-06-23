@@ -3,53 +3,6 @@ import Foundation
 import Dispatch
 #endif
 
-/// Options for creating an actor — clock, system id, input, and inspection wiring.
-public struct ActorOptions: Sendable {
-    /// Clock used for `after:` delays and delayed `raise`/`sendTo` (override in tests).
-    public var clock: any Clock
-    /// Stable id for this actor within its actor system (for `sendTo`/`stateIn` references).
-    public var systemId: String?
-    /// Input passed to the machine's `contextFromInput` to build the initial context.
-    public var input: SendableValue?
-    /// Sink for this actor's inspection events — plug in `InspectorStore.observe()` or a transport.
-    public var inspect: (@Sendable (InspectionEvent) -> Void)?
-    /// When `false`, this actor does not emit inspection events (Stately graph / sequence).
-    public var inspectable: Bool
-    /// When `true`, this actor runs on the `MainActor`'s serial executor instead of its own default
-    /// (background) executor. This eliminates the thread hop for `send`/`snapshot` calls made *from*
-    /// the main actor — useful for latency-sensitive UI — at the cost of running the actor's work on
-    /// the main thread. Has no effect on platforms without `Darwin` (the override is Apple-only).
-    public var useMainExecutor: Bool
-    /// When `false`, the engine does **not** retain an intermediate snapshot for every microstep of a
-    /// run-to-completion step — it keeps only the final macrostep snapshot. A run with many eventless
-    /// (`always`) / `raise` microsteps otherwise holds one `MachineSnapshot` (and, for a value-typed
-    /// `Context`, one distinct context copy) per microstep — O(microsteps × context) per event. Turn
-    /// this off for large-`Context` / high-microstep workloads (e.g. simulation reducers).
-    ///
-    /// **Only takes effect when `inspectable` is `false`.** With `inspectable: true` the microstep
-    /// snapshots are always retained, because inspection (Stately microstep/sequence views) is
-    /// meaningless without them.
-    public var snapshotMicrosteps: Bool
-
-    public init(
-        clock: any Clock = DefaultClock(),
-        systemId: String? = nil,
-        input: SendableValue? = nil,
-        inspect: (@Sendable (InspectionEvent) -> Void)? = nil,
-        inspectable: Bool = true,
-        useMainExecutor: Bool = false,
-        snapshotMicrosteps: Bool = true
-    ) {
-        self.clock = clock
-        self.systemId = systemId
-        self.input = input
-        self.inspect = inspect
-        self.inspectable = inspectable
-        self.useMainExecutor = useMainExecutor
-        self.snapshotMicrosteps = snapshotMicrosteps
-    }
-}
-
 /// A running instance of a `StateMachine` — the live process you `send` events to and read
 /// `snapshot` from. Create one with `createActor(_:)`, then `start()` it. Thread-safe.
 ///
@@ -832,128 +785,155 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     func childActor(id: String) -> (any ChildActorRef)? {
         children[id]
     }
-}
-
-/// Creates an actor (a runnable instance) from a machine — the Swift equivalent of XState's
-/// `createActor(machine)`. Call `.start()` on the result to run it. Pass `inspect:` to stream
-/// inspection events, or `input:` to seed the initial context via `contextFromInput`.
-public func createActor<Context: Sendable>(
-    _ machine: StateMachine<Context>,
-    id: String? = nil,
-    options: ActorOptions = ActorOptions(),
-    input: SendableValue? = nil,
-    inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) -> Actor<Context> {
-    var resolvedOptions = options
-    if let input {
-        resolvedOptions.input = input
-    }
-    if let inspect {
-        resolvedOptions.inspect = inspect
-    }
-    return Actor(machine, id: id, options: resolvedOptions)
-}
-
-/// Creates an actor branded with a compile-time state family `Brand`, returning a `TypedActor`
-/// whose `snapshot` / `start` / `send` yield `Brand`-typed `TypedSnapshot`s (`inState(_:)` /
-/// `narrowed(to:)`). Brand at creation instead of the post-hoc `createActor(machine).typed(as:)`
-/// two-step; otherwise identical to `createActor(_:)`.
-public func createActor<Context: Sendable, Brand: StateID>(
-    _ machine: StateMachine<Context>,
-    as _: Brand.Type,
-    id: String? = nil,
-    options: ActorOptions = ActorOptions(),
-    input: SendableValue? = nil,
-    inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) -> TypedActor<Context, Brand> {
-    TypedActor(createActor(machine, id: id, options: options, input: input, inspect: inspect))
-}
-
-/// Creates an actor and hydrates it from a persisted snapshot in one step.
-///
-/// The returned actor is already started — equivalent to
-/// `createActor(machine).start(from: snapshot)`, including child re-spawn and
-/// delayed-transition scheduling for restored state nodes.
-public func createActor<Context: Codable & Sendable>(
-    _ machine: StateMachine<Context>,
-    snapshot: PersistedSnapshot,
-    id: String? = nil,
-    options: ActorOptions = ActorOptions(),
-    context: Context? = nil,
-    inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) async -> Actor<Context> {
-    var resolvedOptions = options
-    if let inspect {
-        resolvedOptions.inspect = inspect
-    }
-    let actor = Actor(machine, id: id, options: resolvedOptions)
-    await actor.start(from: snapshot, context: context)
-    return actor
-}
-
-/// Brand-tagged variant of `createActor(_:snapshot:)`; the hydrated actor is wrapped in a
-/// `Brand`-typed `TypedActor`.
-public func createActor<Context: Codable & Sendable, Brand: StateID>(
-    _ machine: StateMachine<Context>,
-    as _: Brand.Type,
-    snapshot: PersistedSnapshot,
-    id: String? = nil,
-    options: ActorOptions = ActorOptions(),
-    context: Context? = nil,
-    inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) async -> TypedActor<Context, Brand> {
-    TypedActor(
-        await createActor(
-            machine,
-            snapshot: snapshot,
-            id: id,
-            options: options,
-            context: context,
-            inspect: inspect
-        )
-    )
-}
-
-/// Creates an actor with typed `input` (any `Sendable & Equatable`), wrapped into the machine's
-/// `contextFromInput`. Convenience over passing a `SendableValue`.
-public func createActor<Context: Sendable, Input: Sendable & Equatable>(
-    _ machine: StateMachine<Context>,
-    input: Input,
-    id: String? = nil,
-    options: ActorOptions = ActorOptions(),
-    inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) -> Actor<Context> {
-    createActor(
-        machine,
-        id: id,
-        options: options,
-        input: SendableValue(input),
-        inspect: inspect
-    )
-}
-
-/// Brand-tagged variant of `createActor(_:input:)`.
-public func createActor<Context: Sendable, Input: Sendable & Equatable, Brand: StateID>(
-    _ machine: StateMachine<Context>,
-    as _: Brand.Type,
-    input: Input,
-    id: String? = nil,
-    options: ActorOptions = ActorOptions(),
-    inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) -> TypedActor<Context, Brand> {
-    TypedActor(createActor(machine, input: input, id: id, options: options, inspect: inspect))
-}
-
-/// A handle returned by `Actor.subscribe(_:)`. Call `cancel()` to stop receiving snapshots.
-public struct Subscription: Sendable {
-    private let unsubscribe: @Sendable () -> Void
-
-    init(unsubscribe: @escaping @Sendable () -> Void) {
-        self.unsubscribe = unsubscribe
+    
+    struct ResolvedActorSource {
+        var machine: MachineActorLogicBox?
+        var task: TaskActorLogicBox?
+        var callback: CallbackActorLogicBox?
+        var taskGroup: TaskGroupActorLogicBox?
+        var transition: TransitionActorLogicBox?
+        var observable: ObservableActorLogicBox?
+        var store: StoreActorLogicBox?
+        var named: String?
     }
 
-    /// Stop receiving snapshot updates.
-    public func cancel() {
-        unsubscribe()
+    func resolveActorSource(
+        _ source: ActorSource,
+        implementations: MachineImplementations<Context>
+    ) -> ResolvedActorSource {
+        switch source {
+        case let .named(name):
+            guard let logic = implementations.actors[name] else {
+                return ResolvedActorSource(named: name)
+            }
+            return ResolvedActorSource(
+                machine: logic.machine,
+                task: logic.task,
+                callback: logic.callback,
+                taskGroup: logic.taskGroup,
+                transition: logic.transition,
+                observable: logic.observable,
+                store: logic.store
+            )
+        case let .machine(box):
+            return ResolvedActorSource(machine: box)
+        case let .task(box):
+            return ResolvedActorSource(task: box)
+        case let .callback(box):
+            return ResolvedActorSource(callback: box)
+        case let .taskGroup(box):
+            return ResolvedActorSource(taskGroup: box)
+        case let .transition(box):
+            return ResolvedActorSource(transition: box)
+        case let .observable(box):
+            return ResolvedActorSource(observable: box)
+        case let .store(box):
+            return ResolvedActorSource(store: box)
+        }
+    }
+
+    func makeChildActorRef(
+        from source: ActorSource,
+        id: String,
+        systemId: String?,
+        input: SendableValue?,
+        syncSnapshot: Bool,
+        inspectable: Bool,
+        parent: any ActorParentRef,
+        implementations: MachineImplementations<Context>,
+        options: ActorOptions,
+        persistedChild: PersistedChildSnapshot? = nil,
+        opaqueRestorePolicy: OpaqueInvokeRestorePolicy = .restart
+    ) -> (any ChildActorRef)? {
+        let resolved = resolveActorSource(source, implementations: implementations)
+        var childOptions = options
+        childOptions.systemId = systemId ?? id
+        childOptions.inspectable = inspectable
+
+        let resolvedSystemId = systemId ?? id
+
+        if let machine = resolved.machine {
+            return machine.spawn(
+                id: id,
+                input: input,
+                parent: parent,
+                options: childOptions,
+                syncSnapshot: syncSnapshot,
+                persistedChild: persistedChild
+            )
+        }
+
+        if let task = resolved.task {
+            guard shouldSpawnOpaqueChild(persistedChild: persistedChild, policy: opaqueRestorePolicy) else {
+                return nil
+            }
+            return task.spawn(
+                id: id,
+                input: input,
+                parent: parent,
+                systemId: resolvedSystemId
+            )
+        }
+
+        if let callback = resolved.callback {
+            guard shouldSpawnOpaqueChild(persistedChild: persistedChild, policy: opaqueRestorePolicy) else {
+                return nil
+            }
+            return callback.spawn(
+                id: id,
+                input: input,
+                parent: parent,
+                system: parent.actorSystem,
+                systemId: resolvedSystemId
+            )
+        }
+
+        if let taskGroup = resolved.taskGroup {
+            guard shouldSpawnOpaqueChild(persistedChild: persistedChild, policy: opaqueRestorePolicy) else {
+                return nil
+            }
+            return taskGroup.spawn(
+                id: id,
+                input: input,
+                parent: parent,
+                systemId: resolvedSystemId
+            )
+        }
+
+        if let transition = resolved.transition {
+            return transition.spawn(
+                id: id,
+                input: input,
+                parent: parent,
+                systemId: resolvedSystemId,
+                syncSnapshot: syncSnapshot
+            )
+        }
+
+        if let observable = resolved.observable {
+            return observable.spawn(
+                id: id,
+                input: input,
+                parent: parent,
+                systemId: resolvedSystemId,
+                syncSnapshot: syncSnapshot
+            )
+        }
+
+        if let store = resolved.store {
+            return store.spawn(
+                id: id,
+                input: input,
+                parent: parent,
+                systemId: resolvedSystemId,
+                syncSnapshot: syncSnapshot
+            )
+        }
+
+        if let name = resolved.named {
+            fatalError("Actor logic '\(name)' not found. Register it via setup(actors:) or MachineImplementations.actors.")
+        }
+
+        return nil
     }
 }
