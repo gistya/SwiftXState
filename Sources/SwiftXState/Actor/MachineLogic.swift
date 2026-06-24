@@ -1,15 +1,13 @@
 import Foundation
 
-/// The **reducer** behind a state-machine `StateActor`: the pure transition logic, separated from
-/// the actor's runtime resources (timers, children, effect dispatch). This is the in-package form
-/// of the engine-wrap spike's `MachineLogic`, and the first conformer the eventual
-/// `StateActor<Logic, ID>` will be parameterized over.
+/// The state-machine `ActorLogic`: the reducer that drives a `LogicActor<MachineLogic<Context>>`,
+/// which is the generic actor's machine specialization (full parity with `Actor`).
 ///
-/// It owns only what is genuinely pure — the initial snapshot and the macrostep. The machine-shaped
-/// *orchestration* (scheduling `after`, spawning `invoke` children) and the side-effect dispatch
-/// stay on `StateActor`, which owns the resources they touch. Keeping that split honest is what lets
-/// this type be a plain `Sendable` value: given a snapshot and an event it computes the next
-/// snapshot plus the effects to run, and nothing else.
+/// This type owns only what is genuinely pure — the initial snapshot and the macrostep (`reduce`).
+/// The machine-shaped *orchestration* (running side effects, scheduling `after`, spawning `invoke`
+/// children) lives in the effectful conformance (`MachineLogic+Host.swift`), run against the host's
+/// Context-agnostic primitives. Keeping that split honest is what lets this be a plain `Sendable`
+/// value: given a snapshot and an event it computes the next snapshot, and nothing else.
 struct MachineLogic<Context: Sendable>: Sendable {
     let machine: StateMachine<Context>
 
