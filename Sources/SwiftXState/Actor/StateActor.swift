@@ -32,6 +32,7 @@ actor StateActor<Context: Sendable>: ActorParentRef, ActorSystemRef, EffectHost 
     private nonisolated let system: ActorSystem
     private nonisolated let clock: any Clock
     private nonisolated let options: ActorOptions
+    private let logic: MachineLogic<Context>
 
     let machine: StateMachine<Context>
     nonisolated let id: String
@@ -58,6 +59,7 @@ actor StateActor<Context: Sendable>: ActorParentRef, ActorSystemRef, EffectHost 
         system: ActorSystem? = nil
     ) {
         self.machine = machine
+        self.logic = MachineLogic(machine: machine)
         self.id = id ?? machine.id
         self.options = options
         self.clock = options.clock
@@ -78,7 +80,7 @@ actor StateActor<Context: Sendable>: ActorParentRef, ActorSystemRef, EffectHost 
         isProcessing = true
         defer { isProcessing = false }
         let resolvedInput = input ?? options.input
-        let (snapshot, actions) = initialTransition(machine, input: resolvedInput, context: context)
+        let (snapshot, actions) = logic.initialSnapshot(input: resolvedInput, context: context)
         _snapshot = snapshot
         _snapshot = await runSideEffectActions(snapshot: snapshot, actions: actions, event: SystemEvent.`init`)
         updateDelayedTransitions(
@@ -187,12 +189,7 @@ actor StateActor<Context: Sendable>: ActorParentRef, ActorSystemRef, EffectHost 
         guard current.status == .active else { return }
 
         let previousNodes = current._nodes
-        let (nextSnapshot, actions, _) = macrostep(
-            snapshot: current,
-            event: event,
-            isInitial: false,
-            recordMicrosteps: false
-        )
+        let (nextSnapshot, actions) = logic.reduce(current, on: event)
         _snapshot = await runSideEffectActions(snapshot: nextSnapshot, actions: actions, event: event)
 
         let previousSet = StateNodeSet(previousNodes)
