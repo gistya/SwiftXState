@@ -16,8 +16,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     private var observers: [(id: Int, handler: (MachineSnapshot<Context>) -> Void)] = []
     private var nextObserverID = 0
     private let emitListeners = EmitListeners()
-    private var children: [String: any ChildActorRef] = [:]
-    private var stoppedChildIDs: Set<String> = []
+    private let childRegistry = ChildRegistry()
     private var pendingChildSnapshots: [String: PersistedChildSnapshot] = [:]
     private var mailbox: [any Eventable] = []
     /// True while a drain loop is processing the mailbox. Guards against actor reentrancy: an event
@@ -123,7 +122,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
 
     private func snapshotForInspection(_ snapshot: MachineSnapshot<Context>) -> MachineSnapshot<Context> {
         let inspectableChildren = snapshot.children.filter { childId, _ in
-            guard let child = children[childId] else { return false }
+            guard let child = childRegistry.get(childId) else { return false }
             return child.inspectable
         }
         guard inspectableChildren.count != snapshot.children.count else { return snapshot }
@@ -223,7 +222,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         } else {
             actorId = nil
         }
-        guard let actorId, let child = children[actorId] else { return nil }
+        guard let actorId, let child = childRegistry.get(actorId) else { return nil }
         return InspectionActorRef.from(child)
     }
 
@@ -240,7 +239,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         guard let snapshot = _snapshot else {
             throw PersistenceError.actorNotStarted
         }
-        let childSnapshots = try await collectPersistedChildSnapshots(from: children)
+        let childSnapshots = try await collectPersistedChildSnapshots(from: childRegistry.all)
         return try SwiftXState.getPersistedSnapshot(from: snapshot, children: childSnapshots)
     }
 
@@ -497,7 +496,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
                     persistedChild: pendingChildSnapshots[invoke.id],
                     opaqueRestorePolicy: invoke.opaqueRestorePolicy
                 ) {
-                    children[invoke.id] = child
+                    childRegistry.add(invoke.id, child)
                     system.register(child)
                     if child.inspectable {
                         inspectSpawnedChild(child, machineId: child.machineId)
@@ -512,7 +511,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
 
     private func spawnFromAction(_ spawn: SpawnRef<Context>, args: ActionArgs<Context>) async {
         let childId = spawn.id ?? UUID().uuidString
-        guard children[childId] == nil else { return }
+        guard !childRegistry.contains(childId) else { return }
         let input = spawn.input?(args)
         if let child = makeChildActorRef(
             from: spawn.src,
@@ -527,7 +526,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
             persistedChild: pendingChildSnapshots[childId],
             opaqueRestorePolicy: spawn.opaqueRestorePolicy
         ) {
-            children[childId] = child
+            childRegistry.add(childId, child)
             system.register(child)
             if child.inspectable {
                 inspectSpawnedChild(child, machineId: child.machineId)
@@ -552,34 +551,27 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     }
 
     private func stopChild(id: String) async {
-        guard let child = children.removeValue(forKey: id) else { return }
-        stoppedChildIDs.insert(id)
+        guard let child = childRegistry.remove(id) else { return }
+        childRegistry.markStopped(id)
         system.unregister(child)
         await child.stop()
         syncChildrenSnapshot()
     }
 
     private func stopAllChildren() async {
-        stoppedChildIDs.formUnion(children.keys)
-        for child in children.values {
+        childRegistry.markAllStopped()
+        for child in childRegistry.all.values {
             system.unregister(child)
             await child.stop()
         }
-        children.removeAll()
+        childRegistry.removeAll()
     }
 
     private func syncChildrenSnapshot() {
         guard var snapshot = _snapshot else { return }
-        stoppedChildIDs.subtract(children.keys)
-        var childSnapshots = children.mapValues {
-            ChildActorSnapshot(
-                id: $0.id,
-                status: $0.status,
-                value: $0.snapshotValue,
-                error: $0.errorMessage
-            )
-        }
-        for (id, existing) in snapshot.children where childSnapshots[id] == nil && !stoppedChildIDs.contains(id) {
+        childRegistry.reconcileStopped()
+        var childSnapshots = childRegistry.snapshots()
+        for (id, existing) in snapshot.children where childSnapshots[id] == nil && !childRegistry.wasStopped(id) {
             childSnapshots[id] = existing
         }
         snapshot = MachineSnapshot(
@@ -627,7 +619,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     }
 
     private func deliverToChild(id childId: String, event: any Eventable) async {
-        guard let child = children[childId] else { return }
+        guard let child = childRegistry.get(childId) else { return }
         if child.inspectable {
             emitInspection(.event(
                 rootId: inspectionRootId,
@@ -777,7 +769,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     }
 
     func childActor(id: String) -> (any ChildActorRef)? {
-        children[id]
+        childRegistry.get(id)
     }
     
     struct ResolvedActorSource {
