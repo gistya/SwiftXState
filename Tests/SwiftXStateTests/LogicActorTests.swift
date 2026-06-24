@@ -2,6 +2,27 @@ import Testing
 import Foundation
 @testable import SwiftXState
 
+extension LogicActor {
+    /// Deterministic snapshot wait (mirrors the `Actor`/`StateActor` helpers; uses `subscribe`).
+    @discardableResult
+    func waitForSnapshot(
+        timeout: Duration = .seconds(5),
+        where predicate: @escaping @Sendable (L.Snapshot) -> Bool
+    ) async -> L.Snapshot? {
+        let oneShot = OneShot<L.Snapshot?>()
+        let subscription = subscribe { snapshot in
+            if predicate(snapshot) { oneShot.resolve(snapshot) }
+        }
+        defer { subscription.cancel() }
+        let timeoutTask = Task {
+            try? await Task.sleep(for: timeout)
+            oneShot.resolve(nil)
+        }
+        defer { timeoutTask.cancel() }
+        return await oneShot.get()
+    }
+}
+
 /// A hand-written `ActorLogic` with no machine behind it — proves `LogicActor` is genuinely generic
 /// over the reducer, not secretly machine-coupled.
 private struct CounterLogic: ActorLogic {
@@ -147,5 +168,128 @@ struct LogicActorTests {
         let newCtx = await new.snapshot.context
         #expect(oldCtx == newCtx)
         #expect(newCtx.count == 4)
+    }
+
+    // MARK: EFFECTFUL machines on the generic core — full parity with Actor
+
+    @Test("LogicActor<MachineLogic> matches Actor on emit")
+    func machineEmitParity() async {
+        let emitter = createMachine(MachineConfig(
+            id: "emitter", initial: "idle", context: EmptyContext(),
+            states: [
+                "idle": StateNodeConfig(on: ["GO": .single(TransitionConfig(actions: [emit("ping")]))]),
+            ]
+        ))
+        let old = await createActor(emitter).start()
+        let new = await LogicActor(MachineLogic(machine: emitter)).start()
+        let oldFired = TestSignal()
+        let newFired = TestSignal()
+        await old.on("ping") { _ in oldFired.fire() }
+        await new.on("ping") { _ in newFired.fire() }
+        await old.send(Event("GO"))
+        await new.send(Event("GO"))
+        #expect(await oldFired.wait())
+        #expect(await newFired.wait())
+    }
+
+    @Test("LogicActor<MachineLogic> matches Actor on after (SimulatedClock)")
+    func machineAfterParity() async {
+        let timed = createMachine(MachineConfig(
+            id: "timed", initial: "waiting", context: EmptyContext(),
+            states: [
+                "waiting": StateNodeConfig(after: ["20": .to("done")]),
+                "done": StateNodeConfig(type: .final),
+            ]
+        ))
+        let clockOld = SimulatedClock()
+        let clockNew = SimulatedClock()
+        let old = await createActor(timed, options: ActorOptions(clock: clockOld)).start()
+        let new = await LogicActor(MachineLogic(machine: timed), options: ActorOptions(clock: clockNew)).start()
+        #expect(await new.snapshot.matches("waiting"))
+        clockOld.increment(25)
+        clockNew.increment(25)
+        await old.waitForSnapshot { $0.matches("done") }
+        await new.waitForSnapshot { $0.matches("done") }
+        #expect(await old.snapshot.value.description == new.snapshot.value.description)
+        #expect(await new.status == .done)
+    }
+
+    @Test("LogicActor<MachineLogic> matches Actor on invoke onDone")
+    func machineInvokeParity() async {
+        struct ParentCtx: Sendable, Equatable { var userName: String? }
+        struct ChildCtx: Sendable, Equatable { var userName: String? }
+        func makeParent() -> StateMachine<ParentCtx> {
+            let child = createMachine(MachineConfig(
+                initial: "done", context: ChildCtx(userName: "Ada"),
+                states: ["done": StateNodeConfig(type: .final, output: { args in SendableValue(args.context.userName ?? "") })]
+            ))
+            return createMachine(MachineConfig(
+                id: "fetcher", initial: "idle", context: ParentCtx(userName: nil),
+                states: [
+                    "idle": StateNodeConfig(on: ["GO": .to("waiting")]),
+                    "waiting": StateNodeConfig(invoke: [
+                        InvokeConfig(
+                            id: "fetch",
+                            src: .machine(MachineActorLogicBox(child) { _ in ChildCtx(userName: "Ada") }),
+                            onDone: .single(TransitionConfig(
+                                target: "received",
+                                actions: [assign { ctx, args in
+                                    if let event = args.event as? DoneActorEvent {
+                                        ctx.userName = event.output?.get(String.self)
+                                    }
+                                }]
+                            ))
+                        ),
+                    ]),
+                    "received": StateNodeConfig(type: .final),
+                ]
+            ))
+        }
+        let old = await createActor(makeParent()).start()
+        let new = await LogicActor(MachineLogic(machine: makeParent())).start()
+        await old.send(Event("GO"))
+        await new.send(Event("GO"))
+        await old.waitForSnapshot { $0.matches("received") }
+        await new.waitForSnapshot { $0.matches("received") }
+        #expect(await old.snapshot.value.description == new.snapshot.value.description)
+        #expect(await new.snapshot.context.userName == "Ada")
+        #expect(await new.status == .done)
+    }
+
+    @Test("LogicActor<MachineLogic> matches Actor on forwardTo + sendToParent")
+    func machineForwardToParity() async {
+        struct RelayCtx: Sendable, Equatable { var gotPong: Bool; var childId: String }
+        func makeRelay() -> StateMachine<RelayCtx> {
+            createMachine(MachineConfig(
+                initial: "active", context: RelayCtx(gotPong: false, childId: "listener"),
+                states: [
+                    "active": StateNodeConfig(
+                        on: [
+                            "PING": .single(TransitionConfig(actions: [forwardTo("listener")])),
+                            "PONG": .single(TransitionConfig(actions: [assign { ctx, _ in ctx.gotPong = true }])),
+                        ],
+                        invoke: [
+                            InvokeConfig(
+                                id: "listener",
+                                src: fromCallback { scope in
+                                    scope.receive { event in
+                                        if event.type == "PING" { scope.sendToParent(Event("PONG")) }
+                                    }
+                                    return nil
+                                }
+                            ),
+                        ]
+                    ),
+                ]
+            ))
+        }
+        let old = await createActor(makeRelay()).start()
+        let new = await LogicActor(MachineLogic(machine: makeRelay())).start()
+        await old.send(Event("PING"))
+        await new.send(Event("PING"))
+        await old.waitForSnapshot { $0.context.gotPong }
+        await new.waitForSnapshot { $0.context.gotPong }
+        #expect(await old.snapshot.context.gotPong)
+        #expect(await new.snapshot.context.gotPong)
     }
 }
