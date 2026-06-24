@@ -23,6 +23,22 @@ protocol ActorLogic: Sendable {
 
     /// Lifecycle status of a snapshot. The runtime stops feeding events once this is not `.active`.
     func status(of snapshot: Snapshot) -> SnapshotStatus
+
+    /// Optional background driver. A *runnable* logic (the shape behind callback / task / observable
+    /// children) pushes a stream of snapshots through `scope` from its own task rather than folding
+    /// events. Pure reducers (including `MachineLogic`) leave this as the no-op default.
+    func run(_ scope: ActorScope<Snapshot>) async
+}
+
+extension ActorLogic {
+    func run(_ scope: ActorScope<Snapshot>) async {}
+}
+
+/// Handed to `ActorLogic.run` so a background driver can push new snapshots into its host actor.
+/// `update` hops onto the actor's isolation; updates after the logic is no longer `.active` are
+/// dropped by the host (mirroring run-to-completion).
+struct ActorScope<Snapshot: Sendable>: Sendable {
+    let update: @Sendable (Snapshot) async -> Void
 }
 
 /// `MachineLogic` is an `ActorLogic`: its reducer *is* the macrostep. For an effect-free machine

@@ -17,6 +17,7 @@ actor LogicActor<L: ActorLogic> {
     private var isProcessing = false
     private var observers: [(id: Int, handler: @Sendable (L.Snapshot) -> Void)] = []
     private var nextObserverID = 0
+    private var runTask: Task<Void, Never>?
 
     nonisolated let id: String
 
@@ -43,7 +44,27 @@ actor LogicActor<L: ActorLogic> {
         let snapshot = logic.initialState(input: input)
         _snapshot = snapshot
         notify(snapshot)
+        // Launch the optional background driver (no-op for pure reducers). The scope hops each
+        // pushed snapshot back onto this actor's isolation via `applyExternal`.
+        let scope = ActorScope<L.Snapshot> { [weak self] pushed in
+            await self?.applyExternal(pushed)
+        }
+        runTask = Task { [logic] in await logic.run(scope) }
         return self
+    }
+
+    /// Stops the background driver, if any. Events already in flight still drain.
+    func stop() {
+        runTask?.cancel()
+        runTask = nil
+    }
+
+    /// Applies a snapshot pushed by `ActorLogic.run`. Dropped once the logic is no longer active,
+    /// keeping run-to-completion semantics symmetric with `process`.
+    private func applyExternal(_ snapshot: L.Snapshot) {
+        guard let current = _snapshot, logic.status(of: current) == .active else { return }
+        _snapshot = snapshot
+        notify(snapshot)
     }
 
     func send(_ event: any Eventable) async {

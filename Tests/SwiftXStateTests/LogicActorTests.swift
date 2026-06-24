@@ -31,6 +31,30 @@ private struct CounterLogic: ActorLogic {
     }
 }
 
+/// A *runnable* `ActorLogic`: it has no events to fold, it drives itself from `run`, pushing a
+/// stream of snapshots and finishing. This is the shape behind callback / task / observable
+/// children — proving `LogicActor` spans both reducer and runnable logics with one implementation.
+private struct StreamLogic: ActorLogic {
+    struct State: Sendable, Equatable {
+        var value = 0
+        var finished = false
+    }
+    let upTo: Int
+    let done: TestSignal
+
+    func initialState(input: SendableValue?) -> State { State() }
+    func step(_ snapshot: State, on event: any Eventable) -> State { snapshot }
+    func status(of snapshot: State) -> SnapshotStatus { snapshot.finished ? .done : .active }
+
+    func run(_ scope: ActorScope<State>) async {
+        for i in 1...upTo {
+            await scope.update(State(value: i, finished: false))
+        }
+        await scope.update(State(value: upTo, finished: true))
+        done.fire()
+    }
+}
+
 @Suite("Generic LogicActor")
 struct LogicActorTests {
 
@@ -65,6 +89,18 @@ struct LogicActorTests {
     func initialInput() async {
         let actor = await LogicActor(CounterLogic(target: 100)).start(input: SendableValue(10))
         #expect(await actor.snapshot.count == 10)
+    }
+
+    // MARK: runnable logic (background-driven snapshot stream)
+
+    @Test("LogicActor drives a runnable logic to completion")
+    func runnableLogic() async {
+        let done = TestSignal()
+        let actor = await LogicActor(StreamLogic(upTo: 5, done: done)).start()
+        #expect(await done.wait())
+        #expect(await actor.snapshot.value == 5)
+        #expect(await actor.snapshot.finished)
+        #expect(await actor.status == .done)
     }
 
     // MARK: same generic actor hosting MachineLogic (effect-free machines)
