@@ -12,7 +12,9 @@ import UIKit
 /// Procedural textures for the 3D renderer — generated once per scene build. Returns
 /// `CGImage`s, which SceneKit materials accept directly on every Apple platform.
 enum Scene3DTextures {
-    private static let ciContext = CIContext(options: nil)
+    // CIContext is documented thread-safe; the annotation satisfies Swift 6 strict concurrency
+    // without a lock. Generated-once, read-only thereafter.
+    nonisolated(unsafe) private static let ciContext = CIContext(options: nil)
 
     /// Shared, instance-independent textures (computed once).
     static let brushedRoughnessImage: CGImage? = brushedMetalRoughness()
