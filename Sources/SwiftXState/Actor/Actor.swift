@@ -509,7 +509,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         syncChildrenSnapshot()
     }
 
-    private func spawnFromAction(_ spawn: SpawnRef<Context>, args: ActionArgs<Context>) async {
+    func spawnFromAction(_ spawn: SpawnRef<Context>, args: ActionArgs<Context>) async {
         let childId = spawn.id ?? UUID().uuidString
         guard !childRegistry.contains(childId) else { return }
         let input = spawn.input?(args)
@@ -550,7 +550,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         }
     }
 
-    private func stopChild(id: String) async {
+    func stopChild(id: String) async {
         guard let child = childRegistry.remove(id) else { return }
         childRegistry.markStopped(id)
         system.unregister(child)
@@ -589,13 +589,13 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         _snapshot = snapshot
     }
 
-    private func scheduleDelayedTransition(eventType: String, delay: Int, timerId: String) {
+    func scheduleDelayedTransition(eventType: String, delay: Int, timerId: String) {
         scheduler.schedule(timerId, delay: delay) { [weak self] in
             Task { await self?.sendDelayed(Event(eventType), timerId: timerId) }
         }
     }
 
-    private func scheduleDelayedSendTo(
+    func scheduleDelayedSendTo(
         childId: String,
         event: Event,
         delay: Int,
@@ -618,7 +618,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         await deliverToChild(id: childId, event: event)
     }
 
-    private func deliverToChild(id childId: String, event: any Eventable) async {
+    func deliverToChild(id childId: String, event: any Eventable) async {
         guard let child = childRegistry.get(childId) else { return }
         if child.inspectable {
             emitInspection(.event(
@@ -631,7 +631,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         await child.send(event)
     }
 
-    private func cancelScheduledTimer(_ timerId: String) {
+    func cancelScheduledTimer(_ timerId: String) {
         scheduler.cancel(timerId)
     }
 
@@ -639,83 +639,30 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         cancelScheduledTimer(eventType)
     }
 
+    /// The actor's current snapshot, exposed to `ActionEffectRunner` (the `EffectHost` seam) so the
+    /// extracted dispatch can re-read it after a spawn/stop mutates it.
+    var effectSnapshot: MachineSnapshot<Context>? { _snapshot }
+
+    /// Forwards an event to this actor's parent, if any. The `EffectHost` witness for the
+    /// `sendParent` action (was an inline `await parent?.enqueueFromChild(...)`).
+    func enqueueToParent(_ event: any Eventable) async {
+        await parent?.enqueueFromChild(event)
+    }
+
+    /// Runs a macrostep's side-effect actions. The dispatch itself lives in `ActionEffectRunner`,
+    /// shared with the generics refactor's runtime; passing `host: self` (an `isolated` parameter)
+    /// keeps every effect call same-actor and non-hopping, exactly as when this loop was inline.
     private func runSideEffectActions(
         snapshot: MachineSnapshot<Context>,
         actions: [ExecutableAction<Context>],
         event: any Eventable
     ) async -> MachineSnapshot<Context> {
-        var context = snapshot.context
-        var result = snapshot
-
-        for action in actions {
-            switch action.ref {
-            case .assign:
-                continue
-            case .named, .parameterized, .inline, .log:
-                let args = ActionArgs(context: context, event: event)
-                executeAction(action, context: &context, args: args, implementations: machine.implementations)
-            case let .emit(emitAction):
-                let args = ActionArgs(context: context, event: event)
-                notifyEmitted(resolveEmitEvent(emitAction, args: args))
-            case let .spawn(spawn):
-                let args = ActionArgs(context: context, event: event)
-                await spawnFromAction(spawn, args: args)
-                result = _snapshot ?? result
-            case let .stopChild(target):
-                let args = ActionArgs(context: context, event: event)
-                await stopChild(id: resolveChildTarget(target, args: args))
-                result = _snapshot ?? result
-            case let .forwardTo(target):
-                let args = ActionArgs(context: context, event: event)
-                await deliverToChild(id: resolveChildTarget(target, args: args), event: event)
-            case let .sendTo(sendToAction):
-                let args = ActionArgs(context: context, event: event)
-                let resolved = resolveSendTo(
-                    sendToAction,
-                    args: args,
-                    delays: machine.implementations.delays
-                )
-                if let delayMs = resolved.delayMs {
-                    scheduleDelayedSendTo(
-                        childId: resolved.childId,
-                        event: resolved.event,
-                        delay: delayMs,
-                        timerId: resolved.id ?? "sendTo.\(resolved.childId).\(resolved.event.type)"
-                    )
-                } else {
-                    await deliverToChild(id: resolved.childId, event: resolved.event)
-                }
-            case let .sendParent(parentEvent):
-                await parent?.enqueueFromChild(parentEvent)
-            case .raise:
-                if let delayedEvent = action.delayedEvent,
-                   let delayMs = action.delayMs,
-                   let timerId = action.timerId {
-                    scheduleDelayedTransition(
-                        eventType: delayedEvent.type,
-                        delay: delayMs,
-                        timerId: timerId
-                    )
-                }
-            case let .cancel(cancelId):
-                let args = ActionArgs(context: context, event: event)
-                cancelScheduledTimer(resolveCancelId(cancelId, args: args))
-            case .enqueueActions:
-                break
-            }
-        }
-
-        return MachineSnapshot(
-            machine: result.machine,
-            value: result.value,
-            context: context,
-            nodes: result._nodes,
-            tags: result.tags,
-            status: result.status,
-            historyValue: result.historyValue,
-            output: result.output,
-            error: result.error,
-            children: result.children
+        await ActionEffectRunner().run(
+            snapshot: snapshot,
+            actions: actions,
+            event: event,
+            machine: machine,
+            host: self
         )
     }
 
@@ -755,7 +702,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         }
     }
 
-    private func notifyEmitted(_ event: EmittedEvent) {
+    func notifyEmitted(_ event: EmittedEvent) {
         emitListeners.notify(event)
     }
 
