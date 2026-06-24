@@ -16,7 +16,6 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     private var observers: [(id: Int, handler: (MachineSnapshot<Context>) -> Void)] = []
     private var nextObserverID = 0
     private let emitListeners = EmitListeners()
-    private var scheduledTimers: [String: TimeoutHandle] = [:]
     private var children: [String: any ChildActorRef] = [:]
     private var stoppedChildIDs: Set<String> = []
     private var pendingChildSnapshots: [String: PersistedChildSnapshot] = [:]
@@ -29,6 +28,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     private var isProcessing = false
     private weak var parent: (any ActorParentRef)?
     private let clock: any Clock
+    private let scheduler: DelayScheduler
     private nonisolated let system: ActorSystem
     private nonisolated let options: ActorOptions
     private nonisolated let inspectable: Bool
@@ -77,6 +77,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         self.inspectable = options.inspectable
         self.recordsMicrosteps = options.inspectable || options.snapshotMicrosteps
         self.clock = options.clock
+        self.scheduler = DelayScheduler(clock: options.clock)
         #if canImport(Darwin)
         if options.useMainExecutor {
             self.ownedExecutorQueue = nil
@@ -597,12 +598,9 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     }
 
     private func scheduleDelayedTransition(eventType: String, delay: Int, timerId: String) {
-        cancelScheduledTimer(timerId)
-
-        let handle = clock.setTimeout({ [weak self] in
+        scheduler.schedule(timerId, delay: delay) { [weak self] in
             Task { await self?.sendDelayed(Event(eventType), timerId: timerId) }
-        }, delay: delay)
-        scheduledTimers[timerId] = handle
+        }
     }
 
     private func scheduleDelayedSendTo(
@@ -611,23 +609,20 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
         delay: Int,
         timerId: String
     ) {
-        cancelScheduledTimer(timerId)
-
-        let handle = clock.setTimeout({ [weak self] in
+        scheduler.schedule(timerId, delay: delay) { [weak self] in
             Task { await self?.sendDelayedToChild(childId: childId, event: event, timerId: timerId) }
-        }, delay: delay)
-        scheduledTimers[timerId] = handle
+        }
     }
 
     private func sendDelayed(_ event: Event, timerId: String) async {
-        scheduledTimers.removeValue(forKey: timerId)
+        scheduler.didFire(timerId)
         inspectIncomingEvent(event, source: nil)
         mailbox.append(event)
         await drain()
     }
 
     private func sendDelayedToChild(childId: String, event: Event, timerId: String) async {
-        scheduledTimers.removeValue(forKey: timerId)
+        scheduler.didFire(timerId)
         await deliverToChild(id: childId, event: event)
     }
 
@@ -645,8 +640,7 @@ public actor Actor<Context: Sendable>: ActorParentRef, ActorSystemRef {
     }
 
     private func cancelScheduledTimer(_ timerId: String) {
-        guard let handle = scheduledTimers.removeValue(forKey: timerId) else { return }
-        clock.clearTimeout(handle)
+        scheduler.cancel(timerId)
     }
 
     private func cancelDelayedTransition(_ eventType: String) {
