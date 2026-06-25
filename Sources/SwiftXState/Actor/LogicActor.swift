@@ -45,6 +45,7 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     private nonisolated let system: ActorSystem
     private nonisolated let options: ActorOptions
     private nonisolated let clock: any Clock
+    private nonisolated let inspectable: Bool
 
     nonisolated let id: String
 
@@ -64,12 +65,32 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         self.id = id
         self.options = options
         self.clock = options.clock
+        self.inspectable = options.inspectable
         self.scheduler = DelayScheduler(clock: options.clock)
         self.parent = parent
         self.system = system ?? parent?.actorSystem ?? ActorSystem()
         if parent == nil {
             self.system.setRootIdIfNeeded(id)
         }
+        if inspectable, let inspect = options.inspect {
+            self.system.inspect(inspect)
+        }
+    }
+
+    private var inspectionActorRef: InspectionActorRef {
+        InspectionActorRef.from(self, machineId: logic.inspectionMachineId())
+    }
+
+    private var inspectionRootId: String {
+        system.rootSessionId ?? id
+    }
+
+    /// `event` is an `@autoclosure` so the (potentially expensive) `InspectionEvent` — which
+    /// `Mirror`-encodes the whole `Context` — is only built when an inspector is actually attached,
+    /// exactly as in `Actor`. A nil result (a non-inspected logic) emits nothing.
+    private func emitInspection(_ event: @autoclosure () -> InspectionEvent?) {
+        guard inspectable, system.hasInspectors else { return }
+        if let event = event() { system.sendInspection(event) }
     }
 
     /// The current snapshot. Traps if the actor hasn't been started.
@@ -94,6 +115,18 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         _snapshot = snapshot
         isProcessing = false
         system.register(self)
+        // Inspection lifecycle for startup, matching Actor's order: registration (root only),
+        // transition, incoming init event, snapshot.
+        if parent == nil {
+            emitInspection(logic.inspectionRegistrationEvent(
+                snapshot, actor: inspectionActorRef, rootId: inspectionRootId,
+                parentSessionId: (parent as? ActorSystemRef)?.sessionId,
+                includeDefinition: system.hasInspectors
+            ))
+        }
+        emitInspection(logic.inspectionTransitionEvent(snapshot, event: SystemEvent.`init`, actor: inspectionActorRef, rootId: inspectionRootId))
+        emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: nil, event: SystemEvent.`init`))
+        emitInspection(logic.inspectionSnapshotEvent(snapshot, event: SystemEvent.`init`, actor: inspectionActorRef, rootId: inspectionRootId))
         notify(snapshot)
         // Launch the optional background driver (no-op for pure reducers / machines). The scope hops
         // each pushed snapshot back onto this actor's isolation via `applyExternal`.
@@ -126,6 +159,7 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     }
 
     func send(_ event: any Eventable) async {
+        emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: nil, event: event))
         mailbox.append(event)
         await drain()
     }
@@ -164,6 +198,8 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         guard let current = _snapshot, logic.status(of: current) == .active else { return }
         let next = await logic.handle(event, current, host: self)
         _snapshot = next
+        emitInspection(logic.inspectionTransitionEvent(next, event: event, actor: inspectionActorRef, rootId: inspectionRootId))
+        emitInspection(logic.inspectionSnapshotEvent(next, event: event, actor: inspectionActorRef, rootId: inspectionRootId))
         notify(next)
     }
 
@@ -176,12 +212,20 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     // MARK: ActorParentRef
 
     func enqueueFromChild(_ event: any Eventable) async {
+        // Source attribution (mapping the event back to the originating child) is not yet ported;
+        // the source is nil for now. The event/transition/snapshot stream is otherwise faithful.
+        emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: nil, event: event))
         mailbox.append(event)
         await drain()
     }
 
     func inspectSpawnedChild(_ child: any ChildActorRef, machineId: String?) async {
-        // Inspection deferred for the experimental runtime.
+        emitInspection(.actor(
+            rootId: inspectionRootId,
+            actor: InspectionActorRef.from(child, machineId: machineId),
+            parentSessionId: id,
+            definitionJSON: child.definitionJSON
+        ))
     }
 
     // MARK: MachineHost

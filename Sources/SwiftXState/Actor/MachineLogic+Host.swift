@@ -175,6 +175,7 @@ extension MachineLogic {
                 ) {
                     host.childRegistry.add(invoke.id, child)
                     host.registerChild(child)
+                    if child.inspectable { await host.inspectSpawnedChild(child, machineId: child.machineId) }
                     await child.start()
                 }
             }
@@ -219,6 +220,7 @@ extension MachineLogic {
         ) {
             host.childRegistry.add(childId, child)
             host.registerChild(child)
+            if child.inspectable { await host.inspectSpawnedChild(child, machineId: child.machineId) }
             await child.start()
         }
     }

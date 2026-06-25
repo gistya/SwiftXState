@@ -38,6 +38,21 @@ protocol ActorLogic: Sendable {
     /// default is the pure `step`. `MachineLogic` overrides this to run the macrostep's side-effect
     /// actions, reschedule `after`, and reconcile `invoke` children — all via `host`'s primitives.
     func handle<H: MachineHost>(_ event: any Eventable, _ snapshot: Snapshot, host: isolated H) async -> Snapshot
+
+    // Inspection hooks — declared as requirements (not just extension methods) so a generic
+    // `LogicActor<L>` dispatches to the conformer's override, not the no-op default.
+    var providesInspection: Bool { get }
+    func inspectionMachineId() -> String?
+    func inspectionRegistrationEvent(
+        _ snapshot: Snapshot, actor: InspectionActorRef, rootId: String,
+        parentSessionId: String?, includeDefinition: Bool
+    ) -> InspectionEvent?
+    func inspectionTransitionEvent(
+        _ snapshot: Snapshot, event: any Eventable, actor: InspectionActorRef, rootId: String
+    ) -> InspectionEvent?
+    func inspectionSnapshotEvent(
+        _ snapshot: Snapshot, event: any Eventable, actor: InspectionActorRef, rootId: String
+    ) -> InspectionEvent?
 }
 
 extension ActorLogic {
@@ -50,6 +65,30 @@ extension ActorLogic {
     func handle<H: MachineHost>(_ event: any Eventable, _ snapshot: Snapshot, host: isolated H) async -> Snapshot {
         step(snapshot, on: event)
     }
+
+    // MARK: Inspection hooks (default: not inspected; `MachineLogic` builds the machine events)
+
+    /// Whether this logic emits inspection events at all. Pure reducers / runnables don't.
+    var providesInspection: Bool { false }
+
+    /// The machine id for this logic's inspection actor ref, if any.
+    func inspectionMachineId() -> String? { nil }
+
+    /// The `@xstate.actor` registration event, or nil if this logic isn't inspected.
+    func inspectionRegistrationEvent(
+        _ snapshot: Snapshot, actor: InspectionActorRef, rootId: String,
+        parentSessionId: String?, includeDefinition: Bool
+    ) -> InspectionEvent? { nil }
+
+    /// The `@xstate.transition` event for a settled snapshot, or nil.
+    func inspectionTransitionEvent(
+        _ snapshot: Snapshot, event: any Eventable, actor: InspectionActorRef, rootId: String
+    ) -> InspectionEvent? { nil }
+
+    /// The `@xstate.snapshot` event for a settled snapshot, or nil.
+    func inspectionSnapshotEvent(
+        _ snapshot: Snapshot, event: any Eventable, actor: InspectionActorRef, rootId: String
+    ) -> InspectionEvent? { nil }
 }
 
 /// Handed to `ActorLogic.run` so a background driver can push new snapshots into its host actor.
