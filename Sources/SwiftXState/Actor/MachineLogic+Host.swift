@@ -198,7 +198,7 @@ extension MachineLogic {
                     parent: host,
                     implementations: machine.implementations,
                     options: ActorOptions(clock: host.hostClock),
-                    persistedChild: nil,
+                    persistedChild: host.pendingChildSnapshot(invoke.id),
                     opaqueRestorePolicy: invoke.opaqueRestorePolicy
                 ) {
                     host.childRegistry.add(invoke.id, child)
@@ -206,6 +206,48 @@ extension MachineLogic {
                     if child.inspectable { await host.inspectSpawnedChild(child, machineId: child.machineId) }
                     await child.start()
                 }
+            }
+        }
+        let children = syncedChildren(previous: snapshot.children, host: host)
+        return MachineSnapshot(
+            machine: snapshot.machine,
+            value: snapshot.value,
+            context: snapshot.context,
+            nodes: snapshot._nodes,
+            tags: snapshot.tags,
+            status: snapshot.status,
+            historyValue: snapshot.historyValue,
+            output: snapshot.output,
+            error: snapshot.error,
+            children: children
+        )
+    }
+
+    // MARK: restore (re-spawn children for a hydrated snapshot)
+
+    func restoreChildren<H: MachineHost>(
+        _ snapshot: MachineSnapshot<Context>,
+        host: isolated H
+    ) async -> MachineSnapshot<Context> {
+        let entered = StateNodeSet(snapshot._nodes)
+        let exited = StateNodeSet<Context>()
+        applyAfter(entered: entered, exited: exited, snapshot: snapshot, event: SystemEvent.`init`, host: host)
+        var result = await applyInvokes(entered: entered, exited: exited, snapshot: snapshot, event: SystemEvent.`init`, host: host)
+        result = await restoreSpawnChildren(result, host: host)
+        return result
+    }
+
+    /// Re-spawns children created by `spawnChild` entry actions when hydrating (mirrors
+    /// `Actor.restoreSpawnChildren`).
+    private func restoreSpawnChildren<H: MachineHost>(
+        _ snapshot: MachineSnapshot<Context>,
+        host: isolated H
+    ) async -> MachineSnapshot<Context> {
+        let args = ActionArgs(context: snapshot.context, event: SystemEvent.`init`)
+        for node in snapshot._nodes {
+            for action in node.entry {
+                guard case let .spawn(spawn) = action else { continue }
+                await spawnChild(spawn, args: args, host: host)
             }
         }
         let children = syncedChildren(previous: snapshot.children, host: host)
@@ -243,7 +285,7 @@ extension MachineLogic {
             parent: host,
             implementations: machine.implementations,
             options: ActorOptions(clock: host.hostClock),
-            persistedChild: nil,
+            persistedChild: host.pendingChildSnapshot(childId),
             opaqueRestorePolicy: spawn.opaqueRestorePolicy
         ) {
             host.childRegistry.add(childId, child)

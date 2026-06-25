@@ -18,6 +18,8 @@ protocol MachineHost: _Concurrency.Actor, ActorParentRef, ActorSystemRef {
     func cancelTimer(_ timerId: String)
     func registerChild(_ child: any ChildActorRef)
     func unregisterChild(_ child: any ChildActorRef)
+    /// The persisted snapshot to seed a child with during restore (nil in normal operation).
+    func pendingChildSnapshot(_ id: String) -> PersistedChildSnapshot?
 
     // Inspection primitives, so an effectful logic can emit `.microstep` / `.action` events as it
     // runs. `emitInspection` keeps the `@autoclosure` guard (no Mirror-encode without an inspector).
@@ -47,6 +49,8 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
 
     private let emitListeners = EmitListeners()
     let childRegistry = ChildRegistry()
+    /// Persisted child snapshots awaiting re-spawn during `start(from:)`; empty otherwise.
+    private var pendingChildSnapshots: [String: PersistedChildSnapshot] = [:]
     private let scheduler: DelayScheduler
     private weak var parent: (any ActorParentRef)?
     private nonisolated let system: ActorSystem
@@ -122,22 +126,10 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         // Startup is one processing cycle (see `isProcessing`): entry-action sends to children that
         // bounce back via `enqueueFromChild` queue and drain in order rather than reentering.
         isProcessing = true
-        let snapshot = await logic.started(input: input ?? options.input, host: self)
-        _snapshot = snapshot
+        _snapshot = await logic.started(input: input ?? options.input, host: self)
+        await drainLoop()       // drain any startup-enqueued child events, like Actor.start
         isProcessing = false
-        system.register(self)
-        // Inspection lifecycle for startup, matching Actor's order: registration (root only),
-        // transition, incoming init event, snapshot.
-        if parent == nil {
-            emitInspection(logic.inspectionRegistrationEvent(
-                snapshot, actor: inspectionActorRef, rootId: inspectionRootId,
-                parentSessionId: (parent as? ActorSystemRef)?.sessionId,
-                includeDefinition: system.hasInspectors
-            ))
-        }
-        emitInspection(logic.inspectionTransitionEvent(snapshot, event: SystemEvent.`init`, actor: inspectionActorRef, rootId: inspectionRootId))
-        emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: nil, event: SystemEvent.`init`))
-        emitInspection(logic.inspectionSnapshotEvent(snapshot, event: SystemEvent.`init`, actor: inspectionActorRef, rootId: inspectionRootId))
+        emitStartupInspection()
         notify(snapshot)
         // Launch the optional background driver (no-op for pure reducers / machines). The scope hops
         // each pushed snapshot back onto this actor's isolation via `applyExternal`.
@@ -146,6 +138,23 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         }
         runTask = Task { [logic] in await logic.run(scope) }
         return self
+    }
+
+    /// The startup inspection lifecycle (registration[root only] / transition / init event /
+    /// snapshot), shared by `start` and `start(from:)`. Registers self in the system first.
+    private func emitStartupInspection() {
+        let settled = snapshot
+        system.register(self)
+        if parent == nil {
+            emitInspection(logic.inspectionRegistrationEvent(
+                settled, actor: inspectionActorRef, rootId: inspectionRootId,
+                parentSessionId: (parent as? ActorSystemRef)?.sessionId,
+                includeDefinition: system.hasInspectors
+            ))
+        }
+        emitInspection(logic.inspectionTransitionEvent(settled, event: SystemEvent.`init`, actor: inspectionActorRef, rootId: inspectionRootId))
+        emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: nil, event: SystemEvent.`init`))
+        emitInspection(logic.inspectionSnapshotEvent(settled, event: SystemEvent.`init`, actor: inspectionActorRef, rootId: inspectionRootId))
     }
 
     /// Stops the background driver and all children. Events already in flight still drain.
@@ -196,13 +205,17 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         observers.removeAll { $0.id == id }
     }
 
+    private func drainLoop() async {
+        while !mailbox.isEmpty {
+            await process(mailbox.removeFirst())
+        }
+    }
+
     private func drain() async {
         guard !isProcessing else { return }
         isProcessing = true
         defer { isProcessing = false }
-        while !mailbox.isEmpty {
-            await process(mailbox.removeFirst())
-        }
+        await drainLoop()
     }
 
     private func process(_ event: any Eventable) async {
@@ -288,6 +301,10 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     func unregisterChild(_ child: any ChildActorRef) {
         system.unregister(child)
     }
+
+    func pendingChildSnapshot(_ id: String) -> PersistedChildSnapshot? {
+        pendingChildSnapshots[id]
+    }
 }
 
 // MARK: - Persistence (mirrors Actor.getPersistedSnapshot, gated on a PersistableLogic)
@@ -301,5 +318,28 @@ extension LogicActor where L: PersistableLogic {
         }
         let childSnapshots = try await collectPersistedChildSnapshots(from: childRegistry.all)
         return try logic.persistedSnapshot(snapshot, children: childSnapshots)
+    }
+
+    /// Starts by **restoring** a persisted snapshot (state + context + children) instead of running
+    /// the initial transition. Matches `Actor.start(from:)`. Children persisted under the snapshot
+    /// are re-spawned (seeded with their persisted state via `pendingChildSnapshot`).
+    @discardableResult
+    func start(from persisted: PersistedSnapshot) async throws -> Self {
+        isProcessing = true
+        pendingChildSnapshots = persisted.children
+        defer { pendingChildSnapshots = [:] }
+
+        _snapshot = try logic.restoredSnapshot(from: persisted)
+        _snapshot = await logic.restoreChildren(snapshot, host: self)
+        await drainLoop()
+        isProcessing = false
+
+        emitStartupInspection()
+        notify(snapshot)
+        let scope = ActorScope<L.Snapshot> { [weak self] pushed in
+            await self?.applyExternal(pushed)
+        }
+        runTask = Task { [logic] in await logic.run(scope) }
+        return self
     }
 }
