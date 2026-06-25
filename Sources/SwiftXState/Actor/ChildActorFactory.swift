@@ -19,7 +19,7 @@ struct ResolvedActorSource {
 /// `implementations`, plus free helpers) so the generics refactor's `StateActor` can spawn children
 /// through the exact same factory rather than a duplicate. The `parent` is type-erased to
 /// `any ActorParentRef`, so any actor that can parent children drives identical child creation.
-func makeChildActorRef<Context: Sendable>(
+func makeChildActor<Context: Sendable>(
     from source: ActorSource,
     id: String,
     systemId: String?,
@@ -31,7 +31,7 @@ func makeChildActorRef<Context: Sendable>(
     options: ActorOptions,
     persistedChild: PersistedChildSnapshot? = nil,
     opaqueRestorePolicy: OpaqueInvokeRestorePolicy = .restart
-) -> (any ChildActorRef)? {
+) -> (any ChildActor)? {
     let resolved = resolveActorSource(source, implementations: implementations)
     var childOptions = options
     childOptions.systemId = systemId ?? id
@@ -125,7 +125,7 @@ func makeChildActorRef<Context: Sendable>(
 }
 
 /// Resolves an `ActorSource` (named lookup or inline box) into the concrete logic kinds
-/// `makeChildActorRef` dispatches over. Free function for the same reason as the factory above.
+/// `makeChildActor` dispatches over. Free function for the same reason as the factory above.
 func resolveActorSource<Context: Sendable>(
     _ source: ActorSource,
     implementations: MachineImplementations<Context>

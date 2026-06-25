@@ -3,7 +3,7 @@ protocol PersistedChildSnapshotProviding {
 }
 
 func collectPersistedChildSnapshots(
-    from children: [String: any ChildActorRef]
+    from children: [String: any ChildActor]
 ) async throws -> [String: PersistedChildSnapshot] {
     var result: [String: PersistedChildSnapshot] = [:]
     for (id, child) in children {

@@ -2,7 +2,7 @@
 public protocol ActorParentRef: AnyObject, Sendable {
     func enqueueFromChild(_ event: any Eventable) async
     var actorSystem: ActorSystem { get }
-    func inspectSpawnedChild(_ child: any ChildActorRef, machineId: String?) async
+    func inspectSpawnedChild(_ child: any ChildActor, machineId: String?) async
     func persistedChildSnapshot(for id: String) async -> PersistedChildSnapshot?
 }
 

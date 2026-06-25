@@ -15,7 +15,7 @@ public struct CallbackActorLogicBox: Sendable {
         any ActorParentRef,
         ActorSystem,
         String?
-    ) -> any ChildActorRef
+    ) -> any ChildActor
 
     public init(_ logic: CallbackActorLogic) {
         _spawn = { id, input, parent, system, systemId in
@@ -36,7 +36,7 @@ public struct CallbackActorLogicBox: Sendable {
         parent: any ActorParentRef,
         system: ActorSystem,
         systemId: String?
-    ) -> any ChildActorRef {
+    ) -> any ChildActor {
         _spawn(id, input, parent, system, systemId)
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-final class ObservableChildRef<Context: Sendable & Equatable>: ChildActorRef, @unchecked Sendable {
+final class ObservableChildRef<Context: Sendable & Equatable>: ChildActor, @unchecked Sendable {
     let id: String
     let systemId: String?
     private weak var parent: (any ActorParentRef)?

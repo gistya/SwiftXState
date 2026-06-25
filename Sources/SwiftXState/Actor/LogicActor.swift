@@ -8,7 +8,7 @@ import Dispatch
 /// this and `ActorLogic.handle` takes the host as an **`isolated`** parameter, an effectful logic
 /// (`MachineLogic`) runs its side-effect dispatch / `after` / `invoke` *inside the actor's isolation*
 /// with no hops, exactly as `StateActor` does inline — but without the actor needing to know the
-/// logic's `Context`. All the Context-specific work (the action switch, `makeChildActorRef`) lives in
+/// logic's `Context`. All the Context-specific work (the action switch, `makeChildActor`) lives in
 /// the logic; the host only exposes these non-generic primitives.
 protocol MachineHost: _Concurrency.Actor, ActorParentRef, ActorSystemRef {
     var childRegistry: ChildRegistry { get }
@@ -19,8 +19,8 @@ protocol MachineHost: _Concurrency.Actor, ActorParentRef, ActorSystemRef {
     func scheduleSelfEvent(timerId: String, delay: Int, event: Event)
     func scheduleChildEvent(timerId: String, delay: Int, childId: String, event: Event)
     func cancelTimer(_ timerId: String)
-    func registerChild(_ child: any ChildActorRef)
-    func unregisterChild(_ child: any ChildActorRef)
+    func registerChild(_ child: any ChildActor)
+    func unregisterChild(_ child: any ChildActor)
     /// The persisted snapshot to seed a child with during restore (nil in normal operation).
     func pendingChildSnapshot(_ id: String) -> PersistedChildSnapshot?
 
@@ -293,7 +293,7 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         await drain()
     }
 
-    func inspectSpawnedChild(_ child: any ChildActorRef, machineId: String?) async {
+    func inspectSpawnedChild(_ child: any ChildActor, machineId: String?) async {
         emitInspection(.actor(
             rootId: inspectionRootId,
             actor: InspectionActorRef.from(child, machineId: machineId),
@@ -344,15 +344,15 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         scheduler.cancel(timerId)
     }
 
-    func childActor(id: String) -> (any ChildActorRef)? {
+    func childActor(id: String) -> (any ChildActor)? {
         childRegistry.get(id)
     }
 
-    func registerChild(_ child: any ChildActorRef) {
+    func registerChild(_ child: any ChildActor) {
         system.register(child)
     }
 
-    func unregisterChild(_ child: any ChildActorRef) {
+    func unregisterChild(_ child: any ChildActor) {
         system.unregister(child)
     }
 

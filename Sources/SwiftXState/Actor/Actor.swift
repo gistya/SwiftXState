@@ -133,7 +133,7 @@ public final class Actor<Context: Sendable>: ActorParentRef, ActorSystemRef, @un
         return await inner.subscribe(handler)
     }
 
-    func childActor(id: String) async -> (any ChildActorRef)? {
+    func childActor(id: String) async -> (any ChildActor)? {
         await inner?.childActor(id: id)
     }
 
@@ -144,7 +144,7 @@ public final class Actor<Context: Sendable>: ActorParentRef, ActorSystemRef, @un
         await inner?.enqueueFromChild(event)
     }
 
-    public func inspectSpawnedChild(_ child: any ChildActorRef, machineId: String?) async {
+    public func inspectSpawnedChild(_ child: any ChildActor, machineId: String?) async {
         await inner?.inspectSpawnedChild(child, machineId: machineId)
     }
 }

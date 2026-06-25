@@ -8,7 +8,7 @@ public struct MachineActorLogicBox: Sendable {
         ActorOptions,
         Bool,
         PersistedChildSnapshot?
-    ) -> any ChildActorRef
+    ) -> any ChildActor
 
     /// Uses the child machine's `context` or `contextFromInput` to build initial context.
     public init<ChildContext: Sendable>(_ machine: StateMachine<ChildContext>) {
@@ -124,7 +124,7 @@ public struct MachineActorLogicBox: Sendable {
         options: ActorOptions,
         syncSnapshot: Bool,
         persistedChild: PersistedChildSnapshot? = nil
-    ) -> any ChildActorRef {
+    ) -> any ChildActor {
         _spawn(id, input, parent, options.systemId, options, syncSnapshot, persistedChild)
     }
 }

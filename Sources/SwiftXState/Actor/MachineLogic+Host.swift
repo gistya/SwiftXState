@@ -3,7 +3,7 @@ import Foundation
 /// The effectful side of `MachineLogic`'s `ActorLogic` conformance: the machine orchestration
 /// (side-effect dispatch, `after`, `invoke`) run against a `MachineHost`. This is the same logic
 /// `StateActor` performs inline, lifted to run on the generic `LogicActor` via the `isolated` host
-/// seam — the Context-specific work (the action switch, `makeChildActorRef`) lives here in the logic,
+/// seam — the Context-specific work (the action switch, `makeChildActor`) lives here in the logic,
 /// while the host supplies only Context-agnostic primitives (timers, child registry, emit, parent).
 extension MachineLogic {
     func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> MachineSnapshot<Context> {
@@ -189,7 +189,7 @@ extension MachineLogic {
         for node in entered {
             for invoke in node.invokeConfigs {
                 let input = invoke.input?(args)
-                if let child = makeChildActorRef(
+                if let child = makeChildActor(
                     from: invoke.src,
                     id: invoke.id,
                     systemId: invoke.systemId,
@@ -276,7 +276,7 @@ extension MachineLogic {
         let childId = spawn.id ?? UUID().uuidString
         guard !host.childRegistry.contains(childId) else { return }
         let input = spawn.input?(args)
-        if let child = makeChildActorRef(
+        if let child = makeChildActor(
             from: spawn.src,
             id: childId,
             systemId: spawn.systemId,

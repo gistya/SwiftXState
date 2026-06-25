@@ -1,4 +1,4 @@
-final class TaskChildRef<Output: Sendable & Equatable>: ChildActorRef, @unchecked Sendable {
+final class TaskChildRef<Output: Sendable & Equatable>: ChildActor, @unchecked Sendable {
     let id: String
     let systemId: String?
     private weak var parent: (any ActorParentRef)?

@@ -1,4 +1,4 @@
-final class MachineChildRef<ChildContext: Sendable>: ChildActorRef, @unchecked Sendable {
+final class MachineChildRef<ChildContext: Sendable>: ChildActor, @unchecked Sendable {
     let actor: Actor<ChildContext>
     private weak var parent: (any ActorParentRef)?
     private var subscription: Subscription?

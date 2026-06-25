@@ -17,7 +17,7 @@ public struct ObservableActorLogicBox: Sendable {
         any ActorParentRef,
         String?,
         Bool
-    ) -> any ChildActorRef
+    ) -> any ChildActor
 
     public init<Context: Sendable & Equatable>(_ logic: ObservableActorLogic<Context>) {
         _spawn = { id, input, parent, systemId, syncSnapshot in
@@ -38,7 +38,7 @@ public struct ObservableActorLogicBox: Sendable {
         parent: any ActorParentRef,
         systemId: String?,
         syncSnapshot: Bool
-    ) -> any ChildActorRef {
+    ) -> any ChildActor {
         _spawn(id, input, parent, systemId, syncSnapshot)
     }
 }

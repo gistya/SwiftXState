@@ -20,7 +20,7 @@ public struct TransitionActorLogicBox: Sendable {
         any ActorParentRef,
         String?,
         Bool
-    ) -> any ChildActorRef
+    ) -> any ChildActor
 
     public init<Context: Sendable & Equatable>(_ logic: TransitionActorLogic<Context>) {
         _spawn = { id, input, parent, systemId, syncSnapshot in
@@ -41,7 +41,7 @@ public struct TransitionActorLogicBox: Sendable {
         parent: any ActorParentRef,
         systemId: String?,
         syncSnapshot: Bool
-    ) -> any ChildActorRef {
+    ) -> any ChildActor {
         _spawn(id, input, parent, systemId, syncSnapshot)
     }
 }

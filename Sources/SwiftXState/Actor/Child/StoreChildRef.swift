@@ -1,4 +1,4 @@
-final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildActorRef, @unchecked Sendable {
+final class StoreChildRef<Context: Sendable & Equatable, E: Eventable>: ChildActor, @unchecked Sendable {
     let id: String
     let systemId: String?
     private weak var parent: (any ActorParentRef)?

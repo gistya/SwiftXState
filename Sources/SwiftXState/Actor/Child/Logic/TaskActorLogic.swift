@@ -19,7 +19,7 @@ public struct TaskActorLogicBox: Sendable {
         SendableValue?,
         any ActorParentRef,
         String?
-    ) -> any ChildActorRef
+    ) -> any ChildActor
 
     public init<Output: Sendable & Equatable>(_ logic: TaskActorLogic<Output>) {
         _spawn = { id, input, parent, systemId in
@@ -32,7 +32,7 @@ public struct TaskActorLogicBox: Sendable {
         input: SendableValue?,
         parent: any ActorParentRef,
         systemId: String?
-    ) -> any ChildActorRef {
+    ) -> any ChildActor {
         _spawn(id, input, parent, systemId)
     }
 }

@@ -1,4 +1,4 @@
-final class TransitionChildRef<Context: Sendable & Equatable>: ChildActorRef, @unchecked Sendable {
+final class TransitionChildRef<Context: Sendable & Equatable>: ChildActor, @unchecked Sendable {
     let id: String
     let systemId: String?
     private weak var parent: (any ActorParentRef)?

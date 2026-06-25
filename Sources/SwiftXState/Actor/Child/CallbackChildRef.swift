@@ -1,6 +1,6 @@
 import Foundation
 
-final class CallbackChildRef: ChildActorRef, @unchecked Sendable {
+final class CallbackChildRef: ChildActor, @unchecked Sendable {
     let id: String
     let systemId: String?
     private weak var parent: (any ActorParentRef)?

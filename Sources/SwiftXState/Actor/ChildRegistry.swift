@@ -8,16 +8,16 @@ import Foundation
 ///
 /// Accessed only under the owning actor's isolation, so it needs no lock.
 final class ChildRegistry {
-    private var children: [String: any ChildActorRef] = [:]
+    private var children: [String: any ChildActor] = [:]
     private var stoppedIDs: Set<String> = []
 
     /// All live child refs, keyed by id.
-    var all: [String: any ChildActorRef] { children }
+    var all: [String: any ChildActor] { children }
 
-    func get(_ id: String) -> (any ChildActorRef)? { children[id] }
+    func get(_ id: String) -> (any ChildActor)? { children[id] }
     func contains(_ id: String) -> Bool { children[id] != nil }
-    func add(_ id: String, _ child: any ChildActorRef) { children[id] = child }
-    @discardableResult func remove(_ id: String) -> (any ChildActorRef)? { children.removeValue(forKey: id) }
+    func add(_ id: String, _ child: any ChildActor) { children[id] = child }
+    @discardableResult func remove(_ id: String) -> (any ChildActor)? { children.removeValue(forKey: id) }
     func removeAll() { children.removeAll() }
 
     func markStopped(_ id: String) { stoppedIDs.insert(id) }
