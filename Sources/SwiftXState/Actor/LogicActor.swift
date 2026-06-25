@@ -213,6 +213,13 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         }
         childRegistry.removeAll()
         system.unregister(self)
+        // Publish a terminal snapshot so observers/waiters (waitFor, child refs) see termination,
+        // matching the old Actor.stop().
+        if let current = _snapshot {
+            let stopped = logic.stoppedSnapshot(current)
+            _snapshot = stopped
+            notify(stopped)
+        }
     }
 
     /// Applies a snapshot pushed by `ActorLogic.run`. Dropped once the logic is no longer active,
@@ -335,6 +342,10 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
 
     func cancelTimer(_ timerId: String) {
         scheduler.cancel(timerId)
+    }
+
+    func childActor(id: String) -> (any ChildActorRef)? {
+        childRegistry.get(id)
     }
 
     func registerChild(_ child: any ChildActorRef) {

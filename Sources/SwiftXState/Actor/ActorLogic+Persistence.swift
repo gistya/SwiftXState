@@ -27,6 +27,6 @@ extension MachineLogic: PersistableLogic where Context: Codable {
     }
 
     func restoredSnapshot(from persisted: PersistedSnapshot) throws -> MachineSnapshot<Context> {
-        try restoreSnapshot(machine: machine, persisted: persisted, context: nil)
+        try restoreSnapshot(machine: machine, persisted: persisted, context: contextOverride)
     }
 }

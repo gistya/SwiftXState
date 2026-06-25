@@ -37,7 +37,7 @@ extension MachineLogic {
     func startupActionTypes(input: SendableValue?) -> [String] {
         // Re-derive the initial actions (pure) and keep the inspectable ones — `LogicActor` emits
         // these as `.action` events after the `.actor` registration, matching Actor's order.
-        let (_, actions) = initialSnapshot(input: input, context: nil)
+        let (_, actions) = initialSnapshot(input: input, context: contextOverride)
         return actions.compactMap { action in
             if case let .spawn(spawn) = action.ref, !spawn.inspectable { return nil }
             return action.type

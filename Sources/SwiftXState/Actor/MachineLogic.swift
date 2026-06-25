@@ -10,6 +10,10 @@ import Foundation
 /// value: given a snapshot and an event it computes the next snapshot, and nothing else.
 struct MachineLogic<Context: Sendable>: Sendable {
     let machine: StateMachine<Context>
+    /// Optional start-time context override (replaces the machine's resolved initial context, and
+    /// the decoded context on restore). Lets the `Actor` facade thread `start(context:)` through
+    /// without a separate start signature. Default: none.
+    var contextOverride: Context? = nil
 
     /// The machine's initial snapshot and entry actions (the initial macrostep, run to completion).
     func initialSnapshot(

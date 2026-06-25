@@ -7,7 +7,7 @@ import Foundation
 /// while the host supplies only Context-agnostic primitives (timers, child registry, emit, parent).
 extension MachineLogic {
     func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> MachineSnapshot<Context> {
-        let (snapshot, actions) = initialSnapshot(input: input, context: nil)
+        let (snapshot, actions) = initialSnapshot(input: input, context: contextOverride)
         var result = await runEffects(snapshot, actions: actions, event: SystemEvent.`init`, host: host)
         // Startup `.action` events are emitted by LogicActor *after* the `.actor` registration
         // (see startupActionTypes) to match Actor's ordering — not inline here.

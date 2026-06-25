@@ -1,25 +1,47 @@
 import Foundation
 
 private final class WaitForState<Context: Sendable>: @unchecked Sendable {
-    var finished = false
     var subscription: Subscription?
     var timeoutTask: Task<Void, Never>?
-    var continuation: CheckedContinuation<MachineSnapshot<Context>, Error>?
-    let lock = NSLock()
+    private var finished = false
+    private var continuation: CheckedContinuation<MachineSnapshot<Context>, Error>?
+    private var pending: Result<MachineSnapshot<Context>, Error>?
+    private let lock = NSLock()
 
-    func dispose() {
-        subscription?.cancel()
-        subscription = nil
-        timeoutTask?.cancel()
-        timeoutTask = nil
+    /// Attaches the continuation. If a result already arrived (the subscription / timeout can fire
+    /// before the continuation is installed, now that `subscribe` is async), resume immediately.
+    func attach(_ continuation: CheckedContinuation<MachineSnapshot<Context>, Error>) {
+        lock.lock()
+        if finished { lock.unlock(); return }
+        if let pending {
+            finished = true
+            let sub = subscription, task = timeoutTask
+            subscription = nil; timeoutTask = nil
+            lock.unlock()
+            sub?.cancel(); task?.cancel()
+            continuation.resume(with: pending)
+        } else {
+            self.continuation = continuation
+            lock.unlock()
+        }
     }
 
-    func finish(_ body: () -> Void) {
+    /// Resolves the wait. Buffers the result if the continuation isn't installed yet.
+    func resolve(_ result: Result<MachineSnapshot<Context>, Error>) {
         lock.lock()
-        defer { lock.unlock() }
-        guard !finished else { return }
-        finished = true
-        body()
+        guard !finished else { lock.unlock(); return }
+        if let continuation {
+            finished = true
+            self.continuation = nil
+            let sub = subscription, task = timeoutTask
+            subscription = nil; timeoutTask = nil
+            lock.unlock()
+            sub?.cancel(); task?.cancel()
+            continuation.resume(with: result)
+        } else {
+            pending = result
+            lock.unlock()
+        }
     }
 }
 
@@ -76,55 +98,38 @@ extension Actor {
 
         try Task.checkCancellation()
 
-        let initial = snapshot
+        let initial = await snapshot
         if predicate(initial) {
             return initial
         }
 
         let state = WaitForState<Context>()
 
+        // Subscribe up front (now async). The immediate fire is a no-op because `predicate(initial)`
+        // is already false above; any later snapshot routes through `state.resolve`, which buffers
+        // until the continuation is installed.
+        state.subscription = await subscribe { snapshot in
+            if predicate(snapshot) {
+                state.resolve(.success(snapshot))
+            } else if snapshot.status == .stopped {
+                state.resolve(.failure(WaitForError.actorTerminated))
+            }
+        }
+
+        if let timeout = options.timeout {
+            state.timeoutTask = Task {
+                try? await Task.sleep(for: .milliseconds(timeout))
+                guard !Task.isCancelled else { return }
+                state.resolve(.failure(WaitForError.timeout(milliseconds: timeout)))
+            }
+        }
+
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
-                state.continuation = continuation
-
-                @Sendable func checkEmitted(_ snapshot: MachineSnapshot<Context>) {
-                    if predicate(snapshot) {
-                        state.finish {
-                            state.dispose()
-                            continuation.resume(returning: snapshot)
-                            state.continuation = nil
-                        }
-                    } else if snapshot.status == .stopped {
-                        state.finish {
-                            state.dispose()
-                            continuation.resume(throwing: WaitForError.actorTerminated)
-                            state.continuation = nil
-                        }
-                    }
-                }
-
-                state.subscription = subscribe { snapshot in
-                    checkEmitted(snapshot)
-                }
-
-                if let timeout = options.timeout {
-                    state.timeoutTask = Task {
-                        try? await Task.sleep(for: .milliseconds(timeout))
-                        guard !Task.isCancelled else { return }
-                        state.finish {
-                            state.dispose()
-                            continuation.resume(throwing: WaitForError.timeout(milliseconds: timeout))
-                            state.continuation = nil
-                        }
-                    }
-                }
+                state.attach(continuation)
             }
         } onCancel: {
-            state.finish {
-                state.dispose()
-                state.continuation?.resume(throwing: CancellationError())
-                state.continuation = nil
-            }
+            state.resolve(.failure(CancellationError()))
         }
     }
 }

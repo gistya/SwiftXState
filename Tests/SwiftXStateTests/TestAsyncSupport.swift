@@ -77,7 +77,7 @@ extension Actor {
         where predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool
     ) async -> MachineSnapshot<Context>? {
         let oneShot = OneShot<MachineSnapshot<Context>?>()
-        let subscription = subscribe { snapshot in
+        let subscription = await subscribe { snapshot in
             if predicate(snapshot) {
                 oneShot.resolve(snapshot)
             }

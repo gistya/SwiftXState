@@ -57,6 +57,11 @@ protocol ActorLogic: Sendable {
     /// The inspectable action types run during startup, in order — emitted as `@xstate.action`
     /// events *after* the actor's registration (matching Actor's start ordering). Default: none.
     func startupActionTypes(input: SendableValue?) -> [String]
+
+    /// The snapshot to publish when the actor is stopped (status `.stopped`). The runtime notifies
+    /// observers with this on `stop()`, so waiters (`waitFor`, child refs) see termination. Default:
+    /// the snapshot unchanged.
+    func stoppedSnapshot(_ snapshot: Snapshot) -> Snapshot
 }
 
 extension ActorLogic {
@@ -95,6 +100,8 @@ extension ActorLogic {
     ) -> InspectionEvent? { nil }
 
     func startupActionTypes(input: SendableValue?) -> [String] { [] }
+
+    func stoppedSnapshot(_ snapshot: Snapshot) -> Snapshot { snapshot }
 }
 
 /// Handed to `ActorLogic.run` so a background driver can push new snapshots into its host actor.
@@ -110,7 +117,7 @@ struct ActorScope<Snapshot: Sendable>: Sendable {
 /// the running of side effects / `after` / `invoke`, which `LogicActor` does not (yet) perform.
 extension MachineLogic: ActorLogic {
     func initialState(input: SendableValue?) -> MachineSnapshot<Context> {
-        initialSnapshot(input: input, context: nil).snapshot
+        initialSnapshot(input: input, context: contextOverride).snapshot
     }
 
     func step(_ snapshot: MachineSnapshot<Context>, on event: any Eventable) -> MachineSnapshot<Context> {
@@ -119,5 +126,20 @@ extension MachineLogic: ActorLogic {
 
     func status(of snapshot: MachineSnapshot<Context>) -> SnapshotStatus {
         snapshot.status
+    }
+
+    func stoppedSnapshot(_ snapshot: MachineSnapshot<Context>) -> MachineSnapshot<Context> {
+        MachineSnapshot(
+            machine: snapshot.machine,
+            value: snapshot.value,
+            context: snapshot.context,
+            nodes: snapshot._nodes,
+            tags: snapshot.tags,
+            status: .stopped,
+            historyValue: snapshot.historyValue,
+            output: snapshot.output,
+            error: snapshot.error,
+            children: [:]
+        )
     }
 }
