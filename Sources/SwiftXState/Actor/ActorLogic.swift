@@ -132,6 +132,8 @@ enum LogicEffect: Sendable {
 /// outbound effects (`sendToParent` / `emit`) — the latter routed through the host's ordered effect
 /// chain. Mirrors XState v6's `CallbackLogicFunction` scope (`sendBack` / `receive` / `emit`).
 struct ActorScope<Snapshot: Sendable>: Sendable {
+    /// This actor's id — so a logic can build child-targeted events (e.g. `SnapshotActorEvent`).
+    let actorId: String
     let input: SendableValue?
     /// Push a new snapshot (dropped once the logic is no longer `.active`).
     let update: @Sendable (Snapshot) async -> Void

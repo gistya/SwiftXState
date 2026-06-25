@@ -21,14 +21,14 @@ public struct ObservableActorLogicBox: Sendable {
 
     public init<Context: Sendable & Equatable>(_ logic: ObservableActorLogic<Context>) {
         _spawn = { id, input, parent, systemId, syncSnapshot in
-            ObservableChildRef(
+            let actor = LogicActor(
+                ObservableLogic(logic: logic, syncSnapshot: syncSnapshot, system: parent.actorSystem),
                 id: id,
-                systemId: systemId,
-                input: input,
+                options: ActorOptions(systemId: systemId),
                 parent: parent,
-                logic: logic,
-                syncSnapshot: syncSnapshot
+                system: parent.actorSystem
             )
+            return LogicChildActor(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
         }
     }
 

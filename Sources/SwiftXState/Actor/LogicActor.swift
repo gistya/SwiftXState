@@ -16,6 +16,9 @@ protocol MachineHost: _Concurrency.Actor, ActorParentRef, ActorSystemRef {
     func emit(_ event: EmittedEvent)
     func deliverToChild(id childId: String, event: any Eventable) async
     func enqueueToParent(_ event: any Eventable) async
+    /// Synchronously enqueue an event to the parent on the ordered delivery chain (for reducer-style
+    /// children like `fromTransition`, whose scope `sendToParent` is synchronous).
+    func sendToParentOrdered(_ event: any Eventable)
     func scheduleSelfEvent(timerId: String, delay: Int, event: Event)
     func scheduleChildEvent(timerId: String, delay: Int, childId: String, event: Event)
     func cancelTimer(_ timerId: String)
@@ -229,6 +232,7 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         let parent = self.parent
         let id = self.id
         return ActorScope<L.Snapshot>(
+            actorId: id,
             input: input,
             update: { [weak self] pushed in await self?.applyExternal(pushed) },
             receive: { handler in receivers.add(handler) },
@@ -406,6 +410,10 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
 
     func enqueueToParent(_ event: any Eventable) async {
         await parent?.enqueueFromChild(event)
+    }
+
+    func sendToParentOrdered(_ event: any Eventable) {
+        parentDeliveries.deliver(to: parent, event)
     }
 
     func scheduleSelfEvent(timerId: String, delay: Int, event: Event) {
