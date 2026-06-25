@@ -64,6 +64,10 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     // adapter cache status changes.
     private var terminalStatus: SnapshotStatus?
     private var lastError: String?
+    // For machine children: emit a SnapshotActorEvent per active snapshot, and one Done/Error event
+    // when the snapshot itself reaches a terminal state (final). Gated on having a parent.
+    private nonisolated let childSyncSnapshot: Bool
+    private var childDoneSent = false
     private var statusObservers: [(id: Int, handler: @Sendable (SnapshotStatus, String?) -> Void)] = []
 
     private let emitListeners = EmitListeners()
@@ -100,11 +104,13 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         id: String = UUID().uuidString,
         options: ActorOptions = ActorOptions(),
         parent: (any ActorParentRef)? = nil,
-        system: ActorSystem? = nil
+        system: ActorSystem? = nil,
+        syncSnapshot: Bool = false
     ) {
         self.logic = logic
         self.id = id
         self.options = options
+        self.childSyncSnapshot = syncSnapshot
         self.clock = options.clock
         self.inspectable = options.inspectable
         self.scheduler = DelayScheduler(clock: options.clock)
@@ -378,6 +384,39 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
             observer.handler(snapshot)
         }
         notifyStatus()
+        deliverChildCompletion(snapshot)
+    }
+
+    /// For machine children: when the snapshot reaches `.done`/`.error`, deliver the Done/Error event
+    /// to the parent on the ordered chain (drives the parent's `invoke` onDone/onError); for
+    /// `syncSnapshot`, deliver a `SnapshotActorEvent` per active snapshot. No-op for root actors and
+    /// for completing children (task/observable), whose snapshot status stays `.active`.
+    private func deliverChildCompletion(_ snapshot: L.Snapshot) {
+        guard parent != nil, !childDoneSent else {
+            if parent != nil, childSyncSnapshot, logic.status(of: snapshot) == .active {
+                parentDeliveries.deliver(to: parent, snapshotEvent(snapshot))
+            }
+            return
+        }
+        switch logic.status(of: snapshot) {
+        case .done:
+            childDoneSent = true
+            parentDeliveries.deliver(to: parent, DoneActorEvent(actorId: id, output: logic.output(of: snapshot)))
+        case .error:
+            childDoneSent = true
+            parentDeliveries.deliver(to: parent, ErrorActorEvent(actorId: id, error: lastError ?? "error"))
+        case .active where childSyncSnapshot:
+            parentDeliveries.deliver(to: parent, snapshotEvent(snapshot))
+        default:
+            break
+        }
+    }
+
+    private func snapshotEvent(_ snapshot: L.Snapshot) -> SnapshotActorEvent {
+        SnapshotActorEvent(
+            actorId: id,
+            snapshot: ChildActorSnapshot(id: id, status: .active, value: logic.childSnapshotValue(of: snapshot))
+        )
     }
 
     // MARK: ActorParentRef
@@ -483,6 +522,11 @@ extension LogicActor where L: PersistableLogic {
         defer { pendingChildSnapshots = [:] }
 
         _snapshot = try logic.restoredSnapshot(from: persisted)
+        // A child restored already-terminal must not re-deliver its Done/Error to the parent (the
+        // parent's persisted snapshot already reflects it) — matches MachineChildRef's doneSent guard.
+        if parent != nil, logic.status(of: snapshot) != .active {
+            childDoneSent = true
+        }
         _snapshot = await logic.restoreChildren(snapshot, host: self)
         await drainLoop()
         isProcessing = false

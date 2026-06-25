@@ -168,7 +168,7 @@ struct PersistenceTests {
         }
 
         let restored = await createActor(parentMachine).start(from: persisted)
-        guard let child = await restored.childActor(id: "worker") as? MachineChildRef<WorkerContext> else {
+        guard let child = await restored.childActor(id: "worker") as? LogicChildActor<MachineLogic<WorkerContext>> else {
             Issue.record("Expected restored machine child")
             return
         }
@@ -256,7 +256,7 @@ struct PersistenceTests {
 
         let actor = await createActor(rootMachine).start()
         await actor.send(Event("GO"))
-        guard let midChild = await actor.childActor(id: "mid") as? MachineChildRef<MidContext> else {
+        guard let midChild = await actor.childActor(id: "mid") as? LogicChildActor<MachineLogic<MidContext>> else {
             Issue.record("Expected mid child actor")
             return
         }
@@ -278,8 +278,8 @@ struct PersistenceTests {
         }
 
         let restored = await createActor(rootMachine).start(from: persisted)
-        guard let mid = await restored.childActor(id: "mid") as? MachineChildRef<MidContext>,
-              let leaf = await mid.actor.childActor(id: "leaf") as? MachineChildRef<LeafContext> else {
+        guard let mid = await restored.childActor(id: "mid") as? LogicChildActor<MachineLogic<MidContext>>,
+              let leaf = await mid.actor.childActor(id: "leaf") as? LogicChildActor<MachineLogic<LeafContext>> else {
             Issue.record("Expected restored nested machine children")
             return
         }
@@ -358,8 +358,8 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         let restored = await createActor(parentMachine).start(from: persisted)
 
-        guard let workerA = await restored.childActor(id: "workerA") as? MachineChildRef<WorkerContext>,
-              let workerB = await restored.childActor(id: "workerB") as? MachineChildRef<WorkerContext> else {
+        guard let workerA = await restored.childActor(id: "workerA") as? LogicChildActor<MachineLogic<WorkerContext>>,
+              let workerB = await restored.childActor(id: "workerB") as? LogicChildActor<MachineLogic<WorkerContext>> else {
             Issue.record("Expected restored parallel machine children")
             return
         }
@@ -414,7 +414,7 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         let restored = await createActor(parentMachine).start(from: persisted)
 
-        guard let child = await restored.childActor(id: "spawnedWorker") as? MachineChildRef<ChildContext> else {
+        guard let child = await restored.childActor(id: "spawnedWorker") as? LogicChildActor<MachineLogic<ChildContext>> else {
             Issue.record("Expected restored spawned machine child")
             return
         }

@@ -70,6 +70,14 @@ protocol ActorLogic: Sendable {
     /// observers with this on `stop()`, so waiters (`waitFor`, child refs) see termination. Default:
     /// the snapshot unchanged.
     func stoppedSnapshot(_ snapshot: Snapshot) -> Snapshot
+
+    /// Output carried in the `DoneActorEvent` when a child reaches `.done` via its snapshot (machine
+    /// children). Default nil.
+    func output(of snapshot: Snapshot) -> SendableValue?
+
+    /// The string value used in a child's `SnapshotActorEvent` (syncSnapshot machine children).
+    /// Default nil.
+    func childSnapshotValue(of snapshot: Snapshot) -> String?
 }
 
 extension ActorLogic {
@@ -112,6 +120,10 @@ extension ActorLogic {
     func startupActionTypes(input: SendableValue?) -> [String] { [] }
 
     func stoppedSnapshot(_ snapshot: Snapshot) -> Snapshot { snapshot }
+
+    func output(of snapshot: Snapshot) -> SendableValue? { nil }
+
+    func childSnapshotValue(of snapshot: Snapshot) -> String? { nil }
 }
 
 /// A declarative side effect a logic asks the runtime to perform (modelled on XState v6's
@@ -166,6 +178,10 @@ extension MachineLogic: ActorLogic {
     func status(of snapshot: MachineSnapshot<Context>) -> SnapshotStatus {
         snapshot.status
     }
+
+    func output(of snapshot: MachineSnapshot<Context>) -> SendableValue? { snapshot.output }
+
+    func childSnapshotValue(of snapshot: MachineSnapshot<Context>) -> String? { snapshot.value.description }
 
     func stoppedSnapshot(_ snapshot: MachineSnapshot<Context>) -> MachineSnapshot<Context> {
         MachineSnapshot(
