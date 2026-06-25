@@ -1,8 +1,8 @@
 import Foundation
 
-/// A `ChildActor` adapter wrapping the generic `LogicActor` — XState's "an `ActorRef` wraps the
+/// A `ChildActor` adapter wrapping the generic `Actor` — XState's "an `ActorRef` wraps the
 /// interpreter". One generic adapter replaces the per-kind `*ChildRef` classes: the parent talks to
-/// it through `ChildActor` while the real work runs in `LogicActor<L>`.
+/// it through `ChildActor` while the real work runs in `Actor<L>`.
 ///
 /// The pieces that vary by kind are injected:
 ///   - `startAction` — how `start()` boots the inner actor (`start(input:)` for runnable children;
@@ -15,14 +15,14 @@ import Foundation
 final class LogicChildActor<L: ActorLogic>: ChildActor, @unchecked Sendable {
     /// The wrapped engine. Internal (not private) so `@testable` tests can inspect a machine child's
     /// live snapshot / nested children after restore.
-    let actor: LogicActor<L>
+    let actor: Actor<L>
     let id: String
     let systemId: String?
     private let inspectableValue: Bool
     let machineId: String?
     let definitionJSON: String?
-    private let startAction: @Sendable (LogicActor<L>) async -> Void
-    private let persistAction: @Sendable (LogicActor<L>, SnapshotStatus, String?) async throws -> PersistedChildSnapshot?
+    private let startAction: @Sendable (Actor<L>) async -> Void
+    private let persistAction: @Sendable (Actor<L>, SnapshotStatus, String?) async throws -> PersistedChildSnapshot?
 
     private let lock = NSLock()
     private var cachedStatus: SnapshotStatus = .stopped
@@ -34,14 +34,14 @@ final class LogicChildActor<L: ActorLogic>: ChildActor, @unchecked Sendable {
     var inspectable: Bool { inspectableValue }
 
     init(
-        actor: LogicActor<L>,
+        actor: Actor<L>,
         id: String,
         systemId: String?,
         inspectable: Bool,
         machineId: String?,
         definitionJSON: String?,
-        start: @escaping @Sendable (LogicActor<L>) async -> Void,
-        persist: @escaping @Sendable (LogicActor<L>, SnapshotStatus, String?) async throws -> PersistedChildSnapshot?
+        start: @escaping @Sendable (Actor<L>) async -> Void,
+        persist: @escaping @Sendable (Actor<L>, SnapshotStatus, String?) async throws -> PersistedChildSnapshot?
     ) {
         self.actor = actor
         self.id = id
@@ -56,7 +56,7 @@ final class LogicChildActor<L: ActorLogic>: ChildActor, @unchecked Sendable {
     /// Runnable children (callback / task / observable / transition / store): `start(input:)`, and an
     /// opaque persisted snapshot (status + error).
     convenience init(
-        actor: LogicActor<L>,
+        actor: Actor<L>,
         id: String,
         systemId: String?,
         input: SendableValue?,

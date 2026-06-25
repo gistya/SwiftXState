@@ -402,10 +402,10 @@ struct GraphRenderView: View {
 public struct MachineGraphView<Context: Sendable>: View {
     @State private var render: GraphRenderModel
     @State private var subscription = SubscriptionBox()
-    private let actor: Actor<Context>?
+    private let actor: Actor<MachineLogic<Context>>?
 
     /// Live graph driven by an actor.
-    public init(actor: Actor<Context>, machine: StateMachine<Context>) async {
+    public init(actor: Actor<MachineLogic<Context>>, machine: StateMachine<Context>) async {
         self.actor = actor
         let model = GraphModelBuilder.build(from: machine)
         let render = GraphRenderModel(model: model)

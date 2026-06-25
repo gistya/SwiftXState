@@ -19,7 +19,7 @@ public struct StoreActorLogicBox: Sendable {
 
     public init<Context: Sendable & Equatable, E: Eventable>(_ logic: StoreActorLogic<Context, E>) {
         _spawn = { id, input, parent, systemId, syncSnapshot in
-            let actor = LogicActor(
+            let actor = Actor(
                 StoreChildLogic(logic: logic, syncSnapshot: syncSnapshot),
                 id: id,
                 options: ActorOptions(systemId: systemId),

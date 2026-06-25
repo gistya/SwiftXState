@@ -4,7 +4,7 @@ import Foundation
 /// no meaningful snapshot — just a lifecycle status — and drives itself from `run`: it hands the
 /// user's callback a `CallbackActorScope` built from the runtime scope's `receive`/`sendToParent`/
 /// `emit`, and returns the callback's dispose as the run cleanup. Incoming events reach the user's
-/// `receive` handlers via `LogicActor`'s receiver routing.
+/// `receive` handlers via `Actor`'s receiver routing.
 struct CallbackLogic: ActorLogic {
     struct State: Sendable, Equatable {
         var stopped = false
@@ -15,7 +15,7 @@ struct CallbackLogic: ActorLogic {
 
     func initialState(input: SendableValue?) -> State { State() }
 
-    // Events are consumed by the callback's `receive` handlers (LogicActor routes them); the snapshot
+    // Events are consumed by the callback's `receive` handlers (Actor routes them); the snapshot
     // doesn't fold events.
     func step(_ snapshot: State, on event: any Eventable) -> State { snapshot }
 

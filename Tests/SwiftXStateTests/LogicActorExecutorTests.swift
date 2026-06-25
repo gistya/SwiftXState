@@ -15,19 +15,19 @@ private struct ThreadProbeLogic: ActorLogic {
     func status(of snapshot: State) -> SnapshotStatus { .active }
 }
 
-@Suite("LogicActor custom executor")
+@Suite("Actor custom executor")
 struct LogicActorExecutorTests {
 
     @Test("useMainExecutor runs the actor on the main thread")
     func mainExecutor() async {
-        let actor = await LogicActor(ThreadProbeLogic(), options: ActorOptions(useMainExecutor: true)).start()
+        let actor = await Actor(ThreadProbeLogic(), options: ActorOptions(useMainExecutor: true)).start()
         await actor.send(Event("X"))
         #expect(await actor.snapshot.ranOnMain == true)
     }
 
     @Test("default executor runs off the main thread")
     func dedicatedExecutor() async {
-        let actor = await LogicActor(ThreadProbeLogic()).start()
+        let actor = await Actor(ThreadProbeLogic()).start()
         await actor.send(Event("X"))
         #expect(await actor.snapshot.ranOnMain == false)
     }

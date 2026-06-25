@@ -72,7 +72,7 @@ public enum WaitForError: Error, Equatable, LocalizedError {
 
 /// Subscribes to an actor and waits until its snapshot satisfies a predicate.
 public func waitFor<Context: Sendable>(
-    _ actor: Actor<Context>,
+    _ actor: Actor<MachineLogic<Context>>,
     predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool,
     options: WaitForOptions = WaitForOptions()
 ) async throws -> MachineSnapshot<Context> {
@@ -80,15 +80,15 @@ public func waitFor<Context: Sendable>(
 }
 
 
-extension Actor {
+public extension Actor where L: MachineActorLogic {
     /// Subscribes to an actor and waits until its snapshot satisfies a predicate.
     ///
     /// Checks the current snapshot first. Throws if the predicate is not satisfied
     /// before an optional timeout (default: no timeout) or if the actor stops.
-    public func waitFor(
-        predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool,
+    func waitFor(
+        predicate: @escaping @Sendable (MachineSnapshot<L.MachineContext>) -> Bool,
         options: WaitForOptions = WaitForOptions()
-    ) async throws -> MachineSnapshot<Context> {
+    ) async throws -> MachineSnapshot<L.MachineContext> {
         if let timeout = options.timeout, timeout < 0 {
             #if DEBUG
             print("`timeout` passed to `waitFor` is negative and it will reject immediately.")
@@ -103,7 +103,7 @@ extension Actor {
             return initial
         }
 
-        let state = WaitForState<Context>()
+        let state = WaitForState<L.MachineContext>()
 
         // Subscribe up front (now async). The immediate fire is a no-op because `predicate(initial)`
         // is already false above; any later snapshot routes through `state.resolve`, which buffers

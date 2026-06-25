@@ -2,20 +2,20 @@ import Testing
 import Foundation
 @testable import SwiftXState
 
-/// De-risks the eventual `Actor` migration: proves `LogicActor<MachineLogic>` matches `Actor` across
+/// De-risks the eventual `Actor` migration: proves `Actor<MachineLogic>` matches `Actor` across
 /// the *full* machine feature surface (compound + history, guards, parallel, raise, spawn), not just
 /// the effect cases in `LogicActorTests`. If anything here diverged, the generic path couldn't yet
 /// replace `Actor`.
-@Suite("LogicActor<MachineLogic> full-feature parity")
+@Suite("Actor<MachineLogic> full-feature parity")
 struct LogicActorFullParityTests {
 
-    /// Drives the same event sequence through `Actor` and `LogicActor<MachineLogic>`.
+    /// Drives the same event sequence through `Actor` and `Actor<MachineLogic>`.
     private func driveBoth<C: Sendable>(
         _ machine: StateMachine<C>,
         _ events: [String]
     ) async -> (old: MachineSnapshot<C>, new: MachineSnapshot<C>) {
         let old = await createActor(machine).start()
-        let new = await LogicActor(MachineLogic(machine: machine)).start()
+        let new = await Actor(MachineLogic(machine: machine)).start()
         for e in events {
             await old.send(Event(e))
             await new.send(Event(e))
@@ -128,7 +128,7 @@ struct LogicActorFullParityTests {
         let clockOld = SimulatedClock()
         let clockNew = SimulatedClock()
         let old = await createActor(machine, options: ActorOptions(clock: clockOld)).start()
-        let new = await LogicActor(MachineLogic(machine: machine), options: ActorOptions(clock: clockNew)).start()
+        let new = await Actor(MachineLogic(machine: machine), options: ActorOptions(clock: clockNew)).start()
         await old.send(Event("GO"))
         await new.send(Event("GO"))
         // Raise is deferred — both sit in `waiting` until the clock advances.
@@ -153,7 +153,7 @@ struct LogicActorFullParityTests {
             ]
         ))
         let old = await createActor(spawner).start()
-        let new = await LogicActor(MachineLogic(machine: spawner)).start()
+        let new = await Actor(MachineLogic(machine: spawner)).start()
         let oldKeys = await old.snapshot.children.keys.sorted()
         let newKeys = await new.snapshot.children.keys.sorted()
         #expect(oldKeys == newKeys)

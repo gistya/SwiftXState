@@ -2,7 +2,7 @@
 //  ActorBridge.swift
 //  SwiftXState — Windows / C# bridge
 //
-//  Handle-based actor exports. Because `Actor<Context>` is generic, it can't cross the C ABI directly,
+//  Handle-based actor exports. Because `Actor<MachineLogic<Context>>` is generic, it can't cross the C ABI directly,
 //  so each actor is erased behind closures (like the demo's DemoSession), stored in a registry, and
 //  referenced from C# by an opaque `Int64` handle. Events are passed by name (C string); state and
 //  context come back as JSON / strings the caller frees.

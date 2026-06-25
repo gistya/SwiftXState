@@ -4,7 +4,7 @@ import Foundation
 
 private struct PCtx: Codable, Sendable, Equatable { var count: Int }
 
-@Suite("LogicActor persistence")
+@Suite("Actor persistence")
 struct LogicActorPersistenceTests {
 
     private func counterMachine() -> StateMachine<PCtx> {
@@ -22,7 +22,7 @@ struct LogicActorPersistenceTests {
     func saveParity() async throws {
         let machine = counterMachine()
         let old = await createActor(machine).start()
-        let new = await LogicActor(MachineLogic(machine: machine)).start()
+        let new = await Actor(MachineLogic(machine: machine)).start()
         await old.send(Event("INC")); await old.send(Event("INC"))
         await new.send(Event("INC")); await new.send(Event("INC"))
 
@@ -34,10 +34,10 @@ struct LogicActorPersistenceTests {
 
     @Test("saved snapshot round-trips through Actor.start(from:)")
     func saveRoundTripsViaActor() async throws {
-        // Until LogicActor.start(from:) lands, prove the bytes LogicActor produces are restorable
+        // Until Actor.start(from:) lands, prove the bytes Actor produces are restorable
         // by the existing Actor restore path — i.e. they're genuinely compatible, not just equal.
         let machine = counterMachine()
-        let new = await LogicActor(MachineLogic(machine: machine)).start()
+        let new = await Actor(MachineLogic(machine: machine)).start()
         await new.send(Event("INC")); await new.send(Event("INC")); await new.send(Event("INC"))
         let persisted = try await new.getPersistedSnapshot()
 
@@ -46,15 +46,15 @@ struct LogicActorPersistenceTests {
         #expect(await restored.snapshot.matches("active"))
     }
 
-    @Test("LogicActor.start(from:) restores state + context, then keeps running")
+    @Test("Actor.start(from:) restores state + context, then keeps running")
     func restoreParity() async throws {
         let machine = counterMachine()
-        // Produce a persisted snapshot via Actor, then restore it into a LogicActor.
+        // Produce a persisted snapshot via Actor, then restore it into a Actor.
         let source = await createActor(machine).start()
         await source.send(Event("INC")); await source.send(Event("INC")); await source.send(Event("INC"))
         let persisted = try await source.getPersistedSnapshot()
 
-        let restored = try await LogicActor(MachineLogic(machine: machine)).start(from: persisted)
+        let restored = try await Actor(MachineLogic(machine: machine)).start(from: persisted)
         #expect(await restored.snapshot.context.count == 3)
         #expect(await restored.snapshot.matches("active"))
         // Restored actor is live.
@@ -62,14 +62,14 @@ struct LogicActorPersistenceTests {
         #expect(await restored.snapshot.context.count == 4)
     }
 
-    @Test("round-trip: LogicActor save → LogicActor restore")
+    @Test("round-trip: Actor save → Actor restore")
     func roundTrip() async throws {
         let machine = counterMachine()
-        let a = await LogicActor(MachineLogic(machine: machine)).start()
+        let a = await Actor(MachineLogic(machine: machine)).start()
         await a.send(Event("INC")); await a.send(Event("INC"))
         let persisted = try await a.getPersistedSnapshot()
 
-        let b = try await LogicActor(MachineLogic(machine: machine)).start(from: persisted)
+        let b = try await Actor(MachineLogic(machine: machine)).start(from: persisted)
         #expect(await b.snapshot.context.count == 2)
         #expect(await b.snapshot.matches("active"))
     }
@@ -90,7 +90,7 @@ struct LogicActorPersistenceTests {
         let persisted = try await source.getPersistedSnapshot()
 
         let oldRestored = await createActor(parent).start(from: persisted)
-        let newRestored = try await LogicActor(MachineLogic(machine: parent)).start(from: persisted)
+        let newRestored = try await Actor(MachineLogic(machine: parent)).start(from: persisted)
         #expect(await oldRestored.snapshot.children.keys.sorted() == newRestored.snapshot.children.keys.sorted())
         #expect(await newRestored.snapshot.children.keys.sorted() == ["kid"])
     }

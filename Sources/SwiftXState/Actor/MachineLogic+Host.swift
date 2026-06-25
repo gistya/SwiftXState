@@ -2,14 +2,14 @@ import Foundation
 
 /// The effectful side of `MachineLogic`'s `ActorLogic` conformance: the machine orchestration
 /// (side-effect dispatch, `after`, `invoke`) run against a `MachineHost`. This is the same logic
-/// `StateActor` performs inline, lifted to run on the generic `LogicActor` via the `isolated` host
+/// `StateActor` performs inline, lifted to run on the generic `Actor` via the `isolated` host
 /// seam — the Context-specific work (the action switch, `makeChildActor`) lives here in the logic,
 /// while the host supplies only Context-agnostic primitives (timers, child registry, emit, parent).
 extension MachineLogic {
-    func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> MachineSnapshot<Context> {
+    public func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> MachineSnapshot<Context> {
         let (snapshot, actions) = initialSnapshot(input: input, context: contextOverride)
         var result = await runEffects(snapshot, actions: actions, event: SystemEvent.`init`, host: host)
-        // Startup `.action` events are emitted by LogicActor *after* the `.actor` registration
+        // Startup `.action` events are emitted by Actor *after* the `.actor` registration
         // (see startupActionTypes) to match Actor's ordering — not inline here.
         let entered = StateNodeSet(result._nodes)
         let exited = StateNodeSet<Context>()
@@ -18,7 +18,7 @@ extension MachineLogic {
         return result
     }
 
-    func handle<H: MachineHost>(
+    public func handle<H: MachineHost>(
         _ event: any Eventable,
         _ snapshot: MachineSnapshot<Context>,
         host: isolated H
@@ -226,7 +226,7 @@ extension MachineLogic {
 
     // MARK: restore (re-spawn children for a hydrated snapshot)
 
-    func restoreChildren<H: MachineHost>(
+    public func restoreChildren<H: MachineHost>(
         _ snapshot: MachineSnapshot<Context>,
         host: isolated H
     ) async -> MachineSnapshot<Context> {

@@ -16,7 +16,7 @@ private final class WeakMachineDriverBox<Object: AnyObject>: @unchecked Sendable
 @Observable
 public final class MachineDriver<Context: Sendable> {
     public private(set) var snapshot: MachineSnapshot<Context>
-    public let actor: Actor<Context>
+    public let actor: Actor<MachineLogic<Context>>
 
     @ObservationIgnored private var subscription: Subscription?
 
@@ -59,7 +59,7 @@ public final class MachineDriver<Context: Sendable> {
 public func useMachine<Context: Sendable>(
     _ machine: StateMachine<Context>,
     input: SendableValue? = nil
-) -> (snapshot: MachineSnapshot<Context>, send: (any Eventable) -> Void, actor: Actor<Context>) {
+) -> (snapshot: MachineSnapshot<Context>, send: (any Eventable) -> Void, actor: Actor<MachineLogic<Context>>) {
     let driver = MachineDriver(machine, input: input)
     return (
         driver.snapshot,

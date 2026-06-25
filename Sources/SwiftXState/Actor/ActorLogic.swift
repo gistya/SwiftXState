@@ -10,9 +10,9 @@ import Foundation
 /// (those need the actor's runtime resources and are intrinsically machine-shaped). A logic whose
 /// step produces no side effects — a hand-written reducer, or a state machine that only transitions
 /// / `assign`s / runs `always` — is fully expressible here. `MachineLogic` conforms (below), so the
-/// generic `LogicActor` can host any effect-free machine; effectful machines still need
+/// generic `Actor` can host any effect-free machine; effectful machines still need
 /// `StateActor`'s orchestration until that, too, is folded in.
-protocol ActorLogic: Sendable {
+public protocol ActorLogic: Sendable {
     associatedtype Snapshot: Sendable
 
     /// The snapshot the actor starts in. `input` mirrors a machine's `contextFromInput`.
@@ -48,7 +48,7 @@ protocol ActorLogic: Sendable {
     func handle<H: MachineHost>(_ event: any Eventable, _ snapshot: Snapshot, host: isolated H) async -> Snapshot
 
     // Inspection hooks — declared as requirements (not just extension methods) so a generic
-    // `LogicActor<L>` dispatches to the conformer's override, not the no-op default.
+    // `Actor<L>` dispatches to the conformer's override, not the no-op default.
     var providesInspection: Bool { get }
     func inspectionMachineId() -> String?
     func inspectionRegistrationEvent(
@@ -80,7 +80,7 @@ protocol ActorLogic: Sendable {
     func childSnapshotValue(of snapshot: Snapshot) -> String?
 }
 
-extension ActorLogic {
+public extension ActorLogic {
     func run(_ scope: ActorScope<Snapshot>) async -> (@Sendable () -> Void)? { nil }
 
     func setUp(_ scope: ActorScope<Snapshot>) -> (@Sendable () -> Void)? { nil }
@@ -119,15 +119,15 @@ extension ActorLogic {
 
     func startupActionTypes(input: SendableValue?) -> [String] { [] }
 
-    func stoppedSnapshot(_ snapshot: Snapshot) -> Snapshot { snapshot }
+    public func stoppedSnapshot(_ snapshot: Snapshot) -> Snapshot { snapshot }
 
-    func output(of snapshot: Snapshot) -> SendableValue? { nil }
+    public func output(of snapshot: Snapshot) -> SendableValue? { nil }
 
-    func childSnapshotValue(of snapshot: Snapshot) -> String? { nil }
+    public func childSnapshotValue(of snapshot: Snapshot) -> String? { nil }
 }
 
 /// A declarative side effect a logic asks the runtime to perform (modelled on XState v6's
-/// `LogicEffect` — `emit` / `sendBack` / `raise`). `LogicActor` executes these through one serial
+/// `LogicEffect` — `emit` / `sendBack` / `raise`). `Actor` executes these through one serial
 /// chain, so a child's outbound deliveries keep their order centrally — no per-child delivery chain,
 /// and the historical `sendToParent`-before-`onDone` race can't recur.
 enum LogicEffect: Sendable {
@@ -143,47 +143,47 @@ enum LogicEffect: Sendable {
 /// its host actor: push snapshots (`update`), consume incoming events (`receive`), and produce
 /// outbound effects (`sendToParent` / `emit`) — the latter routed through the host's ordered effect
 /// chain. Mirrors XState v6's `CallbackLogicFunction` scope (`sendBack` / `receive` / `emit`).
-struct ActorScope<Snapshot: Sendable>: Sendable {
+public struct ActorScope<Snapshot: Sendable>: Sendable {
     /// This actor's id — so a logic can build child-targeted events (e.g. `SnapshotActorEvent`).
-    let actorId: String
-    let input: SendableValue?
+    public let actorId: String
+    public let input: SendableValue?
     /// Push a new snapshot (dropped once the logic is no longer `.active`).
-    let update: @Sendable (Snapshot) async -> Void
+    public let update: @Sendable (Snapshot) async -> Void
     /// Register a handler for events sent to this actor.
-    let receive: @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Void
+    public let receive: @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Void
     /// Send an event up to the parent (ordered).
-    let sendToParent: @Sendable (any Eventable) -> Void
+    public let sendToParent: @Sendable (any Eventable) -> Void
     /// Notify emit listeners.
-    let emit: @Sendable (EmittedEvent) -> Void
+    public let emit: @Sendable (EmittedEvent) -> Void
     /// Mark the child done with an optional output — delivers a `DoneActorEvent` to the parent on the
     /// SAME ordered chain as `sendToParent` (so a just-sent event lands first) and sets `.done`.
-    let complete: @Sendable (SendableValue?) -> Void
+    public let complete: @Sendable (SendableValue?) -> Void
     /// Mark the child errored — delivers an `ErrorActorEvent` (ordered) and sets `.error`.
-    let fail: @Sendable (String) -> Void
+    public let fail: @Sendable (String) -> Void
 }
 
 /// `MachineLogic` is an `ActorLogic`: its reducer *is* the macrostep. For an effect-free machine
-/// this conformance is total — `LogicActor<MachineLogic<C>>` reaches the same snapshots as `Actor`.
+/// this conformance is total — `Actor<MachineLogic<C>>` reaches the same snapshots as `Actor`.
 /// For an effectful machine the `step` still computes the right *next snapshot*; what it omits is
-/// the running of side effects / `after` / `invoke`, which `LogicActor` does not (yet) perform.
+/// the running of side effects / `after` / `invoke`, which `Actor` does not (yet) perform.
 extension MachineLogic: ActorLogic {
-    func initialState(input: SendableValue?) -> MachineSnapshot<Context> {
+    public func initialState(input: SendableValue?) -> MachineSnapshot<Context> {
         initialSnapshot(input: input, context: contextOverride).snapshot
     }
 
-    func step(_ snapshot: MachineSnapshot<Context>, on event: any Eventable) -> MachineSnapshot<Context> {
+    public func step(_ snapshot: MachineSnapshot<Context>, on event: any Eventable) -> MachineSnapshot<Context> {
         reduce(snapshot, on: event).snapshot
     }
 
-    func status(of snapshot: MachineSnapshot<Context>) -> SnapshotStatus {
+    public func status(of snapshot: MachineSnapshot<Context>) -> SnapshotStatus {
         snapshot.status
     }
 
-    func output(of snapshot: MachineSnapshot<Context>) -> SendableValue? { snapshot.output }
+    public func output(of snapshot: MachineSnapshot<Context>) -> SendableValue? { snapshot.output }
 
-    func childSnapshotValue(of snapshot: MachineSnapshot<Context>) -> String? { snapshot.value.description }
+    public func childSnapshotValue(of snapshot: MachineSnapshot<Context>) -> String? { snapshot.value.description }
 
-    func stoppedSnapshot(_ snapshot: MachineSnapshot<Context>) -> MachineSnapshot<Context> {
+    public func stoppedSnapshot(_ snapshot: MachineSnapshot<Context>) -> MachineSnapshot<Context> {
         MachineSnapshot(
             machine: snapshot.machine,
             value: snapshot.value,

@@ -24,7 +24,7 @@ public struct TransitionActorLogicBox: Sendable {
 
     public init<Context: Sendable & Equatable>(_ logic: TransitionActorLogic<Context>) {
         _spawn = { id, input, parent, systemId, syncSnapshot in
-            let actor = LogicActor(
+            let actor = Actor(
                 TransitionLogic(logic: logic, syncSnapshot: syncSnapshot),
                 id: id,
                 options: ActorOptions(systemId: systemId),

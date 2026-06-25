@@ -7,7 +7,7 @@ import Foundation
 /// is just the container and its stopped-id tracking.
 ///
 /// Accessed only under the owning actor's isolation, so it needs no lock.
-final class ChildRegistry {
+public final class ChildRegistry {
     private var children: [String: any ChildActor] = [:]
     private var stoppedIDs: Set<String> = []
 

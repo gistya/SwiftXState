@@ -1,6 +1,6 @@
 import Foundation
 
-/// The state-machine `ActorLogic`: the reducer that drives a `LogicActor<MachineLogic<Context>>`,
+/// The state-machine `ActorLogic`: the reducer that drives a `Actor<MachineLogic<Context>>`,
 /// which is the generic actor's machine specialization (full parity with `Actor`).
 ///
 /// This type owns only what is genuinely pure — the initial snapshot and the macrostep (`reduce`).
@@ -8,12 +8,17 @@ import Foundation
 /// children) lives in the effectful conformance (`MachineLogic+Host.swift`), run against the host's
 /// Context-agnostic primitives. Keeping that split honest is what lets this be a plain `Sendable`
 /// value: given a snapshot and an event it computes the next snapshot, and nothing else.
-struct MachineLogic<Context: Sendable>: Sendable {
-    let machine: StateMachine<Context>
+public struct MachineLogic<Context: Sendable>: Sendable {
+    public let machine: StateMachine<Context>
     /// Optional start-time context override (replaces the machine's resolved initial context, and
-    /// the decoded context on restore). Lets the `Actor` facade thread `start(context:)` through
+    /// the decoded context on restore). Lets the machine `Actor`'s `start(context:)` thread through
     /// without a separate start signature. Default: none.
-    var contextOverride: Context? = nil
+    public var contextOverride: Context? = nil
+
+    public init(machine: StateMachine<Context>, contextOverride: Context? = nil) {
+        self.machine = machine
+        self.contextOverride = contextOverride
+    }
 
     /// The machine's initial snapshot and entry actions (the initial macrostep, run to completion).
     func initialSnapshot(

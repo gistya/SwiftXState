@@ -9,7 +9,7 @@ public func createActor<Context: Sendable>(
     options: ActorOptions = ActorOptions(),
     input: SendableValue? = nil,
     inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) -> Actor<Context> {
+) -> Actor<MachineLogic<Context>> {
     var resolvedOptions = options
     if let input {
         resolvedOptions.input = input
@@ -47,12 +47,12 @@ public func createActor<Context: Codable & Sendable>(
     options: ActorOptions = ActorOptions(),
     context: Context? = nil,
     inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) async -> Actor<Context> {
+) async -> Actor<MachineLogic<Context>> {
     var resolvedOptions = options
     if let inspect {
         resolvedOptions.inspect = inspect
     }
-    let actor = Actor(machine, id: id, options: resolvedOptions)
+    let actor = Actor<MachineLogic<Context>>(machine, id: id, options: resolvedOptions)
     await actor.start(from: snapshot, context: context)
     return actor
 }
@@ -88,7 +88,7 @@ public func createActor<Context: Sendable, Input: Sendable & Equatable>(
     id: String? = nil,
     options: ActorOptions = ActorOptions(),
     inspect: (@Sendable (InspectionEvent) -> Void)? = nil
-) -> Actor<Context> {
+) -> Actor<MachineLogic<Context>> {
     createActor(
         machine,
         id: id,

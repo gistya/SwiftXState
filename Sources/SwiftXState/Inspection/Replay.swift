@@ -385,7 +385,7 @@ public func replayActor<Context: Sendable>(
     session: ReplaySession,
     options: ActorOptions = ActorOptions(),
     decodeEvent: ReplayEventDecoder? = nil
-) async -> (actor: Actor<Context>, verifications: [ReplayVerification]) {
+) async -> (actor: Actor<MachineLogic<Context>>, verifications: [ReplayVerification]) {
     let actor = createActor(machine, options: options)
     await actor.start(context: context)
     var verifications: [ReplayVerification] = []

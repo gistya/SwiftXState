@@ -1,15 +1,15 @@
 import Foundation
 
 /// The inspection side of `MachineLogic`'s `ActorLogic` conformance: builds the machine-specific
-/// `@xstate.*` events from `MachineSnapshot`. `LogicActor` owns the *plumbing* (the `inspectable`
+/// `@xstate.*` events from `MachineSnapshot`. `Actor` owns the *plumbing* (the `inspectable`
 /// gate, the `@autoclosure`-guarded emit, and the lifecycle timing); the logic supplies the payloads
 /// here, since only it knows the `Context`/`MachineSnapshot`.
 extension MachineLogic {
-    var providesInspection: Bool { true }
+    public var providesInspection: Bool { true }
 
-    func inspectionMachineId() -> String? { machine.id }
+    public func inspectionMachineId() -> String? { machine.id }
 
-    func inspectionRegistrationEvent(
+    public func inspectionRegistrationEvent(
         _ snapshot: MachineSnapshot<Context>, actor: InspectionActorRef, rootId: String,
         parentSessionId: String?, includeDefinition: Bool
     ) -> InspectionEvent? {
@@ -22,20 +22,20 @@ extension MachineLogic {
         )
     }
 
-    func inspectionTransitionEvent(
+    public func inspectionTransitionEvent(
         _ snapshot: MachineSnapshot<Context>, event: any Eventable, actor: InspectionActorRef, rootId: String
     ) -> InspectionEvent? {
         .transition(rootId: rootId, actor: actor, triggeringEvent: event, machineSnapshot: snapshot)
     }
 
-    func inspectionSnapshotEvent(
+    public func inspectionSnapshotEvent(
         _ snapshot: MachineSnapshot<Context>, event: any Eventable, actor: InspectionActorRef, rootId: String
     ) -> InspectionEvent? {
         .snapshot(rootId: rootId, actor: actor, triggeringEvent: event, machineSnapshot: snapshot)
     }
 
-    func startupActionTypes(input: SendableValue?) -> [String] {
-        // Re-derive the initial actions (pure) and keep the inspectable ones — `LogicActor` emits
+    public func startupActionTypes(input: SendableValue?) -> [String] {
+        // Re-derive the initial actions (pure) and keep the inspectable ones — `Actor` emits
         // these as `.action` events after the `.actor` registration, matching Actor's order.
         let (_, actions) = initialSnapshot(input: input, context: contextOverride)
         return actions.compactMap { action in

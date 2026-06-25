@@ -64,7 +64,7 @@ final class TestSignal: @unchecked Sendable {
     }
 }
 
-extension Actor {
+extension Actor where L: MachineActorLogic {
     /// Awaits the first snapshot satisfying `predicate`, subscribing to the
     /// actor's snapshot stream so it resolves the instant the transition lands —
     /// no fixed delay. Returns the matching snapshot, or `nil` on timeout.
@@ -74,9 +74,9 @@ extension Actor {
     @discardableResult
     func waitForSnapshot(
         timeout: Duration = .seconds(5),
-        where predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool
-    ) async -> MachineSnapshot<Context>? {
-        let oneShot = OneShot<MachineSnapshot<Context>?>()
+        where predicate: @escaping @Sendable (MachineSnapshot<L.MachineContext>) -> Bool
+    ) async -> MachineSnapshot<L.MachineContext>? {
+        let oneShot = OneShot<MachineSnapshot<L.MachineContext>?>()
         let subscription = await subscribe { snapshot in
             if predicate(snapshot) {
                 oneShot.resolve(snapshot)

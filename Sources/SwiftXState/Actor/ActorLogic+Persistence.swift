@@ -1,9 +1,9 @@
 import Foundation
 
-/// A logic whose snapshot can be persisted and restored — the capability behind `LogicActor`'s
+/// A logic whose snapshot can be persisted and restored — the capability behind `Actor`'s
 /// `getPersistedSnapshot()` / `start(from:)`. `MachineLogic` conforms **only when its `Context` is
 /// `Codable`** (conditional conformance), mirroring `Actor`'s `where Context: Codable` constraint.
-protocol PersistableLogic: ActorLogic {
+public protocol PersistableLogic: ActorLogic {
     /// Serialize a snapshot (plus already-collected child snapshots) into a `PersistedSnapshot`.
     func persistedSnapshot(
         _ snapshot: Snapshot,
@@ -19,14 +19,14 @@ protocol PersistableLogic: ActorLogic {
 }
 
 extension MachineLogic: PersistableLogic where Context: Codable {
-    func persistedSnapshot(
+    public func persistedSnapshot(
         _ snapshot: MachineSnapshot<Context>,
         children: [String: PersistedChildSnapshot]
     ) throws -> PersistedSnapshot {
         try SwiftXState.getPersistedSnapshot(from: snapshot, children: children)
     }
 
-    func restoredSnapshot(from persisted: PersistedSnapshot) throws -> MachineSnapshot<Context> {
+    public func restoredSnapshot(from persisted: PersistedSnapshot) throws -> MachineSnapshot<Context> {
         try restoreSnapshot(machine: machine, persisted: persisted, context: contextOverride)
     }
 }

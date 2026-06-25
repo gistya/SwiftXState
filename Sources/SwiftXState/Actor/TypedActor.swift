@@ -2,14 +2,14 @@
 /// selected state-id brand. The wrapper shares the underlying actor instance instead of
 /// duplicating interpreter state.
 public struct TypedActor<Context: Sendable, Brand: StateID>: Sendable {
-    public let actor: Actor<Context>
+    public let actor: Actor<MachineLogic<Context>>
 
-    public init(_ actor: Actor<Context>) {
+    public init(_ actor: Actor<MachineLogic<Context>>) {
         self.actor = actor
     }
 
     /// The machine this actor runs.
-    public var machine: StateMachine<Context> { actor.machine }
+    public var machine: StateMachine<Context> { get async { await actor.machine } }
 
     /// This actor's session id.
     public var id: String { actor.id }

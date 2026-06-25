@@ -2,10 +2,10 @@ import Testing
 import Foundation
 @testable import SwiftXState
 
-/// Proves the inspection stream ported onto `LogicActor` matches `Actor`'s for the core lifecycle
+/// Proves the inspection stream ported onto `Actor` matches `Actor`'s for the core lifecycle
 /// event kinds (`@xstate.actor` / `.event` / `.transition` / `.snapshot`). `.microstep` and
 /// `.action` inspection are not yet ported, so they're filtered out of the comparison.
-@Suite("LogicActor inspection parity")
+@Suite("Actor inspection parity")
 struct LogicActorInspectionTests {
 
     private let coreKinds: Set<InspectionEventKind> = [.actor, .event, .transition, .snapshot]
@@ -28,7 +28,7 @@ struct LogicActorInspectionTests {
         let newCollector = InspectionCollector()
 
         let old = await createActor(machine, id: "p", options: ActorOptions(inspect: oldCollector.observe(), inspectable: true)).start()
-        let new = await LogicActor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: newCollector.observe(), inspectable: true)).start()
+        let new = await Actor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: newCollector.observe(), inspectable: true)).start()
         await old.send(Event("TOGGLE"))
         await new.send(Event("TOGGLE"))
 
@@ -51,7 +51,7 @@ struct LogicActorInspectionTests {
         let oldCollector = InspectionCollector()
         let newCollector = InspectionCollector()
         _ = await createActor(machine, id: "p", options: ActorOptions(inspect: oldCollector.observe(), inspectable: true)).start()
-        _ = await LogicActor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: newCollector.observe(), inspectable: true)).start()
+        _ = await Actor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: newCollector.observe(), inspectable: true)).start()
 
         let oldActor = oldCollector.recordedEvents().first { $0.kind == .actor }
         let newActor = newCollector.recordedEvents().first { $0.kind == .actor }
@@ -67,7 +67,7 @@ struct LogicActorInspectionTests {
             states: ["a": StateNodeConfig(on: ["GO": .to("a")])]
         ))
         let collector = InspectionCollector()
-        let actor = await LogicActor(MachineLogic(machine: machine), options: ActorOptions(inspect: collector.observe(), inspectable: false)).start()
+        let actor = await Actor(MachineLogic(machine: machine), options: ActorOptions(inspect: collector.observe(), inspectable: false)).start()
         await actor.send(Event("GO"))
         #expect(collector.recordedEvents().isEmpty)
     }
@@ -83,7 +83,7 @@ struct LogicActorInspectionTests {
         ))
         let oc = InspectionCollector(); let nc = InspectionCollector()
         let old = await createActor(machine, id: "p", options: ActorOptions(inspect: oc.observe(), inspectable: true)).start()
-        let new = await LogicActor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: nc.observe(), inspectable: true)).start()
+        let new = await Actor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: nc.observe(), inspectable: true)).start()
         await old.send(Event("GO"))
         await new.send(Event("GO"))
         let oldActions = oc.recordedEvents().filter { $0.kind == .action }.compactMap(\.actionType).sorted()
@@ -104,7 +104,7 @@ struct LogicActorInspectionTests {
         ))
         let oc = InspectionCollector(); let nc = InspectionCollector()
         let old = await createActor(machine, id: "p", options: ActorOptions(inspect: oc.observe(), inspectable: true)).start()
-        let new = await LogicActor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: nc.observe(), inspectable: true)).start()
+        let new = await Actor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: nc.observe(), inspectable: true)).start()
         await old.send(Event("GO"))
         await new.send(Event("GO"))
         let oldMicro = oc.recordedEvents().filter { $0.kind == .microstep }.count
@@ -131,7 +131,7 @@ struct LogicActorInspectionTests {
             ]
         ))
         let collector = InspectionCollector()
-        let actor = await LogicActor(MachineLogic(machine: parent), id: "p",
+        let actor = await Actor(MachineLogic(machine: parent), id: "p",
             options: ActorOptions(inspect: collector.observe(), inspectable: true)).start()
         let events = collector.recordedEvents()
         let actorIndex = events.firstIndex { $0.kind == .actor && $0.actor.sessionId == actor.id }
@@ -158,7 +158,7 @@ struct LogicActorInspectionTests {
         let oldCollector = InspectionCollector()
         let newCollector = InspectionCollector()
         _ = await createActor(parent, id: "p", options: ActorOptions(inspect: oldCollector.observe(), inspectable: true)).start()
-        _ = await LogicActor(MachineLogic(machine: parent), id: "p", options: ActorOptions(inspect: newCollector.observe(), inspectable: true)).start()
+        _ = await Actor(MachineLogic(machine: parent), id: "p", options: ActorOptions(inspect: newCollector.observe(), inspectable: true)).start()
 
         let oldActorEvents = oldCollector.recordedEvents().filter { $0.kind == .actor }.count
         let newActorEvents = newCollector.recordedEvents().filter { $0.kind == .actor }.count

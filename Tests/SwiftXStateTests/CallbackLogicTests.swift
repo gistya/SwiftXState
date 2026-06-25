@@ -23,7 +23,7 @@ struct CallbackLogicTests {
         parent: (any ActorParentRef)? = nil,
         system: ActorSystem
     ) -> LogicChildActor<CallbackLogic> {
-        let actor = LogicActor(
+        let actor = Actor(
             CallbackLogic(callback: callback, system: system),
             id: "cb", parent: parent, system: system
         )
