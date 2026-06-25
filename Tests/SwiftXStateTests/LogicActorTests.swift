@@ -67,12 +67,13 @@ private struct StreamLogic: ActorLogic {
     func step(_ snapshot: State, on event: any Eventable) -> State { snapshot }
     func status(of snapshot: State) -> SnapshotStatus { snapshot.finished ? .done : .active }
 
-    func run(_ scope: ActorScope<State>) async {
+    func run(_ scope: ActorScope<State>) async -> (@Sendable () -> Void)? {
         for i in 1...upTo {
             await scope.update(State(value: i, finished: false))
         }
         await scope.update(State(value: upTo, finished: true))
         done.fire()
+        return nil
     }
 }
 

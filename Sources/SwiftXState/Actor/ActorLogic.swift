@@ -25,9 +25,11 @@ protocol ActorLogic: Sendable {
     func status(of snapshot: Snapshot) -> SnapshotStatus
 
     /// Optional background driver. A *runnable* logic (the shape behind callback / task / observable
-    /// children) pushes a stream of snapshots through `scope` from its own task rather than folding
-    /// events. Pure reducers (including `MachineLogic`) leave this as the no-op default.
-    func run(_ scope: ActorScope<Snapshot>) async
+    /// children) drives itself through `scope` — registering `receive` handlers, pushing snapshots,
+    /// and producing `sendToParent`/`emit` effects — rather than folding events. Returns an optional
+    /// cleanup run on `stop()` (XState's `fromCallback` dispose). Pure reducers (incl. `MachineLogic`)
+    /// leave this as the no-op default.
+    func run(_ scope: ActorScope<Snapshot>) async -> (@Sendable () -> Void)?
 
     /// Produce the initial snapshot, *running any startup side effects* against the host. The default
     /// is the pure `initialState` (no effects). An effectful logic (`MachineLogic`) overrides this to
@@ -65,7 +67,7 @@ protocol ActorLogic: Sendable {
 }
 
 extension ActorLogic {
-    func run(_ scope: ActorScope<Snapshot>) async {}
+    func run(_ scope: ActorScope<Snapshot>) async -> (@Sendable () -> Void)? { nil }
 
     func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> Snapshot {
         initialState(input: input)
@@ -104,11 +106,33 @@ extension ActorLogic {
     func stoppedSnapshot(_ snapshot: Snapshot) -> Snapshot { snapshot }
 }
 
-/// Handed to `ActorLogic.run` so a background driver can push new snapshots into its host actor.
-/// `update` hops onto the actor's isolation; updates after the logic is no longer `.active` are
-/// dropped by the host (mirroring run-to-completion).
+/// A declarative side effect a logic asks the runtime to perform (modelled on XState v6's
+/// `LogicEffect` — `emit` / `sendBack` / `raise`). `LogicActor` executes these through one serial
+/// chain, so a child's outbound deliveries keep their order centrally — no per-child delivery chain,
+/// and the historical `sendToParent`-before-`onDone` race can't recur.
+enum LogicEffect: Sendable {
+    /// Notify `on(_:)` emit listeners.
+    case emit(EmittedEvent)
+    /// Send an event up to the parent actor (XState's `sendBack`).
+    case sendToParent(any Eventable)
+    /// Deliver an event back to this actor (XState's `raise`).
+    case deliverToSelf(any Eventable)
+}
+
+/// Handed to `ActorLogic.run` so a background driver (callback / task / observable child) can drive
+/// its host actor: push snapshots (`update`), consume incoming events (`receive`), and produce
+/// outbound effects (`sendToParent` / `emit`) — the latter routed through the host's ordered effect
+/// chain. Mirrors XState v6's `CallbackLogicFunction` scope (`sendBack` / `receive` / `emit`).
 struct ActorScope<Snapshot: Sendable>: Sendable {
+    let input: SendableValue?
+    /// Push a new snapshot (dropped once the logic is no longer `.active`).
     let update: @Sendable (Snapshot) async -> Void
+    /// Register a handler for events sent to this actor.
+    let receive: @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Void
+    /// Send an event up to the parent (ordered).
+    let sendToParent: @Sendable (any Eventable) -> Void
+    /// Notify emit listeners.
+    let emit: @Sendable (EmittedEvent) -> Void
 }
 
 /// `MachineLogic` is an `ActorLogic`: its reducer *is* the macrostep. For an effect-free machine

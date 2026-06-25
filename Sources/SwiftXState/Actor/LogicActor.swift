@@ -49,6 +49,13 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     private var observers: [(id: Int, handler: @Sendable (L.Snapshot) -> Void)] = []
     private var nextObserverID = 0
     private var runTask: Task<Void, Never>?
+    // Runnable-logic (callback/task/observable) support: incoming-event receivers (lock-boxed so a
+    // background `run` can register without a racing hop), the run's cleanup, and one serial chain
+    // for outbound parent deliveries (so `sendToParent` keeps order centrally — the XState-v6 lesson,
+    // no per-child ParentDeliveryChain).
+    private nonisolated let receivers = ReceiverBox()
+    private var runCleanup: (@Sendable () -> Void)?
+    private nonisolated let parentDeliveries = ParentDeliveryChain()
 
     private let emitListeners = EmitListeners()
     let childRegistry = ChildRegistry()
@@ -156,13 +163,32 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         isProcessing = false
         emitStartupInspection(actionTypes: logic.startupActionTypes(input: resolvedInput))
         notify(snapshot)
-        // Launch the optional background driver (no-op for pure reducers / machines). The scope hops
-        // each pushed snapshot back onto this actor's isolation via `applyExternal`.
-        let scope = ActorScope<L.Snapshot> { [weak self] pushed in
-            await self?.applyExternal(pushed)
-        }
-        runTask = Task { [logic] in await logic.run(scope) }
+        launchRunTask(input: resolvedInput)
         return self
+    }
+
+    /// Launches the optional background driver (no-op for pure reducers / machines), handing it the
+    /// scope: snapshot push, event `receive`, ordered `sendToParent`, and `emit`.
+    private func launchRunTask(input: SendableValue?) {
+        let receivers = self.receivers
+        let parentDeliveries = self.parentDeliveries
+        let emitListeners = self.emitListeners
+        let parent = self.parent
+        let scope = ActorScope<L.Snapshot>(
+            input: input,
+            update: { [weak self] pushed in await self?.applyExternal(pushed) },
+            receive: { handler in receivers.add(handler) },
+            sendToParent: { [weak parent] event in parentDeliveries.deliver(to: parent, event) },
+            emit: { event in emitListeners.notify(event) }
+        )
+        runTask = Task { [logic, weak self] in
+            let cleanup = await logic.run(scope)
+            await self?.storeRunCleanup(cleanup)
+        }
+    }
+
+    private func storeRunCleanup(_ cleanup: (@Sendable () -> Void)?) {
+        runCleanup = cleanup
     }
 
     /// The startup inspection lifecycle, matching Actor's order: registration[root only] → startup
@@ -206,6 +232,9 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     func stop() async {
         runTask?.cancel()
         runTask = nil
+        runCleanup?()
+        runCleanup = nil
+        receivers.removeAll()
         childRegistry.markAllStopped()
         for child in childRegistry.all.values {
             system.unregister(child)
@@ -272,6 +301,9 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
 
     private func process(_ event: any Eventable) async {
         guard let current = _snapshot, logic.status(of: current) == .active else { return }
+        // Runnable logics consume events through their registered receivers; for reducers there are
+        // none, so this is a no-op and `handle` does the work.
+        for receiver in receivers.current() { receiver(event) }
         let next = await logic.handle(event, current, host: self)
         _snapshot = next
         emitInspection(logic.inspectionTransitionEvent(next, event: event, actor: inspectionActorRef, rootId: inspectionRootId))
@@ -390,10 +422,7 @@ extension LogicActor where L: PersistableLogic {
 
         emitStartupInspection()
         notify(snapshot)
-        let scope = ActorScope<L.Snapshot> { [weak self] pushed in
-            await self?.applyExternal(pushed)
-        }
-        runTask = Task { [logic] in await logic.run(scope) }
+        launchRunTask(input: options.input)
         return self
     }
 }
