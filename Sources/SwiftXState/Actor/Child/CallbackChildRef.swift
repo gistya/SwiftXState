@@ -1,4 +1,4 @@
-import Foundation   
+import Foundation
 
 final class CallbackChildRef: ChildActorRef, @unchecked Sendable {
     let id: String

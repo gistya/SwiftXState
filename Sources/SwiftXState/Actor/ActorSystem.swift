@@ -62,7 +62,6 @@ public final class ActorSystem: @unchecked Sendable {
     }
 
     /// Registers an actor by session id.
-    @discardableResult
     public func register(_ actor: any ActorSystemRef) -> String {
         lock.lock()
         defer { lock.unlock() }
