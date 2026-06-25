@@ -23,7 +23,14 @@ public struct TaskGroupActorLogicBox: Sendable {
 
     public init<Output: Sendable & Equatable>(_ logic: TaskGroupActorLogic<Output>) {
         _spawn = { id, input, parent, systemId in
-            TaskGroupChildRef(id: id, systemId: systemId, input: input, parent: parent, logic: logic)
+            let actor = LogicActor(
+                TaskGroupLogic(logic: logic),
+                id: id,
+                options: ActorOptions(systemId: systemId),
+                parent: parent,
+                system: parent.actorSystem
+            )
+            return LogicChildActor(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
         }
     }
 
