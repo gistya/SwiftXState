@@ -72,6 +72,47 @@ struct LogicActorInspectionTests {
         #expect(collector.recordedEvents().isEmpty)
     }
 
+    @Test("action events match Actor")
+    func actionParity() async {
+        let machine = createMachine(MachineConfig(
+            id: "m", initial: "a", context: EmptyContext(),
+            states: [
+                "a": StateNodeConfig(on: ["GO": .single(TransitionConfig(target: "b", actions: [log("hi")]))]),
+                "b": StateNodeConfig(),
+            ]
+        ))
+        let oc = InspectionCollector(); let nc = InspectionCollector()
+        let old = await createActor(machine, id: "p", options: ActorOptions(inspect: oc.observe(), inspectable: true)).start()
+        let new = await LogicActor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: nc.observe(), inspectable: true)).start()
+        await old.send(Event("GO"))
+        await new.send(Event("GO"))
+        let oldActions = oc.recordedEvents().filter { $0.kind == .action }.compactMap(\.actionType).sorted()
+        let newActions = nc.recordedEvents().filter { $0.kind == .action }.compactMap(\.actionType).sorted()
+        #expect(oldActions == newActions)
+        #expect(!newActions.isEmpty)
+    }
+
+    @Test("microstep events match Actor on an always machine")
+    func microstepParity() async {
+        let machine = createMachine(MachineConfig(
+            id: "g", initial: "idle", context: EmptyContext(),
+            states: [
+                "idle": StateNodeConfig(on: ["GO": .to("checking")]),
+                "checking": StateNodeConfig(always: [TransitionConfig(target: "open")]),
+                "open": StateNodeConfig(type: .final),
+            ]
+        ))
+        let oc = InspectionCollector(); let nc = InspectionCollector()
+        let old = await createActor(machine, id: "p", options: ActorOptions(inspect: oc.observe(), inspectable: true)).start()
+        let new = await LogicActor(MachineLogic(machine: machine), id: "p", options: ActorOptions(inspect: nc.observe(), inspectable: true)).start()
+        await old.send(Event("GO"))
+        await new.send(Event("GO"))
+        let oldMicro = oc.recordedEvents().filter { $0.kind == .microstep }.count
+        let newMicro = nc.recordedEvents().filter { $0.kind == .microstep }.count
+        #expect(oldMicro == newMicro)
+        #expect(newMicro > 0)
+    }
+
     @Test("invoked child registers an @xstate.actor event, like Actor")
     func childRegistration() async {
         let child = createMachine(MachineConfig(initial: "run", context: EmptyContext(),

@@ -9,6 +9,7 @@ extension MachineLogic {
     func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> MachineSnapshot<Context> {
         let (snapshot, actions) = initialSnapshot(input: input, context: nil)
         var result = await runEffects(snapshot, actions: actions, event: SystemEvent.`init`, host: host)
+        emitActionInspection(actions, event: SystemEvent.`init`, host: host)
         let entered = StateNodeSet(result._nodes)
         let exited = StateNodeSet<Context>()
         applyAfter(entered: entered, exited: exited, snapshot: result, event: SystemEvent.`init`, host: host)
@@ -22,13 +23,23 @@ extension MachineLogic {
         host: isolated H
     ) async -> MachineSnapshot<Context> {
         let previousNodes = snapshot._nodes
-        let (next, actions, _) = macrostep(
+        let (next, actions, microsteps) = macrostep(
             snapshot: snapshot,
             event: event,
             isInitial: false,
-            recordMicrosteps: false
+            recordMicrosteps: host.recordsMicrosteps
         )
         var result = await runEffects(next, actions: actions, event: event, host: host)
+        for step in microsteps {
+            host.emitInspection(.microstep(
+                rootId: host.inspectionRootId,
+                actor: host.inspectionActorRef,
+                triggeringEvent: step.event,
+                machineSnapshot: step.snapshot,
+                transitions: step.transitions
+            ))
+        }
+        emitActionInspection(actions, event: event, host: host)
 
         let previousSet = StateNodeSet(previousNodes)
         let newSet = StateNodeSet(result._nodes)
@@ -40,6 +51,23 @@ extension MachineLogic {
         applyAfter(entered: entered, exited: exited, snapshot: result, event: event, host: host)
         result = await applyInvokes(entered: entered, exited: exited, snapshot: result, event: event, host: host)
         return result
+    }
+
+    /// Emits an `@xstate.action` event per inspectable action (mirrors `Actor.inspectAction`).
+    private func emitActionInspection<H: MachineHost>(
+        _ actions: [ExecutableAction<Context>],
+        event: any Eventable,
+        host: isolated H
+    ) {
+        for action in actions {
+            if case let .spawn(spawn) = action.ref, !spawn.inspectable { continue }
+            host.emitInspection(.action(
+                rootId: host.inspectionRootId,
+                actor: host.inspectionActorRef,
+                actionType: action.type,
+                triggeringEvent: event
+            ))
+        }
     }
 
     // MARK: side-effect dispatch (mirrors ActionEffectRunner, against Context-agnostic primitives)

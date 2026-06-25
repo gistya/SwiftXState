@@ -18,6 +18,13 @@ protocol MachineHost: _Concurrency.Actor, ActorParentRef, ActorSystemRef {
     func cancelTimer(_ timerId: String)
     func registerChild(_ child: any ChildActorRef)
     func unregisterChild(_ child: any ChildActorRef)
+
+    // Inspection primitives, so an effectful logic can emit `.microstep` / `.action` events as it
+    // runs. `emitInspection` keeps the `@autoclosure` guard (no Mirror-encode without an inspector).
+    var inspectionActorRef: InspectionActorRef { get }
+    var inspectionRootId: String { get }
+    var recordsMicrosteps: Bool { get }
+    func emitInspection(_ event: @autoclosure () -> InspectionEvent?)
 }
 
 /// **Experimental — generics refactor.** The generic actor *core*: a mailbox + run-to-completion
@@ -77,18 +84,22 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         }
     }
 
-    private var inspectionActorRef: InspectionActorRef {
+    var inspectionActorRef: InspectionActorRef {
         InspectionActorRef.from(self, machineId: logic.inspectionMachineId())
     }
 
-    private var inspectionRootId: String {
+    var inspectionRootId: String {
         system.rootSessionId ?? id
     }
+
+    /// Whether intermediate microstep snapshots are recorded (and thus inspectable). We only need
+    /// them when an inspector may be attached, so gate on `inspectable`.
+    var recordsMicrosteps: Bool { inspectable }
 
     /// `event` is an `@autoclosure` so the (potentially expensive) `InspectionEvent` — which
     /// `Mirror`-encodes the whole `Context` — is only built when an inspector is actually attached,
     /// exactly as in `Actor`. A nil result (a non-inspected logic) emits nothing.
-    private func emitInspection(_ event: @autoclosure () -> InspectionEvent?) {
+    func emitInspection(_ event: @autoclosure () -> InspectionEvent?) {
         guard inspectable, system.hasInspectors else { return }
         if let event = event() { system.sendInspection(event) }
     }
