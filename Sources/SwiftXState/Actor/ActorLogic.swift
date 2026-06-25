@@ -31,6 +31,12 @@ protocol ActorLogic: Sendable {
     /// leave this as the no-op default.
     func run(_ scope: ActorScope<Snapshot>) async -> (@Sendable () -> Void)?
 
+    /// **Synchronous** startup setup, run during `start()` before it returns — so receivers and the
+    /// dispose are in place before any `send` (callback children rely on this, matching
+    /// `CallbackChildRef.start`). Returns an optional cleanup run on `stop()`. Streaming logics that
+    /// need a long-running task use `run` instead; reducers/machines leave this nil.
+    func setUp(_ scope: ActorScope<Snapshot>) -> (@Sendable () -> Void)?
+
     /// Produce the initial snapshot, *running any startup side effects* against the host. The default
     /// is the pure `initialState` (no effects). An effectful logic (`MachineLogic`) overrides this to
     /// run entry actions / initial `after` / initial `invoke` through the host's runtime resources.
@@ -68,6 +74,8 @@ protocol ActorLogic: Sendable {
 
 extension ActorLogic {
     func run(_ scope: ActorScope<Snapshot>) async -> (@Sendable () -> Void)? { nil }
+
+    func setUp(_ scope: ActorScope<Snapshot>) -> (@Sendable () -> Void)? { nil }
 
     func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> Snapshot {
         initialState(input: input)

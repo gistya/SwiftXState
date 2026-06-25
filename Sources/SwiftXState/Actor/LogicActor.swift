@@ -163,28 +163,36 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         isProcessing = false
         emitStartupInspection(actionTypes: logic.startupActionTypes(input: resolvedInput))
         notify(snapshot)
-        launchRunTask(input: resolvedInput)
+        startDriver(input: resolvedInput)
         return self
     }
 
-    /// Launches the optional background driver (no-op for pure reducers / machines), handing it the
-    /// scope: snapshot push, event `receive`, ordered `sendToParent`, and `emit`.
-    private func launchRunTask(input: SendableValue?) {
+    /// Starts the logic's driver: synchronous `setUp` first (so callback receivers/dispose are ready
+    /// before `start` returns), then the optional async `run` (streaming logics). No-op for pure
+    /// reducers / machines. The scope provides snapshot push, event `receive`, ordered `sendToParent`,
+    /// and `emit`.
+    private func startDriver(input: SendableValue?) {
+        let scope = makeScope(input: input)
+        runCleanup = logic.setUp(scope)   // synchronous — done before start() returns
+        runTask = Task { [logic, weak self] in
+            if let cleanup = await logic.run(scope) {
+                await self?.storeRunCleanup(cleanup)
+            }
+        }
+    }
+
+    private func makeScope(input: SendableValue?) -> ActorScope<L.Snapshot> {
         let receivers = self.receivers
         let parentDeliveries = self.parentDeliveries
         let emitListeners = self.emitListeners
         let parent = self.parent
-        let scope = ActorScope<L.Snapshot>(
+        return ActorScope<L.Snapshot>(
             input: input,
             update: { [weak self] pushed in await self?.applyExternal(pushed) },
             receive: { handler in receivers.add(handler) },
             sendToParent: { [weak parent] event in parentDeliveries.deliver(to: parent, event) },
             emit: { event in emitListeners.notify(event) }
         )
-        runTask = Task { [logic, weak self] in
-            let cleanup = await logic.run(scope)
-            await self?.storeRunCleanup(cleanup)
-        }
     }
 
     private func storeRunCleanup(_ cleanup: (@Sendable () -> Void)?) {
@@ -422,7 +430,7 @@ extension LogicActor where L: PersistableLogic {
 
         emitStartupInspection()
         notify(snapshot)
-        launchRunTask(input: options.input)
+        startDriver(input: options.input)
         return self
     }
 }
