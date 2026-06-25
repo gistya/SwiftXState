@@ -19,14 +19,14 @@ public struct CallbackActorLogicBox: Sendable {
 
     public init(_ logic: CallbackActorLogic) {
         _spawn = { id, input, parent, system, systemId in
-            CallbackChildRef(
+            let actor = LogicActor(
+                CallbackLogic(callback: logic, system: system),
                 id: id,
-                systemId: systemId,
-                input: input,
+                options: ActorOptions(systemId: systemId),
                 parent: parent,
-                logic: logic,
                 system: system
             )
+            return LogicChildActor(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
         }
     }
 
