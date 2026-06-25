@@ -289,3 +289,17 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         system.unregister(child)
     }
 }
+
+// MARK: - Persistence (mirrors Actor.getPersistedSnapshot, gated on a PersistableLogic)
+
+extension LogicActor where L: PersistableLogic {
+    /// A persisted representation of the current snapshot (plus its children). Matches
+    /// `Actor.getPersistedSnapshot()`.
+    func getPersistedSnapshot() async throws -> PersistedSnapshot {
+        guard let snapshot = _snapshot else {
+            throw PersistenceError.actorNotStarted
+        }
+        let childSnapshots = try await collectPersistedChildSnapshots(from: childRegistry.all)
+        return try logic.persistedSnapshot(snapshot, children: childSnapshots)
+    }
+}
