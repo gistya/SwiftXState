@@ -53,6 +53,10 @@ protocol ActorLogic: Sendable {
     func inspectionSnapshotEvent(
         _ snapshot: Snapshot, event: any Eventable, actor: InspectionActorRef, rootId: String
     ) -> InspectionEvent?
+
+    /// The inspectable action types run during startup, in order — emitted as `@xstate.action`
+    /// events *after* the actor's registration (matching Actor's start ordering). Default: none.
+    func startupActionTypes(input: SendableValue?) -> [String]
 }
 
 extension ActorLogic {
@@ -89,6 +93,8 @@ extension ActorLogic {
     func inspectionSnapshotEvent(
         _ snapshot: Snapshot, event: any Eventable, actor: InspectionActorRef, rootId: String
     ) -> InspectionEvent? { nil }
+
+    func startupActionTypes(input: SendableValue?) -> [String] { [] }
 }
 
 /// Handed to `ActorLogic.run` so a background driver can push new snapshots into its host actor.

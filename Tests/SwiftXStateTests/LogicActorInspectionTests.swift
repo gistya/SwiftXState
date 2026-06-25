@@ -113,6 +113,36 @@ struct LogicActorInspectionTests {
         #expect(newMicro > 0)
     }
 
+    @Test("registration precedes startup spawn .action events, like Actor")
+    func registrationBeforeStartupActions() async {
+        let child = createMachine(MachineConfig(id: "c", initial: "idle", context: EmptyContext(),
+            states: ["idle": StateNodeConfig()]))
+        let parent = createMachine(MachineConfig(
+            id: "parent", initial: "boot", context: EmptyContext(),
+            states: [
+                "boot": StateNodeConfig(
+                    always: [TransitionConfig(target: "ready")],
+                    entry: [
+                        spawnChild(fromMachine(child), id: "hidden", inspectable: false),
+                        spawnChild(fromMachine(child), id: "visible", inspectable: true),
+                    ]
+                ),
+                "ready": StateNodeConfig(),
+            ]
+        ))
+        let collector = InspectionCollector()
+        let actor = await LogicActor(MachineLogic(machine: parent), id: "p",
+            options: ActorOptions(inspect: collector.observe(), inspectable: true)).start()
+        let events = collector.recordedEvents()
+        let actorIndex = events.firstIndex { $0.kind == .actor && $0.actor.sessionId == actor.id }
+        let spawnActionIndices = events.enumerated().compactMap { i, e in
+            e.kind == .action && e.actionType == "xstate.spawnChild" ? i : nil
+        }
+        #expect(actorIndex != nil)
+        #expect(spawnActionIndices.count == 1)           // only the inspectable:true spawn
+        #expect(actorIndex! < spawnActionIndices[0])     // registration before the spawn action
+    }
+
     @Test("invoked child registers an @xstate.actor event, like Actor")
     func childRegistration() async {
         let child = createMachine(MachineConfig(initial: "run", context: EmptyContext(),

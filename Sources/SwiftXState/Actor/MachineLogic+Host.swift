@@ -9,7 +9,8 @@ extension MachineLogic {
     func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> MachineSnapshot<Context> {
         let (snapshot, actions) = initialSnapshot(input: input, context: nil)
         var result = await runEffects(snapshot, actions: actions, event: SystemEvent.`init`, host: host)
-        emitActionInspection(actions, event: SystemEvent.`init`, host: host)
+        // Startup `.action` events are emitted by LogicActor *after* the `.actor` registration
+        // (see startupActionTypes) to match Actor's ordering — not inline here.
         let entered = StateNodeSet(result._nodes)
         let exited = StateNodeSet<Context>()
         applyAfter(entered: entered, exited: exited, snapshot: result, event: SystemEvent.`init`, host: host)

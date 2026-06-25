@@ -149,11 +149,12 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     func start(input: SendableValue? = nil) async -> Self {
         // Startup is one processing cycle (see `isProcessing`): entry-action sends to children that
         // bounce back via `enqueueFromChild` queue and drain in order rather than reentering.
+        let resolvedInput = input ?? options.input
         isProcessing = true
-        _snapshot = await logic.started(input: input ?? options.input, host: self)
+        _snapshot = await logic.started(input: resolvedInput, host: self)
         await drainLoop()       // drain any startup-enqueued child events, like Actor.start
         isProcessing = false
-        emitStartupInspection()
+        emitStartupInspection(actionTypes: logic.startupActionTypes(input: resolvedInput))
         notify(snapshot)
         // Launch the optional background driver (no-op for pure reducers / machines). The scope hops
         // each pushed snapshot back onto this actor's isolation via `applyExternal`.
@@ -164,9 +165,10 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         return self
     }
 
-    /// The startup inspection lifecycle (registration[root only] / transition / init event /
-    /// snapshot), shared by `start` and `start(from:)`. Registers self in the system first.
-    private func emitStartupInspection() {
+    /// The startup inspection lifecycle, matching Actor's order: registration[root only] → startup
+    /// `.action` events → transition → init event → snapshot. Shared by `start` (which passes the
+    /// startup action types) and `start(from:)` (which passes none — restore runs no entry actions).
+    private func emitStartupInspection(actionTypes: [String] = []) {
         let settled = snapshot
         system.register(self)
         if parent == nil {
@@ -176,9 +178,28 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
                 includeDefinition: system.hasInspectors
             ))
         }
+        for type in actionTypes {
+            emitInspection(.action(rootId: inspectionRootId, actor: inspectionActorRef, actionType: type, triggeringEvent: SystemEvent.`init`))
+        }
         emitInspection(logic.inspectionTransitionEvent(settled, event: SystemEvent.`init`, actor: inspectionActorRef, rootId: inspectionRootId))
         emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: nil, event: SystemEvent.`init`))
         emitInspection(logic.inspectionSnapshotEvent(settled, event: SystemEvent.`init`, actor: inspectionActorRef, rootId: inspectionRootId))
+    }
+
+    /// Attributes a child→parent event to its originating child (mirrors `Actor.inspectionSource`).
+    private func inspectionSource(for event: any Eventable) -> InspectionActorRef? {
+        let actorId: String?
+        if let done = event as? DoneActorEvent {
+            actorId = done.actorId
+        } else if let error = event as? ErrorActorEvent {
+            actorId = error.actorId
+        } else if let snapshotEvent = event as? SnapshotActorEvent {
+            actorId = snapshotEvent.actorId
+        } else {
+            actorId = nil
+        }
+        guard let actorId, let child = childRegistry.get(actorId) else { return nil }
+        return InspectionActorRef.from(child)
     }
 
     /// Stops the background driver and all children. Events already in flight still drain.
@@ -260,9 +281,7 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     // MARK: ActorParentRef
 
     func enqueueFromChild(_ event: any Eventable) async {
-        // Source attribution (mapping the event back to the originating child) is not yet ported;
-        // the source is nil for now. The event/transition/snapshot stream is otherwise faithful.
-        emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: nil, event: event))
+        emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: inspectionSource(for: event), event: event))
         mailbox.append(event)
         await drain()
     }
