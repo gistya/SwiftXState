@@ -50,8 +50,11 @@ final class LogicChildActor<L: ActorLogic>: ChildActor, @unchecked Sendable {
 
     private let lock = NSLock()
     private var cachedStatus: SnapshotStatus = .stopped
+    private var cachedError: String?
+    private var statusSubscription: Subscription?
 
     var status: SnapshotStatus { lock.withLock { cachedStatus } }
+    var errorMessage: String? { lock.withLock { cachedError } }
     var inspectable: Bool { inspectableValue }
     var machineId: String? { nil }
     var definitionJSON: String? { nil }
@@ -71,12 +74,17 @@ final class LogicChildActor<L: ActorLogic>: ChildActor, @unchecked Sendable {
     }
 
     func start() async {
+        // Subscribe before start so a fast-completing child's terminal status isn't missed.
+        statusSubscription = await actor.subscribeStatus { [weak self] status, error in
+            guard let self else { return }
+            lock.withLock { cachedStatus = status; cachedError = error }
+        }
         await actor.start(input: input)
-        let status = await actor.status
-        lock.withLock { cachedStatus = status }
     }
 
     func stop() async {
+        statusSubscription?.cancel()
+        statusSubscription = nil
         await actor.stop()
         lock.withLock { cachedStatus = .stopped }
     }

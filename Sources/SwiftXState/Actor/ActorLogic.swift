@@ -141,6 +141,11 @@ struct ActorScope<Snapshot: Sendable>: Sendable {
     let sendToParent: @Sendable (any Eventable) -> Void
     /// Notify emit listeners.
     let emit: @Sendable (EmittedEvent) -> Void
+    /// Mark the child done with an optional output — delivers a `DoneActorEvent` to the parent on the
+    /// SAME ordered chain as `sendToParent` (so a just-sent event lands first) and sets `.done`.
+    let complete: @Sendable (SendableValue?) -> Void
+    /// Mark the child errored — delivers an `ErrorActorEvent` (ordered) and sets `.error`.
+    let fail: @Sendable (String) -> Void
 }
 
 /// `MachineLogic` is an `ActorLogic`: its reducer *is* the macrostep. For an effect-free machine

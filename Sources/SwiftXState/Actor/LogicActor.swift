@@ -56,6 +56,12 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     private nonisolated let receivers = ReceiverBox()
     private var runCleanup: (@Sendable () -> Void)?
     private nonisolated let parentDeliveries = ParentDeliveryChain()
+    // Terminal status for completing children (task/observable/transition/store) set via the scope's
+    // complete/fail; overrides the snapshot-derived status. `statusObservers` lets the ChildActor
+    // adapter cache status changes.
+    private var terminalStatus: SnapshotStatus?
+    private var lastError: String?
+    private var statusObservers: [(id: Int, handler: @Sendable (SnapshotStatus, String?) -> Void)] = []
 
     private let emitListeners = EmitListeners()
     let childRegistry = ChildRegistry()
@@ -148,8 +154,43 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     }
 
     var status: SnapshotStatus {
+        if let terminalStatus { return terminalStatus }
         guard let snapshot = _snapshot else { return .stopped }
         return logic.status(of: snapshot)
+    }
+
+    /// The last error message (set by `fail`), for `ChildActor.errorMessage`.
+    var errorMessage: String? { lastError }
+
+    /// Observe status changes (snapshot-derived or terminal). Used by the `ChildActor` adapter to
+    /// cache status synchronously. Fires immediately with the current status.
+    @discardableResult
+    func subscribeStatus(_ handler: @escaping @Sendable (SnapshotStatus, String?) -> Void) -> Subscription {
+        handler(status, lastError)
+        let id = nextObserverID
+        nextObserverID += 1
+        statusObservers.append((id: id, handler: handler))
+        return Subscription { [weak self] in
+            Task { await self?.removeStatusObserver(id: id) }
+        }
+    }
+
+    private func removeStatusObserver(id: Int) {
+        statusObservers.removeAll { $0.id == id }
+    }
+
+    private func notifyStatus() {
+        let status = self.status
+        let error = self.lastError
+        for observer in statusObservers { observer.handler(status, error) }
+    }
+
+    /// Sets a terminal status (`complete`/`fail`) and notifies status observers. The parent delivery
+    /// of the done/error event happens on the ordered chain in `makeScope` before this runs.
+    private func markTerminal(_ status: SnapshotStatus, error: String?) {
+        terminalStatus = status
+        lastError = error
+        notifyStatus()
     }
 
     @discardableResult
@@ -186,12 +227,21 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         let parentDeliveries = self.parentDeliveries
         let emitListeners = self.emitListeners
         let parent = self.parent
+        let id = self.id
         return ActorScope<L.Snapshot>(
             input: input,
             update: { [weak self] pushed in await self?.applyExternal(pushed) },
             receive: { handler in receivers.add(handler) },
             sendToParent: { [weak parent] event in parentDeliveries.deliver(to: parent, event) },
-            emit: { event in emitListeners.notify(event) }
+            emit: { event in emitListeners.notify(event) },
+            complete: { [weak self, weak parent] output in
+                parentDeliveries.deliver(to: parent, DoneActorEvent(actorId: id, output: output))
+                Task { await self?.markTerminal(.done, error: nil) }
+            },
+            fail: { [weak self, weak parent] message in
+                parentDeliveries.deliver(to: parent, ErrorActorEvent(actorId: id, error: message))
+                Task { await self?.markTerminal(.error, error: message) }
+            }
         )
     }
 
@@ -323,6 +373,7 @@ actor LogicActor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         for observer in observers {
             observer.handler(snapshot)
         }
+        notifyStatus()
     }
 
     // MARK: ActorParentRef
