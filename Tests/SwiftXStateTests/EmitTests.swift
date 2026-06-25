@@ -147,6 +147,9 @@ struct EmitTests {
 
     @Test("fromTask scope emit delivers to child on()")
     func taskScopeEmit() async {
+        // Deterministic: the worker waits for `canEmit` (fired only after the listener is attached),
+        // so the emit can never race ahead of `on("progress")` under parallel load. No sleeps.
+        let canEmit = TestSignal()
         let parentMachine = createMachine(MachineConfig(
             initial: "running",
             context: EmitContext(message: ""),
@@ -156,7 +159,7 @@ struct EmitTests {
                         InvokeConfig(
                             id: "worker",
                             src: fromTask { scope in
-                                try await Task.sleep(for: .milliseconds(30))
+                                await canEmit.wait()
                                 scope.emit(
                                     EmittedEvent("progress", property: "step", value: SendableValue(1))
                                 )
@@ -175,6 +178,7 @@ struct EmitTests {
             collector.append($0)
             received.fire()
         }
+        canEmit.fire()
 
         await received.wait()
 
@@ -221,6 +225,8 @@ struct EmitTests {
 
     @Test("fromTaskGroup scope emit delivers to child on()")
     func taskGroupScopeEmit() async {
+        // Same deterministic gate as fromTask above: emit only after the listener is attached.
+        let canEmit = TestSignal()
         let parentMachine = createMachine(MachineConfig(
             initial: "running",
             context: EmitContext(message: ""),
@@ -230,7 +236,7 @@ struct EmitTests {
                         InvokeConfig(
                             id: "group",
                             src: fromTaskGroup { scope -> [Int] in
-                                try await Task.sleep(for: .milliseconds(30))
+                                await canEmit.wait()
                                 scope.emit(
                                     EmittedEvent("progress", property: "count", value: SendableValue(2))
                                 )
@@ -252,6 +258,7 @@ struct EmitTests {
             collector.append($0)
             received.fire()
         }
+        canEmit.fire()
 
         await received.wait()
 
