@@ -67,7 +67,7 @@ public extension Actor where L: MachineActorLogic & PersistableLogic {
     @discardableResult
     func start(from persisted: PersistedSnapshot, context: L.MachineContext? = nil) async -> Self {
         logic = L(machine: logic.machine, contextOverride: context)
-        try? await restore(from: persisted)
+        _ = try? await restore(from: persisted)
         return self
     }
 }

@@ -121,7 +121,7 @@ private func spawnCodableMachineChild<ChildContext: Codable & Sendable>(
         machineId: machine.id, definitionJSON: try? machine.definitionJSON(),
         start: { inner in
             if let persistedRestore {
-                try? await inner.restore(from: persistedRestore)
+                _ = try? await inner.restore(from: persistedRestore)
             } else {
                 await inner.start(input: nil)
             }

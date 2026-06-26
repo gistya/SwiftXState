@@ -98,7 +98,7 @@ public extension Actor where L: MachineActorLogic {
 
         try Task.checkCancellation()
 
-        let initial = await snapshot
+        let initial = snapshot
         if predicate(initial) {
             return initial
         }
@@ -108,7 +108,7 @@ public extension Actor where L: MachineActorLogic {
         // Subscribe up front (now async). The immediate fire is a no-op because `predicate(initial)`
         // is already false above; any later snapshot routes through `state.resolve`, which buffers
         // until the continuation is installed.
-        state.subscription = await subscribe { snapshot in
+        state.subscription = subscribe { snapshot in
             if predicate(snapshot) {
                 state.resolve(.success(snapshot))
             } else if snapshot.status == .stopped {

@@ -266,7 +266,7 @@ public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     /// startup action types) and `start(from:)` (which passes none — restore runs no entry actions).
     private func emitStartupInspection(actionTypes: [String] = []) {
         let settled = snapshot
-        system.register(self)
+        _ = system.register(self)
         if parent == nil {
             emitInspection(logic.inspectionRegistrationEvent(
                 settled, actor: inspectionActorRef, rootId: inspectionRootId,
@@ -489,7 +489,7 @@ public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     }
 
     public func registerChild(_ child: any ChildActor) {
-        system.register(child)
+        _ = system.register(child)
     }
 
     public func unregisterChild(_ child: any ChildActor) {

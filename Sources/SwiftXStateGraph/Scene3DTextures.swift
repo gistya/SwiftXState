@@ -14,7 +14,7 @@ import UIKit
 enum Scene3DTextures {
     // CIContext is documented thread-safe; the annotation satisfies Swift 6 strict concurrency
     // without a lock. Generated-once, read-only thereafter.
-    nonisolated(unsafe) private static let ciContext = CIContext(options: nil)
+    private static let ciContext = CIContext(options: nil)
 
     /// Shared, instance-independent textures (computed once).
     static let brushedRoughnessImage: CGImage? = brushedMetalRoughness()
