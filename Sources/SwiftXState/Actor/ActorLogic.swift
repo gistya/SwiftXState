@@ -118,11 +118,11 @@ public extension ActorLogic {
 
     func startupActionTypes(input: SendableValue?) -> [String] { [] }
 
-    public func stoppedSnapshot(_ snapshot: Snapshot) -> Snapshot { snapshot }
+    func stoppedSnapshot(_ snapshot: Snapshot) -> Snapshot { snapshot }
 
-    public func output(of snapshot: Snapshot) -> SendableValue? { nil }
+    func output(of snapshot: Snapshot) -> SendableValue? { nil }
 
-    public func childSnapshotValue(of snapshot: Snapshot) -> String? { nil }
+    func childSnapshotValue(of snapshot: Snapshot) -> String? { nil }
 }
 
 /// A declarative side effect a logic asks the runtime to perform (modelled on XState v6's
