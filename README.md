@@ -19,6 +19,10 @@
 
 <br>
 
+> **Upgrading from 1.x?** See the [Migration Guide](MIGRATING.md) — 2.0 is almost entirely source-compatible (two small type-level changes).
+
+<br>
+
 ---
 
 
