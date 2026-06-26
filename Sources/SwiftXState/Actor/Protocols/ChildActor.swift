@@ -5,7 +5,7 @@ public protocol ChildActor: ActorSystemRef, AnyObject, Sendable {
     var errorMessage: String? { get }
     var machineId: String? { get }
     var definitionJSON: String? { get }
-    /// Whether Stately Inspector should receive events attributed to this child.
+    /// Whether Inspector should receive events attributed to this child.
     var inspectable: Bool { get }
     func start() async
     func stop() async

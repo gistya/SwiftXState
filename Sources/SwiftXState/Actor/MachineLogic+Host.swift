@@ -3,7 +3,7 @@ import Foundation
 /// The effectful side of `MachineLogic`'s `ActorLogic` conformance: the machine orchestration
 /// (side-effect dispatch, `after`, `invoke`) run against a `MachineHost`. This is the same logic
 /// `StateActor` performs inline, lifted to run on the generic `Actor` via the `isolated` host
-/// seam — the Context-specific work (the action switch, `makeChildActor`) lives here in the logic,
+/// aspect — the Context-specific work (the action switch, `makeChildActor`) lives here in the logic,
 /// while the host supplies only Context-agnostic primitives (timers, child registry, emit, parent).
 extension MachineLogic {
     public func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> MachineSnapshot<Context> {

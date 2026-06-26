@@ -1,12 +1,11 @@
 import Foundation
 
-/// **Experimental — generics refactor.** The behaviour an actor runs, abstracted away from *how*
-/// it is run. A conformer supplies an opaque `Snapshot`, its initial value, and a pure step that
-/// folds one event into the next snapshot — exactly the surface a mailbox/run-to-completion loop
-/// needs, and nothing machine-specific.
+/// The behaviour an actor runs, abstracted away from how it is run. A conformer supplies an
+/// opaque `Snapshot`, its initial value, and a pure step that folds one event into the next
+/// snapshot — exactly the surface a mailbox/run-to-completion loop needs, and nothing machine-specific.
 ///
-/// This is the seam the eventual `StateActor<Logic, ID>` is parameterized over. It is deliberately
-/// the *pure reducer* slice: it has no notion of side effects, `after` timers, or `invoke` children
+/// This is the protocol the eventual `StateActor<Logic, ID>` is parameterized over. It is deliberately
+/// the pure reducer aspect: it has no notion of side effects, `after` timers, or `invoke` children
 /// (those need the actor's runtime resources and are intrinsically machine-shaped). A logic whose
 /// step produces no side effects — a hand-written reducer, or a state machine that only transitions
 /// / `assign`s / runs `always` — is fully expressible here. `MachineLogic` conforms (below), so the

@@ -35,7 +35,7 @@ public protocol MachineHost: _Concurrency.Actor, ActorParentRef, ActorSystemRef 
     func emitInspection(_ event: @autoclosure () -> InspectionEvent?)
 }
 
-/// **Experimental — generics refactor.** The generic actor *core*: a mailbox + run-to-completion
+/// The generic actor *core*: a mailbox + run-to-completion
 /// loop + observers, parameterized purely by an `ActorLogic`. It folds events into snapshots via the
 /// logic and notifies subscribers, owning no `Context` itself.
 ///
