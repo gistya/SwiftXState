@@ -36,23 +36,17 @@ public struct XState<
 
     /// Mark this state the machine's initial state.
     public func initial(_ value: Bool = true) -> Self {
-        var copy = self
-        copy.isInitial = value
-        return copy
+        clone(mutating: \.isInitial <- value)
     }
 
     /// Run a context transform when this state is entered.
     public func onEntry(_ body: @escaping Schema.Action) -> Self {
-        var copy = self
-        copy.entry = body
-        return copy
+        clone(mutating: \.entry <- body)
     }
 
     /// Run a context transform when this state is exited.
     public func onExit(_ body: @escaping Schema.Action) -> Self {
-        var copy = self
-        copy.exit = body
-        return copy
+        clone(mutating: \.exit <- body)
     }
 
     public func folded(into schema: Schema) -> Schema {
