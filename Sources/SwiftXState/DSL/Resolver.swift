@@ -66,11 +66,24 @@ public extension MachineSchema {
         TransitionConfig(
             target: t.target.name,
             guard: t.`guard`.map { g in GuardRef.inline { args in g(args.context) } },
-            actions: t.action.map { [assignAction($0)] }
+            actions: t.action.map { [handlerAction($0)] }
         )
     }
 
-    /// Lower a pure context transform (`(consuming Context) -> Context`) to an engine `assign`.
+    /// Lower a transition `Handler` (`(args, enq) -> context`) to an engine `enqueueActions`: run the
+    /// handler at transition time, apply its context patch first, then the collected effects (so a
+    /// raised event queues after the patch — run-to-completion safe).
+    private static func handlerAction(_ handler: @escaping Handler) -> ActionRef<Context> {
+        enqueueActions { builder in
+            let enq = Enqueue<Context, EventID>(context: builder.context, event: builder.event)
+            let args = XTransitionArgs<Context, EventID>(context: builder.context, event: builder.event)
+            let next = handler(args, enq)
+            builder.enqueue(assign { (ctx: inout Context, _: ActionArgs<Context>) in ctx = next })
+            for effect in enq.collected { builder.enqueue(effect) }
+        }
+    }
+
+    /// Lower a pure entry/exit transform (`(consuming Context) -> Context`) to an engine `assign`.
     private static func assignAction(_ transform: @escaping Action) -> ActionRef<Context> {
         assign { (ctx: inout Context, _: ActionArgs<Context>) in ctx = transform(ctx) }
     }

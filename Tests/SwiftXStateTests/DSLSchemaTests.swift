@@ -39,7 +39,9 @@ struct DSLSchemaTests {
     @Test func actionTransformsContext() {
         let schema = TrafficLight().buildSchema()
         let action = schema.states[.yellow]?.transitions.first?.action
-        #expect(action?(TrafficContext(cycles: 2)) == TrafficContext(cycles: 3))
+        let args = XTransitionArgs<TrafficContext, LightEvent>(context: TrafficContext(cycles: 2), event: Event("stop"))
+        let enq = Enqueue<TrafficContext, LightEvent>(context: TrafficContext(cycles: 2), event: Event("stop"))
+        #expect(action?(args, enq) == TrafficContext(cycles: 3))
     }
 
     @Test func guardEvaluates() {

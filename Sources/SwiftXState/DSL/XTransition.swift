@@ -32,10 +32,18 @@ public struct XTransition<
         return copy
     }
 
-    /// Apply a context transform as the transition is taken.
-    public func action(_ body: @escaping Schema.Action) -> Self {
+    /// Apply a pure context transform as the transition is taken (no effects).
+    public func action(_ transform: @escaping Schema.Action) -> Self {
         var copy = self
-        copy.node.action = body
+        copy.node.action = { args, _ in transform(args.context) }
+        return copy
+    }
+
+    /// Apply an effectful handler as the transition is taken — XState v6's `(args, enq) -> context`.
+    /// Return the next context; `raise` / `sendTo` / `emit` through `enq`.
+    public func action(_ handler: @escaping Schema.Handler) -> Self {
+        var copy = self
+        copy.node.action = handler
         return copy
     }
 }

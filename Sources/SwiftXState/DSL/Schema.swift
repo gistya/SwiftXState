@@ -16,9 +16,11 @@ public struct MachineSchema<
     EventID: EventIdentifying,
     StateID: StateIdentifying
 >: SchemaReducible {
-    /// A pure context transform (entry/exit/transition action). The `enq` effect channel arrives in
-    /// Phase 4; for now an action just maps context to context.
+    /// A pure context transform — used for entry/exit, where there's no triggering event or effects.
     public typealias Action = @Sendable (consuming Context) -> Context
+    /// A transition action — XState v6's `(args, enq) -> patch`. Returns the next context; effects
+    /// (`raise`/`sendTo`/`emit`) are collected via `enq`.
+    public typealias Handler = @Sendable (XTransitionArgs<Context, EventID>, Enqueue<Context, EventID>) -> Context
     /// A transition guard — a pure predicate over the (borrowed) context.
     public typealias Guard = @Sendable (borrowing Context) -> Bool
 
@@ -34,7 +36,7 @@ public struct MachineSchema<
         public let event: EventID
         public let target: StateID
         public var `guard`: Guard?
-        public var action: Action?
+        public var action: Handler?
     }
 
     public private(set) var states: [StateID: StateNode]
