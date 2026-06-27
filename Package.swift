@@ -65,10 +65,16 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0"),
+        // Keypath/case-path optics + functional record update — backs the typed DSL's
+        // `<-` / `clone(mutating:)` / `cloned` and the `CasePath`/`WritableCasePath` prisms.
+        .package(name: "properties", path: "../../originalPublic/properties"),
     ],
     targets: [
         .target(
             name: "SwiftXState",
+            dependencies: [
+                .product(name: "properties", package: "properties"),
+            ],
             path: "Sources/SwiftXState",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
