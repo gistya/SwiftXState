@@ -9,7 +9,7 @@ public struct TypedActor<Context: Sendable, Brand: StateID>: Sendable {
     }
 
     /// The machine this actor runs.
-    public var machine: StateMachine<Context> { get async { await actor.machine } }
+    public var machine: ResolvedMachine<Context> { get async { await actor.machine } }
 
     /// This actor's session id.
     public var id: String { actor.id }

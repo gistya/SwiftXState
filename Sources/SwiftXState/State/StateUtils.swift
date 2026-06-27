@@ -711,7 +711,7 @@ func isInFinalState<Context: Sendable>(
 }
 
 func resolveMachineOutput<Context: Sendable>(
-    machine: StateMachine<Context>,
+    machine: ResolvedMachine<Context>,
     context: Context,
     event: any Eventable,
     rootCompletionNode: StateNode<Context>
@@ -738,7 +738,7 @@ func processEnteredFinalStates<Context: Sendable>(
     activeNodes: StateNodeSet<Context>,
     context: Context,
     event: any Eventable,
-    machine: StateMachine<Context>,
+    machine: ResolvedMachine<Context>,
     completedParallelNodes: inout Set<String>,
     internalQueue: inout [any Eventable],
     status: inout SnapshotStatus,
@@ -792,7 +792,7 @@ func processEnteredFinalStates<Context: Sendable>(
 }
 
 func initialMicrostep<Context: Sendable>(
-    machine: StateMachine<Context>,
+    machine: ResolvedMachine<Context>,
     context: Context
 ) -> MicrostepResult<Context> {
     let historyValue = HistoryValue<Context>()

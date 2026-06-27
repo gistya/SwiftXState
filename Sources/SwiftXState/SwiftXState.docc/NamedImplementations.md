@@ -86,7 +86,7 @@ A named delay is then used like `after: ["shortPause": .to("next")]`, and a name
 ## Providing or overriding later
 
 If you build a machine without all its implementations — or want to swap them in a test — use
-``StateMachine/provide(_:)`` to layer in a ``MachineImplementations`` value. Later registrations
+``ResolvedMachine/provide(_:)`` to layer in a ``MachineImplementations`` value. Later registrations
 win, so you can override a single guard while keeping the rest:
 
 ```swift

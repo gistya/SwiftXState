@@ -57,7 +57,7 @@ private final class SnapshotCache<C: Sendable>: @unchecked Sendable {
         self.snapshot = snapshot
     }
 }
-private func makeBox<C: Sendable & Equatable>(_ machine: StateMachine<C>) -> ActorHandleBox {
+private func makeBox<C: Sendable & Equatable>(_ machine: ResolvedMachine<C>) -> ActorHandleBox {
     let slot = CallbackSlot()
     let initialSnapshot = initialTransition(machine).snapshot
     let cache = SnapshotCache(initialSnapshot)

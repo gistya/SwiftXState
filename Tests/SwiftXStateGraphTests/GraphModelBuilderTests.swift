@@ -7,7 +7,7 @@ import CoreGraphics
 /// A parallel machine with a compound region and a sibling region, mirroring the
 /// shape of the chess machine (`game` + `castling`). This is exactly the structure
 /// the old builder failed to walk — it returned only the root.
-private func makeTrafficParallelMachine() -> StateMachine<Int> {
+private func makeTrafficParallelMachine() -> ResolvedMachine<Int> {
     createMachine(
         MachineConfig<Int>(
             id: "system",

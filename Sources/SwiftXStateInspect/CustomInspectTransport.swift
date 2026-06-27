@@ -21,7 +21,7 @@ public struct InspectWireEncoder: Sendable {
         machineDefinitions.append(registration)
     }
 
-    public mutating func registerMachine<Context: Sendable>(_ machine: StateMachine<Context>) throws {
+    public mutating func registerMachine<Context: Sendable>(_ machine: ResolvedMachine<Context>) throws {
         try registerMachine(InspectMachineRegistration(machine))
     }
 

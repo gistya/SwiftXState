@@ -10,7 +10,7 @@ private struct CartContext: Sendable, Equatable, Codable {
 
 @Suite("SwiftData actor persistence")
 struct SwiftDataPersistenceTests {
-    private var cartMachine: StateMachine<CartContext> {
+    private var cartMachine: ResolvedMachine<CartContext> {
         createMachine(MachineConfig(
             id: "cart",
             initial: "browsing",

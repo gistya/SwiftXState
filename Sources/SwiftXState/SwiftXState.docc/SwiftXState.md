@@ -58,7 +58,7 @@ output, so you lose nothing by starting Basic and tightening up later.
   be generated automatically.
 - **Familiar across the ecosystem.** Same model, names, and JSON format as XState/Stately.
 
-A **machine** (``StateMachine``) is the pure, reusable definition. You run it by creating an
+A **machine** (``ResolvedMachine``) is the pure, reusable definition. You run it by creating an
 **actor** (``Actor``) — a live instance you `send` events to and read ``MachineSnapshot``s from.
 One machine can back many actors; actors can invoke and spawn child actors, run async work, and
 talk to one another.

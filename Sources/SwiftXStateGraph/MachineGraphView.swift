@@ -405,7 +405,7 @@ public struct MachineGraphView<Context: Sendable>: View {
     private let actor: Actor<MachineLogic<Context>>?
 
     /// Live graph driven by an actor.
-    public init(actor: Actor<MachineLogic<Context>>, machine: StateMachine<Context>) async {
+    public init(actor: Actor<MachineLogic<Context>>, machine: ResolvedMachine<Context>) async {
         self.actor = actor
         let model = GraphModelBuilder.build(from: machine)
         let render = GraphRenderModel(model: model)
@@ -415,7 +415,7 @@ public struct MachineGraphView<Context: Sendable>: View {
     }
 
     /// Static / replay graph from a snapshot (no live subscription).
-    public init(machine: StateMachine<Context>, snapshot: MachineSnapshot<Context>) {
+    public init(machine: ResolvedMachine<Context>, snapshot: MachineSnapshot<Context>) {
         self.actor = nil
         let model = GraphModelBuilder.build(from: machine)
         let render = GraphRenderModel(model: model)
@@ -441,7 +441,7 @@ public struct MachineGraphView<Context: Sendable>: View {
 // MARK: - Public: type-erased graph (definition + live state)
 
 /// Renders a statechart from a `GraphModel` (or an exported definition) plus an optional
-/// live `StateValue` for highlighting — without requiring a typed `Actor`/`StateMachine`.
+/// live `StateValue` for highlighting — without requiring a typed `Actor`/`ResolvedMachine`.
 /// This is what the inspector uses to graph any actor from its `definitionJSON`.
 @MainActor
 public struct StateGraphView: View {
@@ -457,7 +457,7 @@ public struct StateGraphView: View {
         _render = State(initialValue: render)
     }
 
-    /// Builds the model from an exported machine definition (see `StateMachine.definitionJSON()`).
+    /// Builds the model from an exported machine definition (see `ResolvedMachine.definitionJSON()`).
     public init(definitionJSON: String, machineID: String, stateValue: StateValue? = nil) {
         self.init(model: GraphModelBuilder.build(fromDefinitionJSON: definitionJSON, machineID: machineID),
                   stateValue: stateValue)

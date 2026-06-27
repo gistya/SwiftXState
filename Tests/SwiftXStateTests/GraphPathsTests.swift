@@ -5,7 +5,7 @@ import Testing
 struct GraphPathsTests {
 
     // A flat traffic light: green -> yellow -> red -> green.
-    private func lights() -> StateMachine<EmptyContext> {
+    private func lights() -> ResolvedMachine<EmptyContext> {
         createMachine(MachineConfig(
             id: "lights", initial: "green", context: EmptyContext(),
             states: [

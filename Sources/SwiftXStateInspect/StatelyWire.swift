@@ -26,7 +26,7 @@ public struct InspectMachineRegistration: Sendable, Equatable {
         self.wireStateValue = wireStateValue
     }
 
-    public init<Context: Sendable>(_ machine: StateMachine<Context>) throws {
+    public init<Context: Sendable>(_ machine: ResolvedMachine<Context>) throws {
         machineId = machine.id
         definitionJSON = try machine.definitionJSON()
         wireStateValue = nil

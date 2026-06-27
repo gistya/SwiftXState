@@ -7,7 +7,7 @@ struct LightContext: Sendable, Equatable {
 
 @Suite("Guards")
 struct GuardTests {
-    func makeLightMachine(context: LightContext, initial: String = "green") -> StateMachine<LightContext> {
+    func makeLightMachine(context: LightContext, initial: String = "green") -> ResolvedMachine<LightContext> {
         setup(
             guards: [
                 "minTimeElapsed": { args in

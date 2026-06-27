@@ -3,7 +3,7 @@ import Testing
 
 @Suite("History")
 struct HistoryTests {
-    func powerMachine(historyType: HistoryType?) -> StateMachine<EmptyContext> {
+    func powerMachine(historyType: HistoryType?) -> ResolvedMachine<EmptyContext> {
         createMachine(MachineConfig(
             initial: "on",
             context: EmptyContext(),

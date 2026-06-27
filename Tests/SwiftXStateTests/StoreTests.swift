@@ -272,7 +272,7 @@ struct StoreTests {
             on: ["increment": storeIncrement]
         )
 
-        let parentMachine: StateMachine<EmptyContext> = createMachine(MachineConfig<EmptyContext>(
+        let parentMachine: ResolvedMachine<EmptyContext> = createMachine(MachineConfig<EmptyContext>(
             initial: "idle",
             context: EmptyContext(),
             states: [

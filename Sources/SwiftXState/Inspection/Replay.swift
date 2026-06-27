@@ -287,7 +287,7 @@ public final class InspectionRecorder: @unchecked Sendable {
 
 /// Replays events through pure `transition()` without side effects.
 public func replayTransitions<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     context: Context,
     events: [ReplayableEvent],
     decodeEvent: ReplayEventDecoder? = nil
@@ -307,7 +307,7 @@ public func replayTransitions<Context: Sendable>(
 
 /// Time-travels to a specific step index using pure transitions (no actor required).
 public func timeTravel<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     context: Context,
     session: ReplaySession,
     toStep step: Int,
@@ -325,7 +325,7 @@ public func timeTravel<Context: Sendable>(
 
 /// Verifies that pure replay matches a recorded session.
 public func verifyReplay<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     context: Context,
     session: ReplaySession,
     decodeEvent: ReplayEventDecoder? = nil
@@ -380,7 +380,7 @@ private func snapshotsMatch(_ expected: InspectionSnapshot, _ actual: Inspection
 /// Starts a fresh actor and replays a recorded session, returning per-step verification.
 @discardableResult
 public func replayActor<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     context: Context,
     session: ReplaySession,
     options: ActorOptions = ActorOptions(),

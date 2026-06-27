@@ -116,7 +116,7 @@ The handler fires immediately with the current snapshot, then again after every 
 | Piece | Type | Role |
 |---|---|---|
 | Config | ``MachineConfig`` / ``StateNodeConfig`` | Declares states + transitions |
-| Machine | ``StateMachine`` | The pure, reusable definition |
+| Machine | ``ResolvedMachine`` | The pure, reusable definition |
 | Actor | ``Actor`` | A running instance you `send` events to |
 | Snapshot | ``MachineSnapshot`` | The state + data, read after each event |
 

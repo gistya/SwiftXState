@@ -24,7 +24,7 @@ public enum MachineDefinitionError: Error, Sendable, Equatable {
     case encodingFailed
 }
 
-extension StateMachine {
+extension ResolvedMachine {
     /// Exports this machine as an XState-compatible JSON definition string.
     public func definitionJSON() throws -> String {
         try MachineDefinitionExporter.export(self)
@@ -32,7 +32,7 @@ extension StateMachine {
 }
 
 enum MachineDefinitionExporter {
-    static func export<Context: Sendable>(_ machine: StateMachine<Context>) throws -> String {
+    static func export<Context: Sendable>(_ machine: ResolvedMachine<Context>) throws -> String {
         let document = exportNode(machine.root, machineId: machine.id)
         return try JSONValue.encode(document)
     }

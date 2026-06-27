@@ -10,7 +10,7 @@ private struct ReplayPersistContext: Sendable, Equatable, Codable {
 
 @Suite("SwiftData replay session persistence")
 struct ReplaySwiftDataTests {
-    private var counterMachine: StateMachine<ReplayPersistContext> {
+    private var counterMachine: ResolvedMachine<ReplayPersistContext> {
         createMachine(MachineConfig(
             id: "counter",
             initial: "idle",

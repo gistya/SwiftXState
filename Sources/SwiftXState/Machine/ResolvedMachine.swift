@@ -189,7 +189,7 @@ public struct MachineImplementations<Context: Sendable>: Sendable {
 /// A state machine definition — the pure, reusable logic of a statechart. Created with
 /// `createMachine(_:)` and run by `createActor(_:)`. Stateless and `Sendable`: one machine can
 /// back many actors. Use `provide(_:)` to swap in implementations.
-public final class StateMachine<Context: Sendable>: @unchecked Sendable {
+public final class ResolvedMachine<Context: Sendable>: @unchecked Sendable {
     /// The machine id (root state node name); `"(machine)"` if none was set.
     public let id: String
     /// The configuration this machine was built from.
@@ -218,14 +218,14 @@ public final class StateMachine<Context: Sendable>: @unchecked Sendable {
     }
 
     /// Override implementations, mirroring XState's `machine.provide()`.
-    public func provide(_ implementations: MachineImplementations<Context>) -> StateMachine<Context> {
+    public func provide(_ implementations: MachineImplementations<Context>) -> ResolvedMachine<Context> {
         let merged = MachineImplementations(
             actions: self.implementations.actions.merging(implementations.actions) { _, new in new },
             guards: self.implementations.guards.merging(implementations.guards) { _, new in new },
             delays: self.implementations.delays.merging(implementations.delays) { _, new in new },
             actors: self.implementations.actors.merging(implementations.actors) { _, new in new }
         )
-        let machine = StateMachine(config: config, implementations: merged)
+        let machine = ResolvedMachine(config: config, implementations: merged)
         return machine
     }
 
@@ -343,6 +343,6 @@ private func rootConfig<Context: Sendable>(from config: MachineConfig<Context>) 
 public func createMachine<Context: Sendable>(
     _ config: MachineConfig<Context>,
     implementations: MachineImplementations<Context> = MachineImplementations<Context>()
-) -> StateMachine<Context> {
-    StateMachine(config: config, implementations: implementations)
+) -> ResolvedMachine<Context> {
+    ResolvedMachine(config: config, implementations: implementations)
 }

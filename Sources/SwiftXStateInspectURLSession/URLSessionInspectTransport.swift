@@ -174,7 +174,7 @@ public enum URLSessionInspect {
 
     /// Stately Inspector observer — sends raw `@xstate.*` events over WebSocket.
     public static func statelyObserver<Context: Sendable>(
-        machine: StateMachine<Context>,
+        machine: ResolvedMachine<Context>,
         policy: ConnectivityPolicy? = nil,
         endpoint: InspectEndpoint? = nil,
         runtime: InspectRuntimeContext = InspectRuntimeContext(),

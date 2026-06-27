@@ -7,7 +7,7 @@ import Testing
 @Suite("Inspector multi-actor (stress-test mechanism)")
 struct InspectorMultiActorTests {
     /// A child machine each spawned actor runs.
-    private func childMachine() -> StateMachine<Int> {
+    private func childMachine() -> ResolvedMachine<Int> {
         createMachine(MachineConfig<Int>(
             id: "square",
             initial: "empty",
@@ -21,7 +21,7 @@ struct InspectorMultiActorTests {
 
     /// A parent that spawns N inspectable children on entry — the same mechanism the chess
     /// board uses for its 96 per-square/piece actors.
-    private func parentMachine(childCount: Int) -> StateMachine<Int> {
+    private func parentMachine(childCount: Int) -> ResolvedMachine<Int> {
         let child = childMachine()
         var entries: [ActionRef<Int>] = []
         for i in 0..<childCount {

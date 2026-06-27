@@ -20,7 +20,7 @@ public final class MachineDriver<Context: Sendable> {
 
     @ObservationIgnored private var subscription: Subscription?
 
-    public init(_ machine: StateMachine<Context>, input: SendableValue? = nil) {
+    public init(_ machine: ResolvedMachine<Context>, input: SendableValue? = nil) {
         self.actor = createActor(machine, input: input)
         self.snapshot = initialTransition(machine, input: input).snapshot
 
@@ -57,7 +57,7 @@ public final class MachineDriver<Context: Sendable> {
 /// Returns the driver, current snapshot, and a send function.
 @MainActor
 public func useMachine<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     input: SendableValue? = nil
 ) -> (snapshot: MachineSnapshot<Context>, send: (any Eventable) -> Void, actor: Actor<MachineLogic<Context>>) {
     let driver = MachineDriver(machine, input: input)
@@ -74,7 +74,7 @@ public func useMachine<Context: Sendable>(
 public struct MachineState<Context: Sendable>: DynamicProperty {
     @State private var driver: MachineDriver<Context>
 
-    public init(_ machine: StateMachine<Context>, input: SendableValue? = nil) {
+    public init(_ machine: ResolvedMachine<Context>, input: SendableValue? = nil) {
         _driver = State(initialValue: MachineDriver(machine, input: input))
     }
 

@@ -24,7 +24,7 @@ private struct InputChildContext: Sendable, Equatable {
 struct InputAndContextTests {
     private func counterMachine(
         contextFromInput: @escaping @Sendable (SendableValue?) -> LabeledCounterContext
-    ) -> StateMachine<LabeledCounterContext> {
+    ) -> ResolvedMachine<LabeledCounterContext> {
         createMachine(MachineConfig(
             id: "counter",
             initial: "idle",

@@ -4,7 +4,7 @@
 /// `createActor(machine)`. Call `.start()` on the result to run it. Pass `inspect:` to stream
 /// inspection events, or `input:` to seed the initial context via `contextFromInput`.
 public func createActor<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     id: String? = nil,
     options: ActorOptions = ActorOptions(),
     input: SendableValue? = nil,
@@ -25,7 +25,7 @@ public func createActor<Context: Sendable>(
 /// `narrowed(to:)`). Brand at creation instead of the post-hoc `createActor(machine).typed(as:)`
 /// two-step; otherwise identical to `createActor(_:)`.
 public func createActor<Context: Sendable, Brand: StateID>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     as _: Brand.Type,
     id: String? = nil,
     options: ActorOptions = ActorOptions(),
@@ -41,7 +41,7 @@ public func createActor<Context: Sendable, Brand: StateID>(
 /// `createActor(machine).start(from: snapshot)`, including child re-spawn and
 /// delayed-transition scheduling for restored state nodes.
 public func createActor<Context: Codable & Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     snapshot: PersistedSnapshot,
     id: String? = nil,
     options: ActorOptions = ActorOptions(),
@@ -60,7 +60,7 @@ public func createActor<Context: Codable & Sendable>(
 /// Brand-tagged variant of `createActor(_:snapshot:)`; the hydrated actor is wrapped in a
 /// `Brand`-typed `TypedActor`.
 public func createActor<Context: Codable & Sendable, Brand: StateID>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     as _: Brand.Type,
     snapshot: PersistedSnapshot,
     id: String? = nil,
@@ -83,7 +83,7 @@ public func createActor<Context: Codable & Sendable, Brand: StateID>(
 /// Creates an actor with typed `input` (any `Sendable & Equatable`), wrapped into the machine's
 /// `contextFromInput`. Convenience over passing a `SendableValue`.
 public func createActor<Context: Sendable, Input: Sendable & Equatable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     input: Input,
     id: String? = nil,
     options: ActorOptions = ActorOptions(),
@@ -100,7 +100,7 @@ public func createActor<Context: Sendable, Input: Sendable & Equatable>(
 
 /// Brand-tagged variant of `createActor(_:input:)`.
 public func createActor<Context: Sendable, Input: Sendable & Equatable, Brand: StateID>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     as _: Brand.Type,
     input: Input,
     id: String? = nil,

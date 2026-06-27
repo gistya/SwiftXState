@@ -175,7 +175,7 @@ public func createInspectObserver(
 /// Stately Inspector observer with machine definition registration.
 public func createStatelyInspectObserver<Context: Sendable>(
     transport: any InspectTransport,
-    machine: StateMachine<Context>,
+    machine: ResolvedMachine<Context>,
     configuration: InspectClientConfiguration = InspectClientConfiguration(),
     startImmediately: Bool = true
 ) throws -> @Sendable (InspectionEvent) -> Void {

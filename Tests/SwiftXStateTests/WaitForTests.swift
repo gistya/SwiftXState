@@ -3,7 +3,7 @@ import Testing
 
 @Suite("waitFor")
 struct WaitForTests {
-    private var taggedMachine: StateMachine<EmptyContext> {
+    private var taggedMachine: ResolvedMachine<EmptyContext> {
         createMachine(MachineConfig(
             initial: "loading",
             context: EmptyContext(),

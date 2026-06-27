@@ -25,7 +25,7 @@ private struct TapContext: Sendable, Equatable {
 
 @Suite("Replay typed event payloads")
 struct ReplayPayloadTests {
-    private var tapMachine: StateMachine<TapContext> {
+    private var tapMachine: ResolvedMachine<TapContext> {
         createMachine(MachineConfig(
             id: "tap-machine",
             initial: "idle",

@@ -2,7 +2,7 @@ import Foundation
 import SwiftXState
 
 /// Parses a pasted XState-format machine *definition* (the JSON that
-/// `StateMachine.definitionJSON()` emits, or an equivalent XState config) into an
+/// `ResolvedMachine.definitionJSON()` emits, or an equivalent XState config) into an
 /// `InspectionEvent` the inspector can ingest — without needing a typed, running machine.
 ///
 /// What we can reconstruct from a static definition:

@@ -58,7 +58,7 @@ public struct MachineSetup<Context: Sendable> {
     }
 
     /// Creates a state machine with the setup's implementations.
-    public func createMachine(_ config: MachineConfig<Context>) -> StateMachine<Context> {
+    public func createMachine(_ config: MachineConfig<Context>) -> ResolvedMachine<Context> {
         SwiftXState.createMachine(
             config,
             implementations: MachineImplementations(

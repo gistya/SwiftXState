@@ -4,7 +4,7 @@ The actor lifecycle, reading state, observing changes, and coordinating child ac
 
 ## Overview
 
-A ``StateMachine`` is just the rules. An ``Actor`` is a *running instance* of those rules — the
+A ``ResolvedMachine`` is just the rules. An ``Actor`` is a *running instance* of those rules — the
 thing you actually interact with. This guide covers the actor's lifecycle and the ways you read
 from and react to it.
 

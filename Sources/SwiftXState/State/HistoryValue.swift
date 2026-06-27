@@ -25,7 +25,7 @@ struct HistoryValue<Context: Sendable>: Sendable {
 
     init(
         persisted entries: [String: [String]],
-        machine: StateMachine<Context>
+        machine: ResolvedMachine<Context>
     ) {
         self.init()
         for (historyNodeId, nodeIds) in entries {

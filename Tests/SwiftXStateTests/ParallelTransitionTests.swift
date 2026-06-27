@@ -8,7 +8,7 @@ private struct ParallelContext: Sendable, Equatable {
 
 @Suite("Parallel multi-transition")
 struct ParallelTransitionTests {
-    private var parallelMachine: StateMachine<ParallelContext> {
+    private var parallelMachine: ResolvedMachine<ParallelContext> {
         createMachine(MachineConfig(
             context: ParallelContext(modeCount: 0, themeCount: 0),
             states: [
@@ -69,7 +69,7 @@ struct ParallelTransitionTests {
 
     @Test("multi-target transition updates multiple parallel regions")
     func multiTargetTransition() async {
-        let machine: StateMachine<ParallelContext> = createMachine(MachineConfig(
+        let machine: ResolvedMachine<ParallelContext> = createMachine(MachineConfig(
             context: ParallelContext(modeCount: 0, themeCount: 0),
             states: [
                 "mode": StateNodeConfig(
@@ -106,7 +106,7 @@ struct ParallelTransitionTests {
 
     @Test("deepest handler wins when parent and child both handle an event")
     func deepestHandlerWins() async {
-        let machine: StateMachine<ParallelContext> = createMachine(MachineConfig(
+        let machine: ResolvedMachine<ParallelContext> = createMachine(MachineConfig(
             initial: "parent",
             context: ParallelContext(modeCount: 0, themeCount: 0),
             states: [
@@ -136,7 +136,7 @@ struct ParallelTransitionTests {
 
     @Test("parallel transition actions run for each selected transition")
     func parallelTransitionActions() async {
-        let machine: StateMachine<ParallelContext> = createMachine(MachineConfig(
+        let machine: ResolvedMachine<ParallelContext> = createMachine(MachineConfig(
             context: ParallelContext(modeCount: 0, themeCount: 0),
             states: [
                 "mode": StateNodeConfig(

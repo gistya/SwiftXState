@@ -14,7 +14,7 @@ public struct MachineActorLogicBox: Sendable {
     ) -> any ChildActor
 
     /// Uses the child machine's `context` or `contextFromInput` to build initial context.
-    public init<ChildContext: Sendable>(_ machine: StateMachine<ChildContext>) {
+    public init<ChildContext: Sendable>(_ machine: ResolvedMachine<ChildContext>) {
         _spawn = { id, input, parent, systemId, options, syncSnapshot, _ in
             spawnMachineChild(
                 machine: machine,
@@ -26,7 +26,7 @@ public struct MachineActorLogicBox: Sendable {
 
     /// Uses the child machine's `context` or `contextFromInput` to build initial context.
     /// Child snapshots can be persisted and restored when `ChildContext` is `Codable`.
-    public init<ChildContext: Codable & Sendable>(_ machine: StateMachine<ChildContext>) {
+    public init<ChildContext: Codable & Sendable>(_ machine: ResolvedMachine<ChildContext>) {
         _spawn = { id, input, parent, systemId, options, syncSnapshot, persistedChild in
             spawnCodableMachineChild(
                 machine: machine,
@@ -38,7 +38,7 @@ public struct MachineActorLogicBox: Sendable {
     }
 
     public init<ChildContext: Sendable>(
-        _ machine: StateMachine<ChildContext>,
+        _ machine: ResolvedMachine<ChildContext>,
         context: @escaping @Sendable (SendableValue?) -> ChildContext
     ) {
         _spawn = { id, input, parent, systemId, options, syncSnapshot, _ in
@@ -51,7 +51,7 @@ public struct MachineActorLogicBox: Sendable {
     }
 
     public init<ChildContext: Codable & Sendable>(
-        _ machine: StateMachine<ChildContext>,
+        _ machine: ResolvedMachine<ChildContext>,
         context: @escaping @Sendable (SendableValue?) -> ChildContext
     ) {
         _spawn = { id, input, parent, systemId, options, syncSnapshot, persistedChild in
@@ -78,7 +78,7 @@ public struct MachineActorLogicBox: Sendable {
 
 /// Non-Codable machine child: starts fresh, not persistable.
 private func spawnMachineChild<ChildContext: Sendable>(
-    machine: StateMachine<ChildContext>,
+    machine: ResolvedMachine<ChildContext>,
     context: ChildContext,
     id: String,
     systemId: String?,
@@ -100,7 +100,7 @@ private func spawnMachineChild<ChildContext: Sendable>(
 
 /// Codable machine child: persists as `.machine(...)`, restores via `start(from:)`.
 private func spawnCodableMachineChild<ChildContext: Codable & Sendable>(
-    machine: StateMachine<ChildContext>,
+    machine: ResolvedMachine<ChildContext>,
     context: ChildContext,
     id: String,
     systemId: String?,

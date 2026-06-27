@@ -57,7 +57,7 @@ public enum URLSessionInspect {
     }
 
     public static func statelyObserver<Context: Sendable>(
-        machine: StateMachine<Context>,
+        machine: ResolvedMachine<Context>,
         policy: ConnectivityPolicy? = nil,
         endpoint: InspectEndpoint? = nil,
         runtime: InspectRuntimeContext = InspectRuntimeContext(),

@@ -14,7 +14,7 @@ mistakes that the string API would only surface at runtime:
 - **State names are a checked enum** — declare a `StateName` enum with one case per state, so
   transition targets like `State.active` are autocompleted and rename-safe.
 
-It still produces an ordinary ``StateMachine`` — same engine, same `definitionJSON()`, same
+It still produces an ordinary ``ResolvedMachine`` — same engine, same `definitionJSON()`, same
 inspector behavior as a string-built machine.
 
 ## Add the package

@@ -5,7 +5,7 @@ import Testing
 
 @Suite("Stately wire protocol")
 struct StatelyWireTests {
-    private var trafficMachine: StateMachine<EmptyContext> {
+    private var trafficMachine: ResolvedMachine<EmptyContext> {
         createMachine(MachineConfig(
             id: "trafficLight",
             initial: "green",

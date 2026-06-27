@@ -7,7 +7,7 @@ private struct PCtx: Codable, Sendable, Equatable { var count: Int }
 @Suite("Actor persistence")
 struct LogicActorPersistenceTests {
 
-    private func counterMachine() -> StateMachine<PCtx> {
+    private func counterMachine() -> ResolvedMachine<PCtx> {
         createMachine(MachineConfig(
             id: "counter", initial: "active", context: PCtx(count: 0),
             states: [

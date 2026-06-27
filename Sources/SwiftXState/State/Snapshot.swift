@@ -31,7 +31,7 @@ public struct ChildActorSnapshot: Sendable, Equatable {
 /// (`actor.snapshot`). Test it with `matches(_:)` / `hasTag(_:)` / `can(_:)` and read `context`.
 public struct MachineSnapshot<Context: Sendable>: Sendable {
     /// The machine this snapshot belongs to.
-    public let machine: StateMachine<Context>
+    public let machine: ResolvedMachine<Context>
     /// The active state value (e.g. `.atomic("green")` or `.compound(["red": .atomic("wait")])`).
     public let value: StateValue
     /// The current context.
@@ -50,7 +50,7 @@ public struct MachineSnapshot<Context: Sendable>: Sendable {
     let historyValue: HistoryValue<Context>
 
     init(
-        machine: StateMachine<Context>,
+        machine: ResolvedMachine<Context>,
         value: StateValue,
         context: Context,
         nodes: [StateNode<Context>],

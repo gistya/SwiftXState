@@ -8,7 +8,7 @@ public final class StateNode<Context: Sendable>: @unchecked Sendable {
     public let path: [String]
     public private(set) var states: [String: StateNode<Context>]
     public let parent: StateNode<Context>?
-    weak var machine: StateMachine<Context>?
+    weak var machine: ResolvedMachine<Context>?
 
     public let initial: String?
     public let entry: [ActionRef<Context>]
@@ -34,7 +34,7 @@ public final class StateNode<Context: Sendable>: @unchecked Sendable {
         key: String,
         config: StateNodeConfig<Context>,
         parent: StateNode<Context>?,
-        machine: StateMachine<Context>? = nil,
+        machine: ResolvedMachine<Context>? = nil,
         machineId: String? = nil
     ) {
         self.key = key
@@ -140,7 +140,7 @@ public final class StateNode<Context: Sendable>: @unchecked Sendable {
         type == .atomic || type == .final
     }
 
-    func bind(machine: StateMachine<Context>) {
+    func bind(machine: ResolvedMachine<Context>) {
         self.machine = machine
         machine.idMap[id] = self
         for child in states.values {

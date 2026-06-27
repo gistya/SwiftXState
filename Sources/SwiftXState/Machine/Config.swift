@@ -322,7 +322,7 @@ func resolveTransitionConfigs<Context: Sendable>(
 
 /// Resolves the initial context for a machine, mirroring XState actor `input` + context initializer.
 public func resolveInitialContext<Context: Sendable>(
-    machine: StateMachine<Context>,
+    machine: ResolvedMachine<Context>,
     input: SendableValue? = nil,
     context: Context? = nil
 ) -> Context {

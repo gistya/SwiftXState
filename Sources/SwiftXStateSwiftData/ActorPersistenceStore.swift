@@ -81,7 +81,7 @@ public struct ActorPersistenceStore {
 
     /// Creates and hydrates an actor from a persisted snapshot stored under `key`.
     public func createActor<Context: Codable & Sendable>(
-        _ machine: StateMachine<Context>,
+        _ machine: ResolvedMachine<Context>,
         key: String,
         id: String? = nil,
         options: ActorOptions = ActorOptions(),

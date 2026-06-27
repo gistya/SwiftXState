@@ -9,13 +9,13 @@ import Foundation
 /// Context-agnostic primitives. Keeping that split honest is what lets this be a plain `Sendable`
 /// value: given a snapshot and an event it computes the next snapshot, and nothing else.
 public struct MachineLogic<Context: Sendable>: Sendable {
-    public let machine: StateMachine<Context>
+    public let machine: ResolvedMachine<Context>
     /// Optional start-time context override (replaces the machine's resolved initial context, and
     /// the decoded context on restore). Lets the machine `Actor`'s `start(context:)` thread through
     /// without a separate start signature. Default: none.
     public var contextOverride: Context? = nil
 
-    public init(machine: StateMachine<Context>, contextOverride: Context? = nil) {
+    public init(machine: ResolvedMachine<Context>, contextOverride: Context? = nil) {
         self.machine = machine
         self.contextOverride = contextOverride
     }

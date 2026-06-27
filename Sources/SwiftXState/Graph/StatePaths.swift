@@ -41,7 +41,7 @@ public struct StatePath<Context: Sendable>: Sendable {
 /// Shortest paths from the initial state to every reachable state (one per state, BFS order).
 /// Mirrors `@xstate/graph`'s `getShortestPaths`.
 public func getShortestPaths<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     options: TraversalOptions<Context> = .init()
 ) -> [StatePath<Context>] {
     let map = getAdjacencyMap(machine, options: options)
@@ -83,7 +83,7 @@ public func getShortestPaths<Context: Sendable>(
 /// - Parameter maxPaths: safety cap on the number of paths collected (dense graphs can have an
 ///   exponential number of simple paths).
 public func getSimplePaths<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     options: TraversalOptions<Context> = .init(),
     maxPaths: Int = 10_000
 ) -> [StatePath<Context>] {

@@ -45,7 +45,7 @@ public protocol Contextual {
 }
 
 /// The full schema identity: a context, an event-id family, and a state-id family. This is the
-/// common surface every machine component (`SchemaReducible`, `StateMachine`, `MachineSchema`) shares.
+/// common surface every machine component (`SchemaReducible`, `ResolvedMachine`, `MachineSchema`) shares.
 public protocol MachineSchemable: Contextual, EventIdentifiable, StateIdentifiable {}
 
 // MARK: - String instantiation (the untyped escape hatch)

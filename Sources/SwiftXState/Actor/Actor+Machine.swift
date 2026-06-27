@@ -1,13 +1,13 @@
 import Foundation
 
-/// A logic that wraps a `StateMachine` — the capability behind the machine-shaped `Actor`
+/// A logic that wraps a `ResolvedMachine` — the capability behind the machine-shaped `Actor`
 /// conveniences (`Actor(_ machine:)`, `start(context:)`, `getSnapshot()`, `typed(as:)`). Only
 /// `MachineLogic` conforms; it lets those conveniences live on `Actor where L: MachineActorLogic`
 /// without `Actor` itself knowing about state machines.
 public protocol MachineActorLogic: ActorLogic where Snapshot == MachineSnapshot<MachineContext> {
     associatedtype MachineContext: Sendable
-    var machine: StateMachine<MachineContext> { get }
-    init(machine: StateMachine<MachineContext>, contextOverride: MachineContext?)
+    var machine: ResolvedMachine<MachineContext> { get }
+    init(machine: ResolvedMachine<MachineContext>, contextOverride: MachineContext?)
 }
 
 extension MachineLogic: MachineActorLogic {
@@ -19,7 +19,7 @@ extension MachineLogic: MachineActorLogic {
 public extension Actor where L: MachineActorLogic {
     /// Create an actor for a state machine — `Actor(machine)`, the form `createActor(_:)` builds on.
     init(
-        _ machine: StateMachine<L.MachineContext>,
+        _ machine: ResolvedMachine<L.MachineContext>,
         id: String? = nil,
         options: ActorOptions = ActorOptions(),
         parent: (any ActorParentRef)? = nil,
@@ -35,7 +35,7 @@ public extension Actor where L: MachineActorLogic {
     }
 
     /// The machine this actor runs.
-    var machine: StateMachine<L.MachineContext> {
+    var machine: ResolvedMachine<L.MachineContext> {
         get async { logic.machine }
     }
 

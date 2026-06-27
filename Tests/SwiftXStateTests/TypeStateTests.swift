@@ -63,7 +63,7 @@ private struct ControlStates: Equatable {
     }
 }
 
-private func makePlayer() -> StateMachine<PlayerContext> {
+private func makePlayer() -> ResolvedMachine<PlayerContext> {
     createMachine(MachineConfig(
         context: PlayerContext(),
         states: [

@@ -11,7 +11,7 @@ struct LogicActorFullParityTests {
 
     /// Drives the same event sequence through `Actor` and `Actor<MachineLogic>`.
     private func driveBoth<C: Sendable>(
-        _ machine: StateMachine<C>,
+        _ machine: ResolvedMachine<C>,
         _ events: [String]
     ) async -> (old: MachineSnapshot<C>, new: MachineSnapshot<C>) {
         let old = await createActor(machine).start()

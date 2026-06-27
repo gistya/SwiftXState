@@ -104,7 +104,7 @@ public struct GraphEdge: Identifiable, Sendable, Equatable {
 }
 
 /// The full structural model of a machine: every node and every transition,
-/// derived directly from the live `StateMachine`. This is the single source of
+/// derived directly from the live `ResolvedMachine`. This is the single source of
 /// truth that the layout engine and both renderers consume.
 public struct GraphModel: Sendable, Equatable {
     public let machineID: String
@@ -168,10 +168,10 @@ public struct GraphModel: Sendable, Equatable {
 
 // MARK: - Builder
 
-/// Builds a `GraphModel` by walking the live `StateMachine` tree. Every node and
+/// Builds a `GraphModel` by walking the live `ResolvedMachine` tree. Every node and
 /// transition is read from the public `StateNode` surface — no scaffolding, no guesses.
 public enum GraphModelBuilder {
-    public static func build<Context: Sendable>(from machine: StateMachine<Context>) -> GraphModel {
+    public static func build<Context: Sendable>(from machine: ResolvedMachine<Context>) -> GraphModel {
         var nodes: [GraphNode] = []
         var edges: [GraphEdge] = []
         var edgeSeq = 0
@@ -252,9 +252,9 @@ public enum GraphModelBuilder {
 
     // MARK: Build from an exported definition (type-erased)
 
-    /// Builds a `GraphModel` from the XState-compatible JSON that `StateMachine.definitionJSON()`
+    /// Builds a `GraphModel` from the XState-compatible JSON that `ResolvedMachine.definitionJSON()`
     /// emits (see `MachineDefinitionExporter`). This lets an inspector graph a *type-erased* actor
-    /// from its definition alone — no `StateMachine<Context>` required.
+    /// from its definition alone — no `ResolvedMachine<Context>` required.
     public static func build(fromDefinitionJSON json: String, machineID: String) -> GraphModel {
         guard let data = json.data(using: .utf8),
               let value = try? JSONDecoder().decode(JSONValue.self, from: data) else {

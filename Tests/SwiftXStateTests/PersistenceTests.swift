@@ -8,7 +8,7 @@ private struct PersistCounterContext: Sendable, Equatable, Codable {
 
 @Suite("Actor persistence")
 struct PersistenceTests {
-    private var counterMachine: StateMachine<PersistCounterContext> {
+    private var counterMachine: ResolvedMachine<PersistCounterContext> {
         createMachine(MachineConfig(
             id: "counter",
             initial: "idle",

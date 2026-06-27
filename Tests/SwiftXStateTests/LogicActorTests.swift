@@ -219,7 +219,7 @@ struct LogicActorTests {
     func machineInvokeParity() async {
         struct ParentCtx: Sendable, Equatable { var userName: String? }
         struct ChildCtx: Sendable, Equatable { var userName: String? }
-        func makeParent() -> StateMachine<ParentCtx> {
+        func makeParent() -> ResolvedMachine<ParentCtx> {
             let child = createMachine(MachineConfig(
                 initial: "done", context: ChildCtx(userName: "Ada"),
                 states: ["done": StateNodeConfig(type: .final, output: { args in SendableValue(args.context.userName ?? "") })]
@@ -260,7 +260,7 @@ struct LogicActorTests {
     @Test("Actor<MachineLogic> matches Actor on forwardTo + sendToParent")
     func machineForwardToParity() async {
         struct RelayCtx: Sendable, Equatable { var gotPong: Bool; var childId: String }
-        func makeRelay() -> StateMachine<RelayCtx> {
+        func makeRelay() -> ResolvedMachine<RelayCtx> {
             createMachine(MachineConfig(
                 initial: "active", context: RelayCtx(gotPong: false, childId: "listener"),
                 states: [

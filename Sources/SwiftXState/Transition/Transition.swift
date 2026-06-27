@@ -3,7 +3,7 @@ import Foundation
 /// Given a machine, snapshot, and event, returns the next snapshot and actions to execute.
 /// This is a pure function that does not execute actions.
 public func transition<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     snapshot: MachineSnapshot<Context>,
     event: any Eventable
 ) -> (snapshot: MachineSnapshot<Context>, actions: [ExecutableAction<Context>]) {
@@ -14,7 +14,7 @@ public func transition<Context: Sendable>(
 
 /// Returns the initial snapshot and actions from a machine's initial transition.
 public func initialTransition<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     input: SendableValue? = nil,
     context: Context? = nil
 ) -> (snapshot: MachineSnapshot<Context>, actions: [ExecutableAction<Context>]) {

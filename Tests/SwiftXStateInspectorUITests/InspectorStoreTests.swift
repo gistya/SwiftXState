@@ -6,7 +6,7 @@ import Testing
 @MainActor
 @Suite("InspectorStore ingestion")
 struct InspectorStoreTests {
-    private func makeMachine() -> StateMachine<Int> {
+    private func makeMachine() -> ResolvedMachine<Int> {
         createMachine(MachineConfig<Int>(
             id: "lights",
             initial: "green",

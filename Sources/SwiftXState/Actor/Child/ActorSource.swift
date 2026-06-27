@@ -51,20 +51,20 @@ public func fromTaskGroup<Output: Sendable & Equatable>(
 }
 
 public func fromMachine<ChildContext: Sendable>(
-    _ machine: StateMachine<ChildContext>
+    _ machine: ResolvedMachine<ChildContext>
 ) -> ActorSource {
     .machine(MachineActorLogicBox(machine))
 }
 
 public func fromMachine<ChildContext: Sendable>(
-    _ machine: StateMachine<ChildContext>,
+    _ machine: ResolvedMachine<ChildContext>,
     context: @escaping @Sendable (SendableValue?) -> ChildContext
 ) -> ActorSource {
     .machine(MachineActorLogicBox(machine, context: context))
 }
 
 public func fromMachine<ChildContext: Sendable>(
-    _ machine: StateMachine<ChildContext>,
+    _ machine: ResolvedMachine<ChildContext>,
     context: ChildContext
 ) -> ActorSource {
     .machine(MachineActorLogicBox(machine, context: { _ in context }))

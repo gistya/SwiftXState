@@ -167,7 +167,7 @@ public func getPersistedSnapshot<Context: Codable & Sendable>(
 
 /// Restores a machine snapshot from persisted data without running side effects.
 public func restoreSnapshot<Context: Codable & Sendable>(
-    machine: StateMachine<Context>,
+    machine: ResolvedMachine<Context>,
     persisted: PersistedSnapshot,
     context overrideContext: Context? = nil
 ) throws -> MachineSnapshot<Context> {

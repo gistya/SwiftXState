@@ -8,10 +8,10 @@ import Foundation
 /// test with `test(_:onState:onEvent:)`: drive your real component in `onEvent`, assert it matches
 /// the model's predicted snapshot in `onState`.
 public struct TestModel<Context: Sendable>: Sendable {
-    public let machine: StateMachine<Context>
+    public let machine: ResolvedMachine<Context>
     public var options: TraversalOptions<Context>
 
-    public init(_ machine: StateMachine<Context>, options: TraversalOptions<Context> = .init()) {
+    public init(_ machine: ResolvedMachine<Context>, options: TraversalOptions<Context> = .init()) {
         self.machine = machine
         self.options = options
     }
@@ -75,7 +75,7 @@ public struct MachineValidationIssue: Sendable, Equatable {
 /// Validate a machine over its reachable graph: flags dead-end states and declared states that are
 /// never reachable. Built on the same faithful traversal as path generation.
 public func validate<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     options: TraversalOptions<Context> = .init()
 ) -> [MachineValidationIssue] {
     let map = getAdjacencyMap(machine, options: options)
