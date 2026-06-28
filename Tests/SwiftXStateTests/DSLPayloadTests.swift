@@ -1,4 +1,5 @@
 import Testing
+import CompositionalInit
 @testable import SwiftXState
 
 @Suite("Plan D — event payloads (associated-value EventID)")
@@ -20,16 +21,16 @@ struct DSLPayloadTests {
         var context: Int { 0 }
         var machine: some XStateMachine {
             XState(.active) {
-                // The payload placeholders below are ignored for routing — only the discriminant
-                // (`increment` / `set` / `reset`) keys the transition; the real payload arrives at send.
-                XTransition(on: .increment(by: 0), to: .active).action { args, _ in
+                // Payload cases referenced by their case initializer — no placeholder value.
+                XTransition(on: CounterEvent.increment, to: .active).action { args, _ in
                     guard case let .increment(by)? = args.event else { return args.context }
                     return args.context + by
                 }
-                XTransition(on: .set(0), to: .active).action { args, _ in
+                XTransition(on: CounterEvent.set, to: .active).action { args, _ in
                     guard case let .set(value)? = args.event else { return args.context }
                     return value
                 }
+                // A payloadless case still uses the plain form.
                 XTransition(on: .reset, to: .active).action { _, _ in 0 }
             }
             .initial()
@@ -60,6 +61,36 @@ struct DSLPayloadTests {
 
         await c.send(.reset)
         #expect(await c.context == 0)
+    }
+
+    @Test func casePathRoutingComposesWithGuard() async {
+        // Explicit CasePath form + a context guard: only large increments are accepted.
+        struct Picky: StateMachine {
+            typealias Context = Int
+            typealias StateID = CounterState
+            typealias EventID = CounterEvent
+            var context: Int { 0 }
+            var machine: some XStateMachine {
+                XState(.active) {
+                    XTransition(on: CasePath(CounterEvent.increment), to: .active)
+                        .when { $0 < 10 }                 // guard on context
+                        .action { args, _ in
+                            guard case let .increment(by)? = args.event else { return args.context }
+                            return args.context + by
+                        }
+                }.initial()
+            }
+        }
+        let m = createActor(Picky())
+        await m.start()
+        await m.send(.increment(by: 5))     // ctx 0 < 10 → +5
+        #expect(await m.context == 5)
+        await m.send(.increment(by: 5))     // ctx 5 < 10 → +5
+        #expect(await m.context == 10)
+        await m.send(.increment(by: 5))     // ctx 10, guard fails → unchanged
+        #expect(await m.context == 10)
+        await m.send(.reset)                // not the increment case → no matching transition, no-op
+        #expect(await m.context == 10)
     }
 
     @Test func typedEventRoundTripsThroughEngine() async {

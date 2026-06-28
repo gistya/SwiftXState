@@ -128,7 +128,8 @@ public extension MachineSchema {
         var grouped: [String: [TransitionConfig<Context>]] = [:]
         var keyOrder: [String] = []
         for t in transitions {
-            let key = t.event.name
+            // A case-matched transition (no `event`) routes under the wildcard, gated by `caseMatch`.
+            let key = t.event?.name ?? wildcardEventDescriptor
             if grouped[key] == nil { keyOrder.append(key) }
             grouped[key, default: []].append(transitionConfig(t))
         }
@@ -143,9 +144,26 @@ public extension MachineSchema {
     private static func transitionConfig(_ t: TransitionNode) -> TransitionConfig<Context> {
         TransitionConfig(
             target: t.target.name,
-            guard: t.`guard`.map { g in GuardRef.inline { args in g(args.context) } },
+            guard: eventGuard(caseMatch: t.caseMatch, userGuard: t.`guard`),
             actions: t.action.map { [handlerAction($0)] }
         )
+    }
+
+    /// Combine the optional case matcher (event-aware) and the optional user guard (context-only)
+    /// into one engine `GuardRef`. A case-matched wildcard transition is taken only when the incoming
+    /// event is the right case *and* the user guard (if any) passes.
+    private static func eventGuard(
+        caseMatch: (@Sendable (EventID) -> Bool)?,
+        userGuard: Guard?
+    ) -> GuardRef<Context>? {
+        guard caseMatch != nil || userGuard != nil else { return nil }
+        return GuardRef.inline { args in
+            if let caseMatch {
+                guard let typed = args.event as? TypedEvent<EventID>, caseMatch(typed.id) else { return false }
+            }
+            if let userGuard { return userGuard(args.context) }
+            return true
+        }
     }
 
     /// Lower a transition `Handler` (`(args, enq) -> context`) to an engine `enqueueActions`: run the

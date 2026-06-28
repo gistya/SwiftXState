@@ -94,10 +94,30 @@ public struct MachineSchema<
     }
 
     public struct TransitionNode: Sendable {
-        public let event: EventID
+        /// The triggering event id. `nil` when the transition routes by a **case match** instead — a
+        /// payload-carrying event referenced by its case path (registered under the wildcard key and
+        /// gated by `caseMatch`).
+        public let event: EventID?
+        /// A case matcher (from `XTransition(on: Event.increment, …)`) — when set, the transition is
+        /// registered under the wildcard event and taken only when the incoming event is this case.
+        public var caseMatch: (@Sendable (EventID) -> Bool)?
         public let target: StateID
         public var `guard`: Guard?
         public var action: Handler?
+
+        public init(
+            event: EventID?,
+            caseMatch: (@Sendable (EventID) -> Bool)? = nil,
+            target: StateID,
+            guard: Guard? = nil,
+            action: Handler? = nil
+        ) {
+            self.event = event
+            self.caseMatch = caseMatch
+            self.target = target
+            self.guard = `guard`
+            self.action = action
+        }
     }
 
     /// An *eventless* transition — the lowered form of `Always` / `After` / `OnDone`, which fire on a
