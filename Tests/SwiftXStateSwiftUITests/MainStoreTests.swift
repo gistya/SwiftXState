@@ -72,10 +72,10 @@ struct MainStoreTests {
 
     @Test func mainStoreCollatesMultipleActors() async {
         let main = MainStore()
-        let light = main.track(TrafficLight(), id: "light")
-        let toggle = main.track(Switch(), id: "toggle")
+        let light = main.track(TrafficLight())   // keyed by type; hold the typed handle
+        let toggle = main.track(Switch())
 
-        #expect(main.ids.count == 2)
+        #expect(main.count == 2)
         await waitUntil { light.configuration != nil && toggle.configuration != nil }
 
         // Independent typed updates, both collated on main.
@@ -85,25 +85,57 @@ struct MainStoreTests {
         #expect(light.matches(.green))
         #expect(toggle.matches(.on))
 
-        // Typed lookup back out of the collator.
-        #expect(main.store("light", as: TrafficLight.self)?.matches(.green) == true)
-        #expect(main.store("toggle", as: Switch.self)?.matches(.on) == true)
-        // Wrong-type lookup is a safe nil.
-        #expect(main.store("light", as: Switch.self) == nil)
+        // Typed lookup back out of the collator — by type, no string, no cast.
+        #expect(main.store(TrafficLight.self)?.matches(.green) == true)
+        #expect(main.store(Switch.self)?.matches(.on) == true)
+        // A type that isn't tracked is a safe nil.
+        #expect(main.store(Unused.self) == nil)
+    }
+
+    @Test func sameTypeMultiplesViaTypedKey() async {
+        let main = MainStore()
+        let north = main.track(TrafficLight(), key: .north)
+        let south = main.track(TrafficLight(), key: .south)
+        #expect(main.count == 2)
+        await waitUntil { north.configuration != nil && south.configuration != nil }
+
+        north.send(.go)
+        await waitUntil { north.matches(.green) }
+        // Independent instances, distinguished by typed key — north advanced, south didn't.
+        #expect(main.store(.north)?.matches(.green) == true)
+        #expect(main.store(.south)?.matches(.red) == true)
     }
 
     @Test func erasedDashboardFaceAndUntrack() async {
         let main = MainStore()
-        main.track(TrafficLight(), id: "light")
-        await waitUntil { main.anyStore("light")?.configurationDescription != nil }
+        let light = main.track(TrafficLight())
+        await waitUntil { main.store(TrafficLight.self)?.configurationDescription != nil }
 
-        let face = main.anyStore("light")
+        // Dashboard iterates the erased faces; identity is the engine session id, not a user string.
+        let face = main.all.first { $0.id == light.id }
+        #expect(face?.typeName == "TrafficLight")
         #expect(face?.statusDescription == "active")
         #expect(face?.configurationDescription == "red")
 
-        main.untrack("light")
-        #expect(main.ids.isEmpty)
-        #expect(main.anyStore("light") == nil)
+        main.untrack(TrafficLight.self)
+        #expect(main.count == 0)
+        #expect(main.store(TrafficLight.self) == nil)
     }
+}
+
+// A machine never tracked, to prove a missing-type lookup is a safe nil.
+private enum UnusedState: String, StateIdentifying { case only; static var _blank: UnusedState { .only } }
+private enum UnusedEvent: String, EventIdentifying { case noop; static var _blank: UnusedEvent { .noop } }
+private struct Unused: StateMachine {
+    typealias Context = Int
+    typealias StateID = UnusedState
+    typealias EventID = UnusedEvent
+    var context: Int { 0 }
+    var machine: some XStateMachine { XState(.only) {}.initial() }
+}
+
+private extension MachineKey where M == MainStoreTests.TrafficLight {
+    static var north: Self { .init("north") }
+    static var south: Self { .init("south") }
 }
 #endif

@@ -104,9 +104,15 @@ public final class MachineStore<M: StateMachine>: AnyMachineStore {
 // MARK: - Erased view (for the collator / dashboards)
 
 /// The type-erased face of a `MachineStore`, so a `MainStore` can hold a heterogeneous set of typed
-/// machines and a dashboard can read a uniform status/value without knowing each machine's `StateID`.
+/// machines and a dashboard can read a uniform identity/status/value without knowing each machine's
+/// `StateID`.
 @MainActor
 public protocol AnyMachineStore: AnyObject {
+    /// The actor's engine-assigned session id — a stable, unique identity for `ForEach` etc. (not a
+    /// user-invented string).
+    var id: String { get }
+    /// The machine type's name, for display (`"TrafficLight"`).
+    var typeName: String { get }
     /// A human-readable lifecycle status (`"active"`, `"done"`, …).
     var statusDescription: String { get }
     /// The active configuration rendered as a dotted/parallel path, or `nil` before the first snapshot.
@@ -114,8 +120,27 @@ public protocol AnyMachineStore: AnyObject {
 }
 
 public extension MachineStore {
+    var id: String { actor.id }
+    var typeName: String { String(describing: M.self) }
     var statusDescription: String { String(describing: status) }
     var configurationDescription: String? { configuration?.description }
+}
+
+/// A **phantom-typed** key for tracking more than one machine of the same type in a `MainStore`
+/// (e.g. two `TrafficLight`s). Because it carries `M`, lookups stay typed and cast-free. Define keys
+/// as constants so call sites read `.north`, never a raw string:
+///
+/// ```swift
+/// extension MachineKey where M == TrafficLight {
+///     static var north: Self { .init("north") }
+///     static var south: Self { .init("south") }
+/// }
+/// store.track(TrafficLight(), key: .north)
+/// store.store(.north)?.matches(.green)
+/// ```
+public struct MachineKey<M: StateMachine>: Hashable, Sendable {
+    public let name: String
+    public init(_ name: String) { self.name = name }
 }
 
 // MARK: - MainStore (collate any number of actors on the main actor)
@@ -128,55 +153,77 @@ public extension MachineStore {
 /// This is the main-actor membrane over the many-Swift-actor world: each tracked machine runs on its
 /// own actor, yet their state lands here coherently, glitch-free, ready to render.
 ///
+/// Identity is **typed, not stringly**: track returns the store (hold it), or look one up by its
+/// machine *type* — and, for several machines of one type, by a phantom-typed `MachineKey`.
+///
 /// ```swift
 /// let store = MainStore()
-/// let light  = store.track(TrafficLight(), id: "light")
-/// let player = store.track(AudioPlayer(),  id: "player")
-/// // …in a view: store.store("light", as: TrafficLight.self)?.matches(.green)
+/// let light  = store.track(TrafficLight())     // hold the returned typed store…
+/// store.track(AudioPlayer())
+/// store.store(TrafficLight.self)?.matches(.green)   // …or look it up by type — no string, no cast
+///
+/// store.track(TrafficLight(), key: .north)          // two of one type → typed keys
+/// store.store(.north)?.matches(.green)
 /// ```
 @MainActor
 @Observable
 public final class MainStore {
-    /// The tracked machine stores, keyed by id. Looked up (not observed) — membership changes are
-    /// observed through `ids`, and each store is independently `@Observable`.
-    @ObservationIgnored public private(set) var stores: [AnyHashable: any AnyMachineStore] = [:]
+    /// Internal storage key: the machine type, plus an optional `MachineKey` name for same-type
+    /// multiples. No user-facing strings.
+    private struct StoreID: Hashable {
+        let type: ObjectIdentifier
+        let name: String?
+    }
 
-    /// The ids of the currently tracked machines, in track order — observe this for membership.
-    public private(set) var ids: [AnyHashable] = []
+    private var entries: [StoreID: any AnyMachineStore] = [:]
 
     public init() {}
 
-    /// Track a machine declaration: build its `MachineStore`, register it under `id`, and return the
-    /// typed store (already self-starting).
+    /// Track a machine declaration: build + start its `MachineStore`, register it (keyed by type, or
+    /// by `key` for same-type multiples), and return the typed store — your primary handle.
     @discardableResult
-    public func track<M: StateMachine>(_ machine: M, id: AnyHashable = UUID()) -> MachineStore<M> {
-        register(MachineStore(machine), id: id)
+    public func track<M: StateMachine>(_ machine: M, key: MachineKey<M>? = nil) -> MachineStore<M> {
+        register(MachineStore(machine), key: key)
     }
 
     /// Track an already-built `MachineStore`.
     @discardableResult
-    public func track<M: StateMachine>(_ store: MachineStore<M>, id: AnyHashable = UUID()) -> MachineStore<M> {
-        register(store, id: id)
+    public func track<M: StateMachine>(_ store: MachineStore<M>, key: MachineKey<M>? = nil) -> MachineStore<M> {
+        register(store, key: key)
     }
 
-    private func register<M: StateMachine>(_ store: MachineStore<M>, id: AnyHashable) -> MachineStore<M> {
-        stores[id] = store
-        if !ids.contains(id) { ids.append(id) }
+    private func register<M: StateMachine>(_ store: MachineStore<M>, key: MachineKey<M>?) -> MachineStore<M> {
+        entries[StoreID(type: ObjectIdentifier(M.self), name: key?.name)] = store
         return store
     }
 
-    /// The typed store for `id`, if it is tracked and of type `M`.
-    public func store<M: StateMachine>(_ id: AnyHashable, as _: M.Type = M.self) -> MachineStore<M>? {
-        stores[id] as? MachineStore<M>
+    /// The typed store for machine type `M` — `store(TrafficLight.self)`. Stringless, cast-free.
+    public func store<M: StateMachine>(_ type: M.Type = M.self) -> MachineStore<M>? {
+        entries[StoreID(type: ObjectIdentifier(M.self), name: nil)] as? MachineStore<M>
     }
 
-    /// The erased store for `id` (uniform status/value, any machine type).
-    public func anyStore(_ id: AnyHashable) -> (any AnyMachineStore)? { stores[id] }
+    /// The typed store for a phantom-typed `key` (same-type multiples) — `store(.north)`.
+    public func store<M: StateMachine>(_ key: MachineKey<M>) -> MachineStore<M>? {
+        entries[StoreID(type: ObjectIdentifier(M.self), name: key.name)] as? MachineStore<M>
+    }
 
-    /// Stop tracking `id` (the underlying actor is released and its subscription cancelled on deinit).
-    public func untrack(_ id: AnyHashable) {
-        stores.removeValue(forKey: id)
-        ids.removeAll { $0 == id }
+    /// Every tracked store, erased — for dashboards. `ForEach` over them with `\.id` (the engine
+    /// session id).
+    public var all: [any AnyMachineStore] {
+        Array(entries.values).sorted { $0.id < $1.id }
+    }
+
+    /// How many machines are tracked.
+    public var count: Int { entries.count }
+
+    /// Stop tracking machine type `M`.
+    public func untrack<M: StateMachine>(_ type: M.Type = M.self) {
+        entries[StoreID(type: ObjectIdentifier(M.self), name: nil)] = nil
+    }
+
+    /// Stop tracking the machine at `key`.
+    public func untrack<M: StateMachine>(_ key: MachineKey<M>) {
+        entries[StoreID(type: ObjectIdentifier(M.self), name: key.name)] = nil
     }
 }
 #endif
