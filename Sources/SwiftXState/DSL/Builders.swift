@@ -44,6 +44,7 @@ public struct StateBody<
     public var always: [Schema.GuardedTransition]
     public var after: [Schema.AfterEntry]
     public var onDone: [Schema.GuardedTransition]
+    public var invokes: [Schema.InvokeNode]
 
     public init(
         transitions: [Schema.TransitionNode] = [],
@@ -51,7 +52,8 @@ public struct StateBody<
         initialChild: StateID? = nil,
         always: [Schema.GuardedTransition] = [],
         after: [Schema.AfterEntry] = [],
-        onDone: [Schema.GuardedTransition] = []
+        onDone: [Schema.GuardedTransition] = [],
+        invokes: [Schema.InvokeNode] = []
     ) {
         self.transitions = transitions
         self.children = children
@@ -59,6 +61,7 @@ public struct StateBody<
         self.always = always
         self.after = after
         self.onDone = onDone
+        self.invokes = invokes
     }
 
     /// Concatenate two bodies; the first declared `initial` child wins.
@@ -69,7 +72,8 @@ public struct StateBody<
             initialChild: initialChild ?? other.initialChild,
             always: always + other.always,
             after: after + other.after,
-            onDone: onDone + other.onDone
+            onDone: onDone + other.onDone,
+            invokes: invokes + other.invokes
         )
     }
 }
@@ -104,6 +108,10 @@ public enum StateBuilder<
 
     public static func buildExpression(_ onDone: OnDone<Context, EventID, StateID>) -> Body {
         Body(onDone: [onDone.node])
+    }
+
+    public static func buildExpression(_ invoke: Invoke<Context, EventID, StateID>) -> Body {
+        Body(invokes: [invoke.node])
     }
 
     public static func buildBlock(_ parts: Body...) -> Body {

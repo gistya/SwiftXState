@@ -126,3 +126,64 @@ public struct OnDone<
         clone(mutating: \.node.action <- handler)
     }
 }
+
+// MARK: - Invoke (child actors)
+
+/// An invoked child actor — XState v6's `invoke`. The child runs while the enclosing state is
+/// active; `.onDone(to:)` / `.onError(to:)` fire when it completes or fails, and `.input(_:)` seeds
+/// it from the parent context.
+///
+/// ```swift
+/// XState(.loading) {
+///     Invoke(id: "load", run: { _ in try await fetch() })
+///         .onDone(to: .loaded)
+///         .onError(to: .failed)
+/// }
+///
+/// // or a child machine:
+/// XState(.playing) {
+///     Invoke(id: "timer", machine: TimerMachine()).onDone(to: .done)
+/// }
+/// ```
+public struct Invoke<
+    Context: Sendable,
+    EventID: EventIdentifying,
+    StateID: StateIdentifying
+>: Sendable, Cloneable {
+    public typealias Schema = MachineSchema<Context, EventID, StateID>
+
+    public var node: Schema.InvokeNode
+
+    /// Invoke an async task as the child — XState v6's `createAsyncLogic` / v5 `fromPromise`.
+    public init<Output: Sendable & Equatable>(
+        id: String,
+        run: @escaping @Sendable (TaskActorScope) async throws -> Output
+    ) {
+        node = Schema.InvokeNode(id: id, src: fromTask(run))
+    }
+
+    /// Invoke another `StateMachine` declaration as the child actor.
+    public init<M: StateMachine>(id: String, machine: M) {
+        node = Schema.InvokeNode(id: id, src: fromMachine(machine.resolvedMachine(id: id)))
+    }
+
+    /// Invoke from an already-built `ActorSource` (the engine escape hatch — callbacks, stores, …).
+    public init(id: String, source: ActorSource) {
+        node = Schema.InvokeNode(id: id, src: source)
+    }
+
+    /// Seed the child's `input` from the parent context.
+    public func input(_ make: @escaping @Sendable (Context) -> SendableValue?) -> Self {
+        clone(mutating: \.node.input <- make)
+    }
+
+    /// Transition taken when the child completes successfully.
+    public func onDone(to target: StateID) -> Self {
+        clone(mutating: \.node.onDone <- Schema.GuardedTransition(target: target))
+    }
+
+    /// Transition taken when the child errors.
+    public func onError(to target: StateID) -> Self {
+        clone(mutating: \.node.onError <- Schema.GuardedTransition(target: target))
+    }
+}

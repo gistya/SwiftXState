@@ -37,8 +37,21 @@ public extension MachineSchema {
             onDone: guardedInput(node.onDone),
             always: node.always.isEmpty ? nil : node.always.map { guardedConfig($0) },
             after: afterInputs(node.after),
-            entry: node.entry.map { [assignAction($0)] },
-            exit: node.exit.map { [assignAction($0)] }
+            invoke: node.invokes.isEmpty ? nil : node.invokes.map { invokeConfig($0) },
+            entry: node.entry.map { [handlerAction($0)] },
+            exit: node.exit.map { [handlerAction($0)] }
+        )
+    }
+
+    /// Lower a typed `InvokeNode` to the engine's `InvokeConfig` (wrapping the context-only `input`
+    /// closure into the engine's `ActionArgs` form; `onDone`/`onError` reuse the guarded lowering).
+    private static func invokeConfig(_ n: InvokeNode) -> InvokeConfig<Context> {
+        InvokeConfig(
+            id: n.id,
+            src: n.src,
+            input: n.input.map { make in { @Sendable (args: ActionArgs<Context>) in make(args.context) } },
+            onDone: n.onDone.flatMap { guardedInput([$0]) },
+            onError: n.onError.flatMap { guardedInput([$0]) }
         )
     }
 
@@ -148,11 +161,6 @@ public extension MachineSchema {
             builder.enqueue(assign { (ctx: inout Context, _: ActionArgs<Context>) in ctx = next })
             for effect in enq.collected { builder.enqueue(effect) }
         }
-    }
-
-    /// Lower a pure entry/exit transform (`(consuming Context) -> Context`) to an engine `assign`.
-    private static func assignAction(_ transform: @escaping Action) -> ActionRef<Context> {
-        assign { (ctx: inout Context, _: ActionArgs<Context>) in ctx = transform(ctx) }
     }
 }
 

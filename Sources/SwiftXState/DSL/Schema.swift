@@ -42,8 +42,13 @@ public struct MachineSchema<
         public var after: [AfterEntry]
         /// Transitions taken when this compound/parallel node's children complete (`OnDone`).
         public var onDone: [GuardedTransition]
-        public var entry: Action?
-        public var exit: Action?
+        /// Child actors invoked while this state is active (`Invoke`).
+        public var invokes: [InvokeNode]
+        /// Entry/exit handlers — XState v6's `(args, enq) -> context` form (may patch context and
+        /// enqueue effects; may not target). A pure `(consuming Context) -> Context` transform is
+        /// wrapped into this shape by `XState.onEntry`/`onExit`.
+        public var entry: Handler?
+        public var exit: Handler?
         /// Child states in declaration order. Non-empty makes this a compound (or, with
         /// `isParallel`, a parallel) node.
         public var children: [StateNode]
@@ -59,8 +64,9 @@ public struct MachineSchema<
             always: [GuardedTransition] = [],
             after: [AfterEntry] = [],
             onDone: [GuardedTransition] = [],
-            entry: Action? = nil,
-            exit: Action? = nil,
+            invokes: [InvokeNode] = [],
+            entry: Handler? = nil,
+            exit: Handler? = nil,
             children: [StateNode] = [],
             initialChild: StateID? = nil
         ) {
@@ -72,6 +78,7 @@ public struct MachineSchema<
             self.always = always
             self.after = after
             self.onDone = onDone
+            self.invokes = invokes
             self.entry = entry
             self.exit = exit
             self.children = children
@@ -111,6 +118,31 @@ public struct MachineSchema<
     public struct AfterEntry: Sendable {
         public var delayMS: Int
         public var transition: GuardedTransition
+    }
+
+    /// An invoked child actor (`Invoke`) — XState v6's `invoke`. Built from an `ActorSource` (a task
+    /// or a child machine), optionally seeded with `input` from context, with `onDone` / `onError`
+    /// transitions taken when the child completes or fails.
+    public struct InvokeNode: Sendable {
+        public var id: String
+        public var src: ActorSource
+        public var input: (@Sendable (Context) -> SendableValue?)?
+        public var onDone: GuardedTransition?
+        public var onError: GuardedTransition?
+
+        public init(
+            id: String,
+            src: ActorSource,
+            input: (@Sendable (Context) -> SendableValue?)? = nil,
+            onDone: GuardedTransition? = nil,
+            onError: GuardedTransition? = nil
+        ) {
+            self.id = id
+            self.src = src
+            self.input = input
+            self.onDone = onDone
+            self.onError = onError
+        }
     }
 
     public private(set) var states: [StateID: StateNode]
