@@ -168,6 +168,14 @@ let package = Package(
             ]
         ),
         .testTarget(
+            name: "SwiftXStateSwiftUITests",
+            dependencies: ["SwiftXState", "SwiftXStateSwiftUI"],
+            path: "Tests/SwiftXStateSwiftUITests",
+            swiftSettings: [
+                .define("SWIFTXSTATE_APPLE_UI", .when(platforms: appleUIPlatforms)),
+            ]
+        ),
+        .testTarget(
             name: "SwiftXStateInspectTests",
             dependencies: [
                 "SwiftXState",
