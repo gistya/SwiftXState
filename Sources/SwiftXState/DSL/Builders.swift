@@ -41,15 +41,24 @@ public struct StateBody<
     public var transitions: [Schema.TransitionNode]
     public var children: [Schema.StateNode]
     public var initialChild: StateID?
+    public var always: [Schema.GuardedTransition]
+    public var after: [Schema.AfterEntry]
+    public var onDone: [Schema.GuardedTransition]
 
     public init(
         transitions: [Schema.TransitionNode] = [],
         children: [Schema.StateNode] = [],
-        initialChild: StateID? = nil
+        initialChild: StateID? = nil,
+        always: [Schema.GuardedTransition] = [],
+        after: [Schema.AfterEntry] = [],
+        onDone: [Schema.GuardedTransition] = []
     ) {
         self.transitions = transitions
         self.children = children
         self.initialChild = initialChild
+        self.always = always
+        self.after = after
+        self.onDone = onDone
     }
 
     /// Concatenate two bodies; the first declared `initial` child wins.
@@ -57,7 +66,10 @@ public struct StateBody<
         StateBody(
             transitions: transitions + other.transitions,
             children: children + other.children,
-            initialChild: initialChild ?? other.initialChild
+            initialChild: initialChild ?? other.initialChild,
+            always: always + other.always,
+            after: after + other.after,
+            onDone: onDone + other.onDone
         )
     }
 }
@@ -80,6 +92,18 @@ public enum StateBuilder<
 
     public static func buildExpression(_ state: St) -> Body {
         Body(children: [state.node], initialChild: state.isInitial ? state.id : nil)
+    }
+
+    public static func buildExpression(_ always: Always<Context, EventID, StateID>) -> Body {
+        Body(always: [always.node])
+    }
+
+    public static func buildExpression(_ after: After<Context, EventID, StateID>) -> Body {
+        Body(after: [after.entry])
+    }
+
+    public static func buildExpression(_ onDone: OnDone<Context, EventID, StateID>) -> Body {
+        Body(onDone: [onDone.node])
     }
 
     public static func buildBlock(_ parts: Body...) -> Body {

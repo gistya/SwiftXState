@@ -28,14 +28,52 @@ public extension MachineSchema {
         for child in node.children {
             childConfigs[child.id.name] = nodeConfig(child)
         }
+        let explicitType: StateNodeType? = node.isFinal ? .final : (node.isParallel ? .parallel : nil)
         return StateNodeConfig(
             initial: node.initialChild?.name,
-            type: node.isParallel ? .parallel : nil,
+            type: explicitType,
             states: childConfigs.isEmpty ? nil : childConfigs,
             on: transitionInputs(node.transitions),
+            onDone: guardedInput(node.onDone),
+            always: node.always.isEmpty ? nil : node.always.map { guardedConfig($0) },
+            after: afterInputs(node.after),
             entry: node.entry.map { [assignAction($0)] },
             exit: node.exit.map { [assignAction($0)] }
         )
+    }
+
+    /// Lower an eventless guarded transition (`Always` / `After` / `OnDone`) to a `TransitionConfig`.
+    private static func guardedConfig(_ t: GuardedTransition) -> TransitionConfig<Context> {
+        TransitionConfig(
+            target: t.target.name,
+            guard: t.`guard`.map { g in GuardRef.inline { args in g(args.context) } },
+            actions: t.action.map { [handlerAction($0)] }
+        )
+    }
+
+    /// Bundle a guarded-transition list into a `TransitionInput` (single / multiple-candidate).
+    private static func guardedInput(_ list: [GuardedTransition]) -> TransitionInput<Context>? {
+        guard !list.isEmpty else { return nil }
+        let configs = list.map { guardedConfig($0) }
+        return configs.count == 1 ? .single(configs[0]) : .multiple(configs)
+    }
+
+    /// Group delayed transitions by delay-ms, producing the engine's `after` map (keyed by ms string).
+    private static func afterInputs(_ list: [AfterEntry]) -> [String: TransitionInput<Context>]? {
+        guard !list.isEmpty else { return nil }
+        var grouped: [String: [TransitionConfig<Context>]] = [:]
+        var keyOrder: [String] = []
+        for entry in list {
+            let key = String(entry.delayMS)
+            if grouped[key] == nil { keyOrder.append(key) }
+            grouped[key, default: []].append(guardedConfig(entry.transition))
+        }
+        var out: [String: TransitionInput<Context>] = [:]
+        for key in keyOrder {
+            let configs = grouped[key]!
+            out[key] = configs.count == 1 ? .single(configs[0]) : .multiple(configs)
+        }
+        return out
     }
 
     /// Project an engine `StateValue` back into a typed `Configuration` by matching id `name`s — at

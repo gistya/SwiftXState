@@ -32,7 +32,11 @@ public struct XState<
     public let id: StateID
     public var isInitial: Bool
     public var isParallel: Bool
+    public var isFinal: Bool
     public var transitions: [Schema.TransitionNode]
+    public var always: [Schema.GuardedTransition]
+    public var after: [Schema.AfterEntry]
+    public var onDone: [Schema.GuardedTransition]
     public var entry: Schema.Action?
     public var exit: Schema.Action?
     public var children: [Schema.StateNode]
@@ -46,7 +50,11 @@ public struct XState<
         self.id = id
         self.isInitial = false
         self.isParallel = false
+        self.isFinal = false
         self.transitions = body.transitions
+        self.always = body.always
+        self.after = body.after
+        self.onDone = body.onDone
         self.entry = nil
         self.exit = nil
         self.children = body.children
@@ -62,6 +70,12 @@ public struct XState<
     /// concurrently-active regions (each entering its own `.initial()` child).
     public func parallel(_ value: Bool = true) -> Self {
         clone(mutating: \.isParallel <- value)
+    }
+
+    /// Mark this a final state — XState v6's `type: 'final'`. Entering it completes the parent,
+    /// firing the parent's `OnDone`.
+    public func final(_ value: Bool = true) -> Self {
+        clone(mutating: \.isFinal <- value)
     }
 
     /// Run a context transform when this state is entered.
@@ -80,7 +94,11 @@ public struct XState<
             id: id,
             isInitial: isInitial,
             isParallel: isParallel,
+            isFinal: isFinal,
             transitions: transitions,
+            always: always,
+            after: after,
+            onDone: onDone,
             entry: entry,
             exit: exit,
             children: children,

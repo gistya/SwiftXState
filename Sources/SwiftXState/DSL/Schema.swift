@@ -32,7 +32,16 @@ public struct MachineSchema<
         /// `.parallel()` marker — XState v6's `type: 'parallel'`; its `children` become concurrently
         /// active regions instead of one-at-a-time substates.
         public var isParallel: Bool
+        /// `.final()` marker — XState v6's `type: 'final'`; entering it completes the parent (firing
+        /// the parent's `OnDone`).
+        public var isFinal: Bool
         public var transitions: [TransitionNode]
+        /// Eventless guarded transitions (`Always`) — re-evaluated after every microstep.
+        public var always: [GuardedTransition]
+        /// Delayed transitions (`After`).
+        public var after: [AfterEntry]
+        /// Transitions taken when this compound/parallel node's children complete (`OnDone`).
+        public var onDone: [GuardedTransition]
         public var entry: Action?
         public var exit: Action?
         /// Child states in declaration order. Non-empty makes this a compound (or, with
@@ -45,7 +54,11 @@ public struct MachineSchema<
             id: StateID,
             isInitial: Bool = false,
             isParallel: Bool = false,
+            isFinal: Bool = false,
             transitions: [TransitionNode] = [],
+            always: [GuardedTransition] = [],
+            after: [AfterEntry] = [],
+            onDone: [GuardedTransition] = [],
             entry: Action? = nil,
             exit: Action? = nil,
             children: [StateNode] = [],
@@ -54,15 +67,20 @@ public struct MachineSchema<
             self.id = id
             self.isInitial = isInitial
             self.isParallel = isParallel
+            self.isFinal = isFinal
             self.transitions = transitions
+            self.always = always
+            self.after = after
+            self.onDone = onDone
             self.entry = entry
             self.exit = exit
             self.children = children
             self.initialChild = initialChild
         }
 
-        /// `.atomic` (leaf) / `.compound` (has children) / `.parallel` (marked) — the engine node type.
+        /// `.final` / `.parallel` / `.compound` (has children) / `.atomic` (leaf) — the engine node type.
         public var nodeType: StateNodeType {
+            if isFinal { return .final }
             if isParallel { return .parallel }
             return children.isEmpty ? .atomic : .compound
         }
@@ -73,6 +91,26 @@ public struct MachineSchema<
         public let target: StateID
         public var `guard`: Guard?
         public var action: Handler?
+    }
+
+    /// An *eventless* transition — the lowered form of `Always` / `After` / `OnDone`, which fire on a
+    /// condition (a guard, a delay, or child completion) rather than an event.
+    public struct GuardedTransition: Sendable {
+        public let target: StateID
+        public var `guard`: Guard?
+        public var action: Handler?
+
+        public init(target: StateID, guard: Guard? = nil, action: Handler? = nil) {
+            self.target = target
+            self.guard = `guard`
+            self.action = action
+        }
+    }
+
+    /// A delayed transition (`After`) — its `delayMS` becomes the engine's `after` key.
+    public struct AfterEntry: Sendable {
+        public var delayMS: Int
+        public var transition: GuardedTransition
     }
 
     public private(set) var states: [StateID: StateNode]
