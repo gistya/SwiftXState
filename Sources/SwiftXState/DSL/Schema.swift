@@ -1,10 +1,10 @@
-import properties
+import CompositionalInit
 
 /// A composable machine component — the result-builder element, in the spirit of SwiftUI's `View`.
 /// Each component knows how to *fold itself into* a `MachineSchema`. `XState`, `XTransition`-bearing
 /// blocks, and `MachineSchema` itself all conform, so `@MachineBuilder` can reduce a declaration
 /// block down to one schema.
-public protocol SchemaReducible<Context, EventID, StateID>: MachineSchemable, Clonable, Sendable {
+public protocol SchemaReducible<Context, EventID, StateID>: MachineSchemable, Cloneable, Sendable {
     func folded(into schema: MachineSchema<Context, EventID, StateID>) -> MachineSchema<Context, EventID, StateID>
 }
 

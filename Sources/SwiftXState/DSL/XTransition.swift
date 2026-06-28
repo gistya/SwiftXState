@@ -1,4 +1,4 @@
-import properties
+import CompositionalInit
 
 /// A single transition declaration: on `event`, go `to` a target state — refined with the chainable
 /// `.when(_:)` guard and `.action(_:)` context transform.
@@ -12,7 +12,7 @@ public struct XTransition<
     Context: Sendable,
     EventID: EventIdentifying,
     StateID: StateIdentifying
->: Sendable, Clonable {
+>: Sendable, Cloneable {
     public typealias Schema = MachineSchema<Context, EventID, StateID>
 
     public var node: Schema.TransitionNode

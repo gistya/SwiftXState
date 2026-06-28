@@ -1,4 +1,4 @@
-import properties
+import CompositionalInit
 
 /// A single state declaration in the DSL: an id, the transitions out of it, and optional entry/exit
 /// context transforms. Built with the `@TransitionBuilder` trailing block, refined with the
@@ -14,7 +14,7 @@ public struct XState<
     Context: Sendable,
     EventID: EventIdentifying,
     StateID: StateIdentifying
->: SchemaReducible, Identifiable, Clonable {
+>: SchemaReducible, Identifiable, Cloneable {
     public typealias Schema = MachineSchema<Context, EventID, StateID>
 
     public let id: StateID

@@ -1,4 +1,4 @@
-import properties
+import CompositionalInit
 
 // MARK: - Identity
 

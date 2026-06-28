@@ -54,7 +54,7 @@ struct LogicActorPersistenceTests {
         await source.send(Event("INC")); await source.send(Event("INC")); await source.send(Event("INC"))
         let persisted = try await source.getPersistedSnapshot()
 
-        let restored = try await Actor(MachineLogic(machine: machine)).start(from: persisted)
+        let restored = await Actor(MachineLogic(machine: machine)).start(from: persisted)
         #expect(await restored.snapshot.context.count == 3)
         #expect(await restored.snapshot.matches("active"))
         // Restored actor is live.
@@ -69,7 +69,7 @@ struct LogicActorPersistenceTests {
         await a.send(Event("INC")); await a.send(Event("INC"))
         let persisted = try await a.getPersistedSnapshot()
 
-        let b = try await Actor(MachineLogic(machine: machine)).start(from: persisted)
+        let b = await Actor(MachineLogic(machine: machine)).start(from: persisted)
         #expect(await b.snapshot.context.count == 2)
         #expect(await b.snapshot.matches("active"))
     }
@@ -90,7 +90,7 @@ struct LogicActorPersistenceTests {
         let persisted = try await source.getPersistedSnapshot()
 
         let oldRestored = await createActor(parent).start(from: persisted)
-        let newRestored = try await Actor(MachineLogic(machine: parent)).start(from: persisted)
+        let newRestored = await Actor(MachineLogic(machine: parent)).start(from: persisted)
         #expect(await oldRestored.snapshot.children.keys.sorted() == newRestored.snapshot.children.keys.sorted())
         #expect(await newRestored.snapshot.children.keys.sorted() == ["kid"])
     }
