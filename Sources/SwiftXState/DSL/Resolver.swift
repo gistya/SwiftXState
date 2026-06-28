@@ -7,7 +7,7 @@ public extension MachineSchema {
     /// that turns typed ids into string node keys/targets (via `name`) and typed handlers into the
     /// engine's `assign`/`guard` refs. The result runs on the existing `Actor` / `MachineLogic` /
     /// macrostep unchanged — the typed DSL is, in the end, an alternate constructor for a machine.
-    func resolve(id: String? = nil) -> ResolvedMachine<Context> {
+    func resolve(id: String? = nil, context: Context? = nil) -> ResolvedMachine<Context> {
         var stateConfigs: [String: StateNodeConfig<Context>] = [:]
         for stateID in order {
             guard let node = states[stateID] else { continue }
@@ -20,6 +20,7 @@ public extension MachineSchema {
         return createMachine(MachineConfig<Context>(
             id: id,
             initial: initialState?.name,
+            context: context,
             states: stateConfigs
         ))
     }
@@ -90,9 +91,10 @@ public extension MachineSchema {
 }
 
 public extension StateMachine {
-    /// Fold + resolve in one step — the running machine for the engine.
+    /// Fold + resolve in one step — the running machine for the engine, with the declared `context`
+    /// baked into the `MachineConfig` so `start()` needs no argument.
     func resolvedMachine(id: String? = nil) -> ResolvedMachine<Context> {
-        buildSchema().resolve(id: id)
+        buildSchema().resolve(id: id, context: context)
     }
 }
 

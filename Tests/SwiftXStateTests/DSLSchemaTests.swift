@@ -15,6 +15,7 @@ struct DSLSchemaTests {
         typealias StateID = LightState
         typealias EventID = LightEvent
 
+        var context: TrafficContext { .init() }
         var machine: some XStateMachine {
             XState(.red)    { XTransition(on: .go,      to: .green)  }.initial()
             XState(.green)  { XTransition(on: .caution, to: .yellow) }
@@ -49,6 +50,7 @@ struct DSLSchemaTests {
             typealias Context = Int
             typealias StateID = LightState
             typealias EventID = LightEvent
+            var context: Int { 0 }
             var machine: some XStateMachine {
                 XState(.red) { XTransition(on: .go, to: .green).when { ctx in ctx > 0 } }.initial()
                 XState(.green) {}
@@ -65,6 +67,7 @@ struct DSLSchemaTests {
             typealias Context = Int
             typealias StateID = String
             typealias EventID = String
+            var context: Int { 0 }
             var machine: some XStateMachine {
                 XState("idle") { XTransition(on: "GO", to: "running") }.initial()
                 XState("running") {}

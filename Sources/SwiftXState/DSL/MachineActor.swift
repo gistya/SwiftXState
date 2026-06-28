@@ -122,6 +122,6 @@ public func createActor<M: StateMachine>(
     inspect: (@Sendable (InspectionEvent) -> Void)? = nil
 ) -> MachineActor<M> {
     let schema = machine.buildSchema()
-    let engine = createActor(schema.resolve(id: id), id: id, options: options, inspect: inspect)
+    let engine = createActor(schema.resolve(id: id, context: machine.context), id: id, options: options, inspect: inspect)
     return MachineActor(actor: engine, schema: schema)
 }

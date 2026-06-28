@@ -14,6 +14,7 @@ struct DSLRunTests {
         typealias Context = TrafficContext
         typealias StateID = LightState
         typealias EventID = LightEvent
+        var context: TrafficContext { .init() }
         var machine: some XStateMachine {
             XState(.red)    { XTransition(on: .go,      to: .green)  }.initial()
             XState(.green)  { XTransition(on: .caution, to: .yellow) }
@@ -46,6 +47,7 @@ struct DSLRunTests {
             typealias Context = Int
             typealias StateID = LightState
             typealias EventID = LightEvent
+            var context: Int { 0 }
             var machine: some XStateMachine {
                 XState(.red) { XTransition(on: .go, to: .green).when { $0 > 0 } }.initial()
                 XState(.green) {}
@@ -67,6 +69,7 @@ struct DSLRunTests {
             typealias Context = Int
             typealias StateID = String
             typealias EventID = String
+            var context: Int { 0 }
             var machine: some XStateMachine {
                 XState("off") { XTransition(on: "FLIP", to: "on") }.initial()
                 XState("on")  { XTransition(on: "FLIP", to: "off") }

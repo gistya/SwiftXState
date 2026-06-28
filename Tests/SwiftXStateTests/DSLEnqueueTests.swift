@@ -12,6 +12,7 @@ struct DSLEnqueueTests {
         typealias Context = Int
         typealias StateID = S
         typealias EventID = E
+        var context: Int { 0 }
         var machine: some XStateMachine {
             XState(.idle) {
                 XTransition(on: .start, to: .working).action { args, enq in

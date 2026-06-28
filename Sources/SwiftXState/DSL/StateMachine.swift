@@ -7,6 +7,8 @@
 ///     typealias StateID = Light.State
 ///     typealias EventID = Light.Event
 ///
+///     var context: TrafficContext { .init() }
+///
 ///     var machine: some XStateMachine {
 ///         XState(.red)    { XTransition(on: .go,      to: .green)  }.initial()
 ///         XState(.green)  { XTransition(on: .caution, to: .yellow) }
@@ -19,6 +21,12 @@ public protocol StateMachine<Context, EventID, StateID>: MachineSchemable, Senda
     typealias XStateMachine = SchemaReducible<Context, EventID, StateID>
 
     associatedtype Body: XStateMachine
+
+    /// The machine's initial context — XState v6's `createMachine({ context })`. Declared on the
+    /// machine (evaluated fresh per actor) so `createActor(machine).start()` needs no context
+    /// argument; an explicit `start(context:)` override still wins. The input-derived form
+    /// (`context: ({ input }) => …`) arrives with the typed-input phase.
+    var context: Context { get }
 
     @MachineBuilder<Context, EventID, StateID>
     var machine: Body { get }

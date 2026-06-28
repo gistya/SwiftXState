@@ -14,6 +14,7 @@ struct DSLMachineActorTests {
         typealias Context = TrafficContext
         typealias StateID = LightState
         typealias EventID = LightEvent
+        var context: TrafficContext { .init() }
         var machine: some XStateMachine {
             XState(.red)    { XTransition(on: .go,      to: .green)  }.initial()
             XState(.green)  { XTransition(on: .caution, to: .yellow) }
@@ -24,7 +25,7 @@ struct DSLMachineActorTests {
     @Test func typedSendAndMatch() async {
         // No `.event`, no `schema.configuration(from:)` anywhere below — the whole surface is typed.
         let light = createActor(TrafficLight())
-        let initial = await light.start(context: TrafficContext())
+        let initial = await light.start()
 
         #expect(initial == .atomic(.red))
         #expect(await light.matches(.red))
@@ -43,7 +44,7 @@ struct DSLMachineActorTests {
 
     @Test func machineDotActorConvenience() async {
         let light = TrafficLight().actor()
-        await light.start(context: TrafficContext())
+        await light.start()
         await light.send(.go)
         #expect(await light.matches(.green))
     }
@@ -57,7 +58,7 @@ struct DSLMachineActorTests {
             if let config { Task { await recorder.add(config) } }
         }
 
-        await light.start(context: TrafficContext())
+        await light.start()
         await light.send(.go)
         await light.send(.caution)
         sub.cancel()
@@ -70,10 +71,43 @@ struct DSLMachineActorTests {
         #expect(seen.contains(.yellow))
     }
 
+    @Test func declaredContextSeedsStart() async {
+        // `start()` takes no context — TrafficLight.context (XState v6 `createMachine({ context })`)
+        // is baked into the engine config and seeds the initial context.
+        struct Counting: StateMachine {
+            typealias Context = TrafficContext
+            typealias StateID = LightState
+            typealias EventID = LightEvent
+            var context: TrafficContext { .init(cycles: 7) }
+            var machine: some XStateMachine {
+                XState(.red) { XTransition(on: .go, to: .green) }.initial()
+                XState(.green) {}
+            }
+        }
+        let m = createActor(Counting())
+        await m.start()
+        #expect(await m.context.cycles == 7)            // declared context seeded the actor
+    }
+
+    @Test func startContextOverrideWins() async {
+        struct Counting: StateMachine {
+            typealias Context = TrafficContext
+            typealias StateID = LightState
+            typealias EventID = LightEvent
+            var context: TrafficContext { .init(cycles: 7) }
+            var machine: some XStateMachine {
+                XState(.red) {}.initial()
+            }
+        }
+        let m = createActor(Counting())
+        await m.start(context: TrafficContext(cycles: 99))
+        #expect(await m.context.cycles == 99)           // explicit start(context:) beats the declared one
+    }
+
     @Test func untypedEscapeHatchStillReachable() async {
         // `actor` exposes the raw engine actor for untyped sends / inspection.
         let light = createActor(TrafficLight())
-        await light.start(context: TrafficContext())
+        await light.start()
         await light.actor.send(LightEvent.go.event)
         #expect(await light.matches(.green))
     }
