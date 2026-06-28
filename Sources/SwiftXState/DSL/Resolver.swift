@@ -11,11 +11,7 @@ public extension MachineSchema {
         var stateConfigs: [String: StateNodeConfig<Context>] = [:]
         for stateID in order {
             guard let node = states[stateID] else { continue }
-            stateConfigs[stateID.name] = StateNodeConfig(
-                on: Self.transitionInputs(node.transitions),
-                entry: node.entry.map { [Self.assignAction($0)] },
-                exit: node.exit.map { [Self.assignAction($0)] }
-            )
+            stateConfigs[stateID.name] = Self.nodeConfig(node)
         }
         return createMachine(MachineConfig<Context>(
             id: id,
@@ -25,10 +21,28 @@ public extension MachineSchema {
         ))
     }
 
-    /// Project an engine `StateValue` back into a typed `Configuration` by matching id `name`s.
-    /// (Flat/atomic today; nested projection arrives with the hierarchy phase.)
+    /// Recursively lower a typed `StateNode` (and its children) to an engine `StateNodeConfig`.
+    /// Compound is inferred by the engine from a non-nil `states`; parallel is set explicitly.
+    private static func nodeConfig(_ node: StateNode) -> StateNodeConfig<Context> {
+        var childConfigs: [String: StateNodeConfig<Context>] = [:]
+        for child in node.children {
+            childConfigs[child.id.name] = nodeConfig(child)
+        }
+        return StateNodeConfig(
+            initial: node.initialChild?.name,
+            type: node.isParallel ? .parallel : nil,
+            states: childConfigs.isEmpty ? nil : childConfigs,
+            on: transitionInputs(node.transitions),
+            entry: node.entry.map { [assignAction($0)] },
+            exit: node.exit.map { [assignAction($0)] }
+        )
+    }
+
+    /// Project an engine `StateValue` back into a typed `Configuration` by matching id `name`s — at
+    /// every depth, so a nested compound (`.compound([parent: .atomic(child)])`) or parallel
+    /// (`.compound` with several keys) value resolves to a typed `Configuration.nested` tree.
     func configuration(from value: StateValue) -> Configuration<StateID>? {
-        let byName = Dictionary(order.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
+        let byName = Self.idsByName(states)
         func project(_ v: StateValue) -> Configuration<StateID>? {
             switch v {
             case let .atomic(name):
@@ -44,6 +58,18 @@ public extension MachineSchema {
             }
         }
         return project(value)
+    }
+
+    /// Index every state id in the tree by its lowered `name` — the lookup the `StateValue → typed
+    /// Configuration` projection needs at all depths (engine values are dotted/nested by name).
+    private static func idsByName(_ nodes: [StateID: StateNode]) -> [String: StateID] {
+        var map: [String: StateID] = [:]
+        func walk(_ node: StateNode) {
+            map[node.id.name] = node.id
+            for child in node.children { walk(child) }
+        }
+        for node in nodes.values { walk(node) }
+        return map
     }
 
     private static func transitionInputs(_ transitions: [TransitionNode]) -> [String: TransitionInput<Context>]? {

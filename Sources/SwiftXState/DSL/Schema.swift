@@ -26,10 +26,46 @@ public struct MachineSchema<
 
     public struct StateNode: Sendable, Identifiable {
         public let id: StateID
+        /// Whether this node is the initial state among its siblings (its parent's `initial`, or the
+        /// machine's `initial` at the root).
         public var isInitial: Bool
+        /// `.parallel()` marker — XState v6's `type: 'parallel'`; its `children` become concurrently
+        /// active regions instead of one-at-a-time substates.
+        public var isParallel: Bool
         public var transitions: [TransitionNode]
         public var entry: Action?
         public var exit: Action?
+        /// Child states in declaration order. Non-empty makes this a compound (or, with
+        /// `isParallel`, a parallel) node.
+        public var children: [StateNode]
+        /// The initial child among `children` (compound only).
+        public var initialChild: StateID?
+
+        public init(
+            id: StateID,
+            isInitial: Bool = false,
+            isParallel: Bool = false,
+            transitions: [TransitionNode] = [],
+            entry: Action? = nil,
+            exit: Action? = nil,
+            children: [StateNode] = [],
+            initialChild: StateID? = nil
+        ) {
+            self.id = id
+            self.isInitial = isInitial
+            self.isParallel = isParallel
+            self.transitions = transitions
+            self.entry = entry
+            self.exit = exit
+            self.children = children
+            self.initialChild = initialChild
+        }
+
+        /// `.atomic` (leaf) / `.compound` (has children) / `.parallel` (marked) — the engine node type.
+        public var nodeType: StateNodeType {
+            if isParallel { return .parallel }
+            return children.isEmpty ? .atomic : .compound
+        }
     }
 
     public struct TransitionNode: Sendable {

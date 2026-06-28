@@ -88,6 +88,12 @@ public struct MachineActor<M: StateMachine>: Sendable {
         await configuration?.matches(id) ?? false
     }
 
+    /// Whether a dotted path of state `name`s is active, e.g. `"red.walk"` — the typed analog of
+    /// XState's `snapshot.matches('red.walk')`, for reaching into compound/parallel substates.
+    public func matches(path: String) async -> Bool {
+        await configuration?.matches(path: path) ?? false
+    }
+
     /// Subscribe to snapshot changes, projected to the typed `Configuration` + `Context`.
     public func subscribe(
         _ handler: @escaping @Sendable (Configuration<StateID>?, Context) -> Void
