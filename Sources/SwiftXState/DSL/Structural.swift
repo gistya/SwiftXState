@@ -125,6 +125,20 @@ public struct OnDone<
     public func action(_ handler: @escaping Schema.Handler) -> Self {
         clone(mutating: \.node.action <- handler)
     }
+
+    /// Read the completed region's typed `output` as the done transition is taken — XState v6's
+    /// `onDone: ({ output }) => …`. The final state's `output` is decoded to `Output`; if it's absent
+    /// or a different type, the context passes through unchanged.
+    public func action<Output: Sendable & Equatable>(
+        reading _: Output.Type = Output.self,
+        _ transform: @escaping @Sendable (Output, Context) -> Context
+    ) -> Self {
+        let outputAction: @Sendable (SendableValue?, Context) -> Context = { output, context in
+            guard let value = output?.get(Output.self) else { return context }
+            return transform(value, context)
+        }
+        return clone(mutating: \.node.outputAction <- outputAction)
+    }
 }
 
 // MARK: - Invoke (child actors)
@@ -182,8 +196,32 @@ public struct Invoke<
         clone(mutating: \.node.onDone <- Schema.GuardedTransition(target: target))
     }
 
+    /// Transition taken when the child completes — reading the child's typed `output` into the
+    /// parent context (XState v6's `onDone: ({ output }) => …`). Absent / mismatched output passes
+    /// the context through unchanged.
+    public func onDone<Output: Sendable & Equatable>(
+        to target: StateID,
+        reading _: Output.Type = Output.self,
+        _ transform: @escaping @Sendable (Output, Context) -> Context
+    ) -> Self {
+        let outputAction: @Sendable (SendableValue?, Context) -> Context = { output, context in
+            guard let value = output?.get(Output.self) else { return context }
+            return transform(value, context)
+        }
+        return clone(mutating: \.node.onDone <- Schema.GuardedTransition(target: target, outputAction: outputAction))
+    }
+
     /// Transition taken when the child errors.
     public func onError(to target: StateID) -> Self {
         clone(mutating: \.node.onError <- Schema.GuardedTransition(target: target))
+    }
+
+    /// Transition taken when the child errors — reading the error string into the parent context
+    /// (XState v6's `onError`).
+    public func onError(
+        to target: StateID,
+        _ transform: @escaping @Sendable (String, Context) -> Context
+    ) -> Self {
+        clone(mutating: \.node.onError <- Schema.GuardedTransition(target: target, errorAction: transform))
     }
 }

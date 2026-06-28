@@ -44,6 +44,9 @@ public struct MachineSchema<
         public var onDone: [GuardedTransition]
         /// Child actors invoked while this state is active (`Invoke`).
         public var invokes: [InvokeNode]
+        /// The output this (final) state produces on completion — XState v6's final-state `output`,
+        /// read back by an enclosing `OnDone` / parent `onDone`.
+        public var output: (@Sendable (Context) -> SendableValue?)?
         /// Entry/exit handlers — XState v6's `(args, enq) -> context` form (may patch context and
         /// enqueue effects; may not target). A pure `(consuming Context) -> Context` transform is
         /// wrapped into this shape by `XState.onEntry`/`onExit`.
@@ -65,6 +68,7 @@ public struct MachineSchema<
             after: [AfterEntry] = [],
             onDone: [GuardedTransition] = [],
             invokes: [InvokeNode] = [],
+            output: (@Sendable (Context) -> SendableValue?)? = nil,
             entry: Handler? = nil,
             exit: Handler? = nil,
             children: [StateNode] = [],
@@ -79,6 +83,7 @@ public struct MachineSchema<
             self.after = after
             self.onDone = onDone
             self.invokes = invokes
+            self.output = output
             self.entry = entry
             self.exit = exit
             self.children = children
@@ -126,11 +131,25 @@ public struct MachineSchema<
         public let target: StateID
         public var `guard`: Guard?
         public var action: Handler?
+        /// Reads the completing child's / final state's `output` (XState v6's `onDone: ({ output })`).
+        /// The raw `SendableValue?` comes from the engine's `DoneActorEvent` / `DoneStateEvent`; the
+        /// typed `.action(reading:)` / `.onDone(to:_:)` overloads decode it before calling user code.
+        public var outputAction: (@Sendable (SendableValue?, Context) -> Context)?
+        /// Reads the failed child's `error` string (XState v6's `onError`), from `ErrorActorEvent`.
+        public var errorAction: (@Sendable (String, Context) -> Context)?
 
-        public init(target: StateID, guard: Guard? = nil, action: Handler? = nil) {
+        public init(
+            target: StateID,
+            guard: Guard? = nil,
+            action: Handler? = nil,
+            outputAction: (@Sendable (SendableValue?, Context) -> Context)? = nil,
+            errorAction: (@Sendable (String, Context) -> Context)? = nil
+        ) {
             self.target = target
             self.guard = `guard`
             self.action = action
+            self.outputAction = outputAction
+            self.errorAction = errorAction
         }
     }
 

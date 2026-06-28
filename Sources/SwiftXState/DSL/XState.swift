@@ -38,6 +38,7 @@ public struct XState<
     public var after: [Schema.AfterEntry]
     public var onDone: [Schema.GuardedTransition]
     public var invokes: [Schema.InvokeNode]
+    public var output: (@Sendable (Context) -> SendableValue?)?
     public var entry: Schema.Handler?
     public var exit: Schema.Handler?
     public var children: [Schema.StateNode]
@@ -57,6 +58,7 @@ public struct XState<
         self.after = body.after
         self.onDone = body.onDone
         self.invokes = body.invokes
+        self.output = nil
         self.entry = nil
         self.exit = nil
         self.children = body.children
@@ -78,6 +80,15 @@ public struct XState<
     /// firing the parent's `OnDone`.
     public func final(_ value: Bool = true) -> Self {
         clone(mutating: \.isFinal <- value)
+    }
+
+    /// Produce a typed `output` from context when this (final) state is reached — XState v6's
+    /// final-state `output`, read back by an enclosing `OnDone` / parent `onDone`.
+    public func output<Output: Sendable & Equatable>(
+        _ make: @escaping @Sendable (Context) -> Output
+    ) -> Self {
+        let resolver: @Sendable (Context) -> SendableValue? = { context in SendableValue(make(context)) }
+        return clone(mutating: \.output <- resolver)
     }
 
     /// Run a pure context transform when this state is entered.
@@ -115,6 +126,7 @@ public struct XState<
             after: after,
             onDone: onDone,
             invokes: invokes,
+            output: output,
             entry: entry,
             exit: exit,
             children: children,

@@ -39,7 +39,8 @@ public extension MachineSchema {
             after: afterInputs(node.after),
             invoke: node.invokes.isEmpty ? nil : node.invokes.map { invokeConfig($0) },
             entry: node.entry.map { [handlerAction($0)] },
-            exit: node.exit.map { [handlerAction($0)] }
+            exit: node.exit.map { [handlerAction($0)] },
+            output: node.output.map { make in { @Sendable (args: ActionArgs<Context>) in make(args.context) } }
         )
     }
 
@@ -56,11 +57,35 @@ public extension MachineSchema {
     }
 
     /// Lower an eventless guarded transition (`Always` / `After` / `OnDone`) to a `TransitionConfig`.
+    /// Output/error-reading actions pull from the triggering `DoneActorEvent` / `DoneStateEvent` /
+    /// `ErrorActorEvent` (XState v6's `onDone: ({ output })` / `onError`).
     private static func guardedConfig(_ t: GuardedTransition) -> TransitionConfig<Context> {
-        TransitionConfig(
+        var actions: [ActionRef<Context>] = []
+        if let action = t.action {
+            actions.append(handlerAction(action))
+        }
+        if let outputAction = t.outputAction {
+            actions.append(assign { (ctx: inout Context, args: ActionArgs<Context>) in
+                let output: SendableValue?
+                switch args.event {
+                case let done as DoneActorEvent: output = done.output
+                case let done as DoneStateEvent: output = done.output
+                default: output = nil
+                }
+                ctx = outputAction(output, ctx)
+            })
+        }
+        if let errorAction = t.errorAction {
+            actions.append(assign { (ctx: inout Context, args: ActionArgs<Context>) in
+                if let error = (args.event as? ErrorActorEvent)?.error {
+                    ctx = errorAction(error, ctx)
+                }
+            })
+        }
+        return TransitionConfig(
             target: t.target.name,
             guard: t.`guard`.map { g in GuardRef.inline { args in g(args.context) } },
-            actions: t.action.map { [handlerAction($0)] }
+            actions: actions.isEmpty ? nil : actions
         )
     }
 
