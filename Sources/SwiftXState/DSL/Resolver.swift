@@ -140,8 +140,10 @@ public extension MachineSchema {
     /// raised event queues after the patch — run-to-completion safe).
     private static func handlerAction(_ handler: @escaping Handler) -> ActionRef<Context> {
         enqueueActions { builder in
-            let enq = Enqueue<Context, EventID>(context: builder.context, event: builder.event)
-            let args = XTransitionArgs<Context, EventID>(context: builder.context, event: builder.event)
+            // Recover the typed id if this transition was triggered by a directly-sent typed event.
+            let triggeringID = (builder.event as? TypedEvent<EventID>)?.id
+            let enq = Enqueue<Context, EventID>(context: builder.context, event: triggeringID)
+            let args = XTransitionArgs<Context, EventID>(context: builder.context, event: triggeringID)
             let next = handler(args, enq)
             builder.enqueue(assign { (ctx: inout Context, _: ActionArgs<Context>) in ctx = next })
             for effect in enq.collected { builder.enqueue(effect) }
@@ -163,6 +165,7 @@ public extension StateMachine {
 }
 
 public extension EventIdentifying {
-    /// The engine event this id sends — `actor.send(LightEvent.go.event)`.
-    var event: Event { Event(name) }
+    /// The engine event this id sends — `actor.send(LightEvent.go.event)`. A `TypedEvent` so a
+    /// payload-carrying case survives the send and is readable, typed, in the handler.
+    var event: TypedEvent<Self> { TypedEvent(self) }
 }

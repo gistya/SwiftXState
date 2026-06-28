@@ -13,8 +13,16 @@ public protocol BasicIdentifying: Hashable, Sendable, PropertyInitializable {
 }
 
 public extension BasicIdentifying {
-    /// Default: the case name (e.g. `Light.State.red` → `"red"`). Override for custom wire names.
-    var name: String { String(describing: self) }
+    /// Default: the case *discriminant* (e.g. `Light.State.red` → `"red"`, and crucially
+    /// `Event.increment(by: 5)` → `"increment"`, not `"increment(by: 5)"`). Using `Mirror` to read the
+    /// enum label keeps the routing key stable across an event's payload. Override for custom wire names.
+    var name: String {
+        let mirror = Mirror(reflecting: self)
+        if mirror.displayStyle == .enum, let label = mirror.children.first?.label {
+            return label
+        }
+        return String(describing: self)
+    }
 }
 
 public extension BasicIdentifying where Self: RawRepresentable, Self.RawValue == String {
