@@ -1,141 +1,134 @@
 import Foundation
 import SwiftXState
 
-enum ChessMachineFactory: Sendable {
+/// Every state in the chess machine. `root` is a parallel wrapper holding the two regions; `game` is
+/// a compound (playing / gameOver / replaying); `castling` is parallel over four sides, each a
+/// compound `available` / `forfeited`. (`available` / `forfeited` are shared across the four sides —
+/// the typed `Configuration` keeps them distinct by their parent path.)
+enum ChessState: String, StateIdentifying {
+    case root
+    case game, castling
+    case playing, gameOver, replaying
+    case whiteKingside, whiteQueenside, blackKingside, blackQueenside
+    case available, forfeited
+
+    static var _blank: ChessState { .root }
+}
+
+/// The chess game as a typed `StateMachine` — was `ChessMachineFactory` over `createMachine` /
+/// `MachineConfig` / `StateNodeConfig` with `setup(guards:)` named guards. Taps drive `game`
+/// (`ChessRules.handleTap`) and, in parallel, the `castling` region's per-side **event-aware** forfeit
+/// guards (`.when { ctx, event in … }`).
+struct ChessGameMachine: StateMachine {
+    typealias Context = ChessContext
+    typealias StateID = ChessState
+    typealias EventID = ChessEvent
+
     static let id = "chess"
-    static let machine: StateMachine<ChessContext> = build()
 
-    static func make() -> StateMachine<ChessContext> {
-        machine
-    }
+    var context: ChessContext { .initial() }
 
-    private static func build() -> StateMachine<ChessContext> {
-        let machineSetup = ChessCastlingMachine.registerGuards(
-            into: setup(guards: [
-                "hasOutcome": { args in args.context.outcome != nil },
-                "isReplaying": { args in args.context.replaySession != nil },
-            ])
-        )
-        return machineSetup.createMachine(
-            MachineConfig(
-                id: id,
-                context: ChessContext.initial(),
-                states: [
-                    "game": StateNodeConfig(
-                        initial: "playing",
-                        states: [
-                            "playing": StateNodeConfig(
-                                on: [
-                                    "TAP.*": .single(TransitionConfig(actions: [assign { ctx, args in
-                                        handleTap(&ctx, args: args)
-                                    }])),
-                                    "PROMOTE.*": .single(TransitionConfig(actions: [assign { ctx, args in
-                                        handlePromotion(&ctx, args: args)
-                                    }])),
-                                    ChessEvent.newGame.type: .single(
-                                        TransitionConfig(target: "playing", actions: [assign { ctx, args in
-                                            resetGame(&ctx, args)
-                                        }])
-                                    ),
-                                    ChessEvent.enterReplay.type: .single(
-                                        TransitionConfig(target: "replaying", actions: [assign { ctx, args in
-                                            enterReplay(&ctx, args)
-                                        }])
-                                    ),
-                                ],
-                                always: [
-                                    TransitionConfig(
-                                        target: "gameOver",
-                                        guard: .named("hasOutcome")
-                                    ),
-                                ]
-                            ),
-                            "gameOver": StateNodeConfig(
-                                on: [
-                                    ChessEvent.newGame.type: .single(
-                                        TransitionConfig(target: "playing", actions: [assign { ctx, args in
-                                            resetGame(&ctx, args)
-                                        }])
-                                    ),
-                                    ChessEvent.enterReplay.type: .single(
-                                        TransitionConfig(target: "replaying", actions: [assign { ctx, args in
-                                            enterReplay(&ctx, args)
-                                        }])
-                                    ),
-                                ]
-                            ),
-                            "replaying": StateNodeConfig(
-                                on: [
-                                    ChessEvent.exitReplay.type: .single(
-                                        TransitionConfig(target: "playing", actions: [assign { ctx, args in
-                                            exitReplay(&ctx, args)
-                                        }])
-                                    ),
-                                    ChessEvent.newGame.type: .single(
-                                        TransitionConfig(target: "playing", actions: [assign { ctx, args in
-                                            resetGame(&ctx, args)
-                                        }])
-                                    ),
-                                    "REPLAY_SCRUB.*": .single(TransitionConfig(actions: [assign { ctx, args in
-                                        scrubReplay(&ctx, args: args)
-                                    }])),
-                                ]
-                            ),
-                        ]
-                    ),
-                    "castling": ChessCastlingMachine.region(),
-                ],
-                type: .parallel
-            )
-        )
-    }
+    var machine: some XStateMachine {
+        XState(.root) {
+            // ── game region ──────────────────────────────────────────────────────────────
+            XState(.game) {
+                XState(.playing) {
+                    XTransition(on: ChessEvent.tap, to: .playing).action { args, _ in
+                        var ctx = args.context
+                        guard ctx.replaySession == nil, case let .tap(square)? = args.event else { return ctx }
+                        ChessRules.handleTap(&ctx, at: square)
+                        return ctx
+                    }
+                    XTransition(on: ChessEvent.promote, to: .playing).action { args, _ in
+                        var ctx = args.context
+                        guard ctx.replaySession == nil, case let .promote(kind)? = args.event else { return ctx }
+                        ChessRules.handlePromotion(&ctx, piece: kind)
+                        return ctx
+                    }
+                    XTransition(on: .newGame, to: .playing).action(Self.resetGame)
+                    XTransition(on: .enterReplay, to: .replaying).action(Self.enterReplay)
+                    Always(to: .gameOver).when { $0.outcome != nil }
+                }
+                .initial()
 
-    private nonisolated static func handleTap(_ context: inout ChessContext, args: ActionArgs<ChessContext>) {
-        guard context.replaySession == nil,
-              let event = ChessEvent.parse(args.event),
-              case let .tap(square) = event else {
-            return
+                XState(.gameOver) {
+                    XTransition(on: .newGame, to: .playing).action(Self.resetGame)
+                    XTransition(on: .enterReplay, to: .replaying).action(Self.enterReplay)
+                }
+
+                XState(.replaying) {
+                    XTransition(on: .exitReplay, to: .playing).action(Self.exitReplay)
+                    XTransition(on: .newGame, to: .playing).action(Self.resetGame)
+                    XTransition(on: ChessEvent.replayScrub, to: .replaying).action { args, _ in
+                        var ctx = args.context
+                        guard case let .replayScrub(step)? = args.event else { return ctx }
+                        Self.syncReplaySnapshot(&ctx, step: step)
+                        return ctx
+                    }
+                }
+            }
+
+            // ── castling region (parallel over the four sides) ───────────────────────────
+            XState(.castling) {
+                castlingSide(.whiteKingside, forfeits: ChessRules.forfeitsWhiteKingside)
+                castlingSide(.whiteQueenside, forfeits: ChessRules.forfeitsWhiteQueenside)
+                castlingSide(.blackKingside, forfeits: ChessRules.forfeitsBlackKingside)
+                castlingSide(.blackQueenside, forfeits: ChessRules.forfeitsBlackQueenside)
+            }
+            .parallel()
         }
-        ChessRules.handleTap(&context, at: square)
+        .parallel()
+        .initial()
     }
 
-    private nonisolated static func handlePromotion(_ context: inout ChessContext, args: ActionArgs<ChessContext>) {
-        guard context.replaySession == nil,
-              let event = ChessEvent.parse(args.event),
-              case let .promote(kind) = event else {
-            return
+    /// One castling side: `available` until a tap implies a move that forfeits this side's rights,
+    /// then `forfeited`; `newGame` resets to `available`. The forfeit check is an **event-aware**
+    /// guard — it needs the tapped square from the event, not just context.
+    private func castlingSide(
+        _ id: ChessState,
+        forfeits: @escaping @Sendable (ChessMove) -> Bool
+    ) -> XState<ChessContext, ChessEvent, ChessState> {
+        XState(id) {
+            XState(.available) {
+                XTransition(on: ChessEvent.tap, to: .forfeited).when { ctx, event in
+                    guard case let .tap(to)? = event, let move = ChessRules.pendingMove(ctx, to: to) else { return false }
+                    return forfeits(move)
+                }
+                XTransition(on: .newGame, to: .available)
+            }
+            .initial()
+
+            XState(.forfeited) {
+                XTransition(on: .newGame, to: .available)
+            }
         }
-        ChessRules.handlePromotion(&context, piece: kind)
     }
 
-    private nonisolated static func resetGame(_ context: inout ChessContext, _: ActionArgs<ChessContext>) {
-        context = ChessContext.initial()
+    // MARK: - Action handlers (call ChessRules / the replay bridge; logic unchanged from the factory)
+
+    static func resetGame(_: consuming ChessContext) -> ChessContext {
         ChessReplayBridge.clearPendingSession()
+        return ChessContext.initial()
     }
 
-    private nonisolated static func enterReplay(_ context: inout ChessContext, _: ActionArgs<ChessContext>) {
-        guard let session = ChessReplayBridge.takePendingSession() else { return }
-        context.captureLiveSnapshot()
-        context.replaySession = session
-        let lastStep = max(session.steps.count - 1, 0)
-        syncReplaySnapshot(&context, step: lastStep)
+    static func enterReplay(_ context: consuming ChessContext) -> ChessContext {
+        var ctx = context
+        guard let session = ChessReplayBridge.takePendingSession() else { return ctx }
+        ctx.captureLiveSnapshot()
+        ctx.replaySession = session
+        syncReplaySnapshot(&ctx, step: max(session.steps.count - 1, 0))
+        return ctx
     }
 
-    private nonisolated static func exitReplay(_ context: inout ChessContext, _: ActionArgs<ChessContext>) {
-        context.replaySession = nil
-        context.replayStep = 0
-        context.restoreLiveSnapshot()
+    static func exitReplay(_ context: consuming ChessContext) -> ChessContext {
+        var ctx = context
+        ctx.replaySession = nil
+        ctx.replayStep = 0
+        ctx.restoreLiveSnapshot()
+        return ctx
     }
 
-    private nonisolated static func scrubReplay(_ context: inout ChessContext, args: ActionArgs<ChessContext>) {
-        guard let event = ChessEvent.parse(args.event),
-              case let .replayScrub(step) = event else {
-            return
-        }
-        syncReplaySnapshot(&context, step: step)
-    }
-
-    nonisolated static func syncReplaySnapshot(_ context: inout ChessContext, step: Int) {
+    static func syncReplaySnapshot(_ context: inout ChessContext, step: Int) {
         guard let session = context.replaySession else { return }
         let clamped = min(max(step, 0), max(session.steps.count - 1, 0))
         ChessReplayRestore.apply(
@@ -147,28 +140,23 @@ enum ChessMachineFactory: Sendable {
     }
 }
 
-/// Bridges UI-recorded sessions into machine actions.
+/// Bridges UI-recorded sessions into machine actions (unchanged).
 enum ChessReplayBridge {
     private static let lock = NSLock()
     private nonisolated(unsafe) static var pendingSession: ReplaySession?
 
     static func setPendingSession(_ session: ReplaySession?) {
-        lock.lock()
-        pendingSession = session
-        lock.unlock()
+        lock.lock(); pendingSession = session; lock.unlock()
     }
 
     static func takePendingSession() -> ReplaySession? {
-        lock.lock()
-        defer { lock.unlock() }
+        lock.lock(); defer { lock.unlock() }
         let session = pendingSession
         pendingSession = nil
         return session
     }
 
     static func clearPendingSession() {
-        lock.lock()
-        pendingSession = nil
-        lock.unlock()
+        lock.lock(); pendingSession = nil; lock.unlock()
     }
 }

@@ -217,7 +217,10 @@ struct ChessContext: Sendable, Equatable, Codable {
     }
 }
 
-enum ChessEvent: Eventable, Equatable {
+/// Typed event union — `EventIdentifying` gives each case its routing discriminant for free; the
+/// hand-written `type` encoding (`TAP.<r>.<c>`, …) and `parse(_:)` are gone. Handlers/guards read the
+/// payload off `args.event`. `Hashable` is synthesized (Square / PieceKind / Int are all Hashable).
+enum ChessEvent: EventIdentifying {
     case tap(Square)
     case promote(PieceKind)
     case newGame
@@ -225,46 +228,5 @@ enum ChessEvent: Eventable, Equatable {
     case exitReplay
     case replayScrub(Int)
 
-    var type: String {
-        switch self {
-        case let .tap(square):
-            return "TAP.\(square.row).\(square.col)"
-        case let .promote(kind):
-            return "PROMOTE.\(kind.rawValue)"
-        case .newGame:
-            return "NEW_GAME"
-        case .enterReplay:
-            return "ENTER_REPLAY"
-        case .exitReplay:
-            return "EXIT_REPLAY"
-        case let .replayScrub(step):
-            return "REPLAY_SCRUB.\(step)"
-        }
-    }
-
-    static func parse(_ event: any Eventable) -> ChessEvent? {
-        let type = event.type
-        if type == "NEW_GAME" { return .newGame }
-        if type == "ENTER_REPLAY" { return .enterReplay }
-        if type == "EXIT_REPLAY" { return .exitReplay }
-        if type.hasPrefix("TAP.") {
-            let parts = type.split(separator: ".")
-            guard parts.count == 3,
-                  let row = Int(parts[1]),
-                  let col = Int(parts[2]) else { return nil }
-            return .tap(Square(row: row, col: col))
-        }
-        if type.hasPrefix("PROMOTE.") {
-            let parts = type.split(separator: ".")
-            guard parts.count == 2,
-                  let kind = PieceKind(rawValue: String(parts[1])) else { return nil }
-            return .promote(kind)
-        }
-        if type.hasPrefix("REPLAY_SCRUB.") {
-            let parts = type.split(separator: ".")
-            guard parts.count == 2, let step = Int(parts[1]) else { return nil }
-            return .replayScrub(step)
-        }
-        return nil
-    }
+    static var _blank: ChessEvent { .newGame }
 }
