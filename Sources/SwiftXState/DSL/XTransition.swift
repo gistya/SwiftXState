@@ -47,9 +47,16 @@ public struct XTransition<
         self.init(on: CasePath(caseInit), to: target)
     }
 
-    /// Only take this transition when the predicate holds.
+    /// Only take this transition when the predicate holds (context-only).
     public func when(_ predicate: @escaping Schema.Guard) -> Self {
         clone(mutating: \.node.`guard` <- predicate)
+    }
+
+    /// Only take this transition when the predicate holds — **event-aware**, XState's
+    /// `({ context, event }) => bool`. The two-argument closure (`{ ctx, event in … }`) disambiguates
+    /// it from the context-only form; `event` is the typed triggering event (`nil` for system events).
+    public func when(_ predicate: @escaping @Sendable (Context, EventID?) -> Bool) -> Self {
+        clone(mutating: \.node.eventGuard <- predicate)
     }
 
     /// Apply a pure context transform as the transition is taken (no effects).

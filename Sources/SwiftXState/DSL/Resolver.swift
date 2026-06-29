@@ -170,24 +170,27 @@ public extension MachineSchema {
     private static func transitionConfig(_ t: TransitionNode) -> TransitionConfig<Context> {
         TransitionConfig(
             target: t.target.name,
-            guard: eventGuard(caseMatch: t.caseMatch, userGuard: t.`guard`),
+            guard: combinedGuard(caseMatch: t.caseMatch, contextGuard: t.`guard`, eventGuard: t.eventGuard),
             actions: t.action.map { [handlerAction($0)] }
         )
     }
 
-    /// Combine the optional case matcher (event-aware) and the optional user guard (context-only)
-    /// into one engine `GuardRef`. A case-matched wildcard transition is taken only when the incoming
-    /// event is the right case *and* the user guard (if any) passes.
-    private static func eventGuard(
+    /// AND-combine the optional case matcher (event-aware), the context-only `guard`, and the
+    /// event-aware `eventGuard` into one engine `GuardRef`: the transition is taken only when the
+    /// incoming event is the right case *and* every guard passes.
+    private static func combinedGuard(
         caseMatch: (@Sendable (EventID) -> Bool)?,
-        userGuard: Guard?
+        contextGuard: Guard?,
+        eventGuard: (@Sendable (Context, EventID?) -> Bool)?
     ) -> GuardRef<Context>? {
-        guard caseMatch != nil || userGuard != nil else { return nil }
+        guard caseMatch != nil || contextGuard != nil || eventGuard != nil else { return nil }
         return GuardRef.inline { args in
+            let typedID = (args.event as? TypedEvent<EventID>)?.id
             if let caseMatch {
-                guard let typed = args.event as? TypedEvent<EventID>, caseMatch(typed.id) else { return false }
+                guard let typedID, caseMatch(typedID) else { return false }
             }
-            if let userGuard { return userGuard(args.context) }
+            if let contextGuard, !contextGuard(args.context) { return false }
+            if let eventGuard, !eventGuard(args.context, typedID) { return false }
             return true
         }
     }

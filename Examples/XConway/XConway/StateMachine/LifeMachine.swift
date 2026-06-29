@@ -18,7 +18,7 @@ public struct LifeMachine: StateMachine {
     public var machine: some XStateMachine {
         XState(.running) {
             // Payload events — referenced by case path, payload read off args.event.
-            XTransition(on: LifeEvent.toggleCell, to: .running).action { args, _ in
+            XTransition(on: .toggleCell, to: .running).action { args, _ in
                 var ctx = args.context
                 if case let .toggleCell(x, y)? = args.event { ctx[x, y].toggle() }
                 return ctx

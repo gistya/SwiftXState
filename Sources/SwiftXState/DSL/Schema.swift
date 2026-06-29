@@ -108,6 +108,9 @@ public struct MachineSchema<
         public var caseMatch: (@Sendable (EventID) -> Bool)?
         public let target: StateID
         public var `guard`: Guard?
+        /// An **event-aware** guard — XState's `({ context, event }) => bool`. Gets the typed
+        /// triggering event (`nil` for system/untyped events); AND-combined with `guard` / `caseMatch`.
+        public var eventGuard: (@Sendable (Context, EventID?) -> Bool)?
         public var action: Handler?
 
         public init(
@@ -115,9 +118,11 @@ public struct MachineSchema<
             caseMatch: (@Sendable (EventID) -> Bool)? = nil,
             target: StateID,
             guard: Guard? = nil,
+            eventGuard: (@Sendable (Context, EventID?) -> Bool)? = nil,
             action: Handler? = nil
         ) {
             self.event = event
+            self.eventGuard = eventGuard
             self.caseMatch = caseMatch
             self.target = target
             self.guard = `guard`
