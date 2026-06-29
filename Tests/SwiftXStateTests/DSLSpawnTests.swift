@@ -66,6 +66,44 @@ struct DSLSpawnTests {
         #expect(await board.actor.snapshot.children.count == 4)
     }
 
+    @Test func spawnFleetFromInitialEntry() async {
+        // The proper case: spawn the fleet from the ROOT machine's initial-state entry, on start().
+        enum S: String, StateIdentifying { case running; static var _blank: S { .running } }
+        enum E: String, EventIdentifying { case noop; static var _blank: E { .noop } }
+        struct Board: StateMachine {
+            typealias Context = Int; typealias StateID = S; typealias EventID = E
+            var context: Int { 0 }
+            var machine: some XStateMachine {
+                XState(.running) {}
+                    .initial()
+                    .onEntry { _, enq in
+                        for c in DSLSpawnTests.coords { enq.spawn(Tile(), id: "tile.\(c)", inspectable: false) }
+                        return 0
+                    }
+            }
+        }
+        let board = createActor(Board())
+        await board.start()
+        await board.actor.waitForSnapshot { $0.children.count == 4 }
+        #expect(Set(await board.actor.snapshot.children.keys) == ["tile.a1", "tile.b2", "tile.c3", "tile.d4"])
+    }
+
+    @Test func initialEntryContextPatchApplies() async {
+        // The same fix also makes an initial-state entry's context patch (and raise) land.
+        enum S: String, StateIdentifying { case start; static var _blank: S { .start } }
+        enum E: String, EventIdentifying { case noop; static var _blank: E { .noop } }
+        struct M: StateMachine {
+            typealias Context = Int; typealias StateID = S; typealias EventID = E
+            var context: Int { 0 }
+            var machine: some XStateMachine {
+                XState(.start) {}.initial().onEntry { _, _ in 42 }   // entry patches context on start
+            }
+        }
+        let m = createActor(M())
+        await m.start()
+        #expect(await m.context == 42)
+    }
+
     @Test func stopChildRemovesIt() async {
         enum S: String, StateIdentifying { case running; static var _blank: S { .running } }
         enum E: String, EventIdentifying { case spawnOne, stopOne; static var _blank: E { .spawnOne } }

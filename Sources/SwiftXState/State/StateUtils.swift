@@ -813,14 +813,28 @@ func initialMicrostep<Context: Sendable>(
         actions.append(contentsOf: node.entry.map { ExecutableAction(ref: $0) })
     }
 
+    let value = getStateValue(root: machine.root, nodes: nodes)
+
     var context = context
     let initEvent: any Eventable = SystemEvent.`init`
+    // Expand `enqueueActions` entry actions so their inner effects are exposed: the context patch
+    // (`assign`) is applied below, and the side effects (`spawn`, `raise`, …) flow out in `actions`
+    // for the initial transition to dispatch. Without this, an initial-state entry that spawns
+    // children or patches context via the typed DSL's `enqueueActions` lowering is silently dropped
+    // (`executeAssignOnly` and `runEffects` both no-op on a raw `.enqueueActions`). The transition
+    // path already does this via `flattenActions` inside `microstep`.
+    actions = flattenActions(
+        actions,
+        context: context,
+        event: initEvent,
+        stateValue: value,
+        implementations: machine.implementations
+    )
     for action in actions {
         let args = ActionArgs(context: context, event: initEvent)
         executeAssignOnly(action, context: &context, args: args, implementations: machine.implementations)
     }
 
-    let value = getStateValue(root: machine.root, nodes: nodes)
     let tags = getTags(from: nodes)
 
     var status: SnapshotStatus = .active
