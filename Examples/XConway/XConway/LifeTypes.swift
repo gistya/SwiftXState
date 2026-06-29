@@ -36,7 +36,7 @@ public nonisolated struct LifeRules: Codable, Sendable, Equatable, Hashable {
 
 // MARK: - Context (holds the grid + rules + playback state). Codable for SwiftData persistence via SwiftXStateSwiftData.
 
-public nonisolated struct LifeContext: Codable, Sendable, Equatable {
+public nonisolated struct LifeContext: Codable, Sendable, Equatable, Hashable {
     public let width: Int
     public let height: Int
     public var cells: [Bool]          // row-major: index = y * width + x
@@ -91,9 +91,21 @@ public struct GridSnapshot: Sendable, Equatable {
     public let cells: [Bool]
 }
 
-// MARK: - Events (drive the machine; rules can be sent as JSON to affect guard-like decisions in step assign)
+// MARK: - State + Events (Plan D typed DSL)
 
-public nonisolated enum LifeEvent: Eventable, Equatable {
+/// The machine has a single behavioural state — Life is a long-running interpreter of events. (Play
+/// vs. pause is *context* (`isPlaying`), driven by the UI timer, not a separate state.)
+public enum LifeState: String, StateIdentifying {
+    case running
+    public static var _blank: LifeState { .running }
+}
+
+/// The typed event union — XState v6's `{ type, …payload }` as a Swift enum. `EventIdentifying` gives
+/// each case a discriminant `name` (via reflection) for free, so the old hand-written `type` switch
+/// and `==` are gone; handlers read the payload off the typed `args.event` (no `as? LifeEvent`).
+///
+/// `Hashable` is synthesized — which is why `LifeContext` (carried by `.restore`) is now `Hashable`.
+public nonisolated enum LifeEvent: EventIdentifying {
     case toggleCell(x: Int, y: Int)
     case step
     case play
@@ -105,41 +117,7 @@ public nonisolated enum LifeEvent: Eventable, Equatable {
     case setSpeed(Double)
     case restore(LifeContext)   // used by replay bar to jump the live state to a prior snapshot
 
-    public var type: String {
-        switch self {
-        case .toggleCell: return "TOGGLE_CELL"
-        case .step: return "STEP"
-        case .play: return "PLAY"
-        case .pause: return "PAUSE"
-        case .clear: return "CLEAR"
-        case .randomize: return "RANDOMIZE"
-        case .loadTemplate: return "LOAD_TEMPLATE"
-        case .setRulesJSON: return "SET_RULES_JSON"
-        case .setSpeed: return "SET_SPEED"
-        case .restore: return "RESTORE"
-        }
-    }
-
-    public static func == (lhs: LifeEvent, rhs: LifeEvent) -> Bool {
-        switch (lhs, rhs) {
-        case (.toggleCell(let x1, let y1), .toggleCell(let x2, let y2)):
-            return x1 == x2 && y1 == y2
-        case (.step, .step), (.play, .play), (.pause, .pause), (.clear, .clear):
-            return true
-        case (.randomize(let d1), .randomize(let d2)):
-            return d1 == d2
-        case (.loadTemplate(let n1, let x1, let y1), .loadTemplate(let n2, let x2, let y2)):
-            return n1 == n2 && x1 == x2 && y1 == y2
-        case (.setRulesJSON(let j1), .setRulesJSON(let j2)):
-            return j1 == j2
-        case (.setSpeed(let s1), .setSpeed(let s2)):
-            return s1 == s2
-        case (.restore(let c1), .restore(let c2)):
-            return c1 == c2
-        default:
-            return false
-        }
-    }
+    public static var _blank: LifeEvent { .step }
 }
 
 // MARK: - Next generation computation (core of "rules" interpreted from context.rules, used inside assign)
