@@ -1,5 +1,3 @@
-import Foundation
-
 /// Owns an actor's invoked/spawned child references and the set of ids that have been stopped.
 /// Extracted from `Actor` so the same child bookkeeping can back any actor runtime (the generics
 /// refactor's `StateActor`). The spawn/stop *orchestration* — creating child refs, registering

@@ -1,7 +1,3 @@
-protocol PersistedChildSnapshotProviding {
-    func makePersistedChildSnapshot() async throws -> PersistedChildSnapshot?
-}
-
 func collectPersistedChildSnapshots(
     from children: [String: any ChildActor]
 ) async throws -> [String: PersistedChildSnapshot] {

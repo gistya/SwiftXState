@@ -1,15 +1,3 @@
-/// Source logic for spawning a child actor.
-public enum ActorSource: Sendable {
-    case named(String)
-    case machine(MachineActorLogicBox)
-    case task(TaskActorLogicBox)
-    case callback(CallbackActorLogicBox)
-    case taskGroup(TaskGroupActorLogicBox)
-    case transition(TransitionActorLogicBox)
-    case observable(ObservableActorLogicBox)
-    case store(StoreActorLogicBox)
-}
-
 /// Actor logic backed by an `async` task — XState's `fromPromise`. The returned `Output` becomes
 /// the child's `done` data (drives `onDone`); throwing drives `onError`; `onCancel` runs if the
 /// invoking state exits first. Use as an `invoke` `src` or with `spawnChild`.

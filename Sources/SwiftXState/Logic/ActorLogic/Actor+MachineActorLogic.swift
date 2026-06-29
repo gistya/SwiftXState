@@ -1,21 +1,5 @@
 import Foundation
 
-/// A logic that wraps a `ResolvedMachine` — the capability behind the machine-shaped `Actor`
-/// conveniences (`Actor(_ machine:)`, `start(context:)`, `getSnapshot()`, `typed(as:)`). Only
-/// `MachineLogic` conforms; it lets those conveniences live on `Actor where L: MachineActorLogic`
-/// without `Actor` itself knowing about state machines.
-public protocol MachineActorLogic: ActorLogic where Snapshot == MachineSnapshot<MachineContext> {
-    associatedtype MachineContext: Sendable
-    var machine: ResolvedMachine<MachineContext> { get }
-    init(machine: ResolvedMachine<MachineContext>, contextOverride: MachineContext?)
-}
-
-extension MachineLogic: MachineActorLogic {
-    public typealias MachineContext = Context
-}
-
-// MARK: - Machine-shaped Actor conveniences
-
 public extension Actor where L: MachineActorLogic {
     /// Create an actor for a state machine — `Actor(machine)`, the form `createActor(_:)` builds on.
     init(

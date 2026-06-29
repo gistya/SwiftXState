@@ -35,3 +35,45 @@ struct CallbackLogic: ActorLogic {
     }
 }
 
+/// Callback logic for long-running listeners, mirroring XState's `fromCallback`.
+public struct CallbackActorLogic: Sendable {
+    public let run: @Sendable (CallbackActorScope) -> (@Sendable () -> Void)?
+
+    public init(run: @escaping @Sendable (CallbackActorScope) -> (@Sendable () -> Void)?) {
+        self.run = run
+    }
+}
+
+/// Type-erased callback actor logic.
+public struct CallbackActorLogicBox: Sendable {
+    private let _spawn: @Sendable (
+        String,
+        SendableValue?,
+        any ActorParentRef,
+        ActorSystem,
+        String?
+    ) -> any ChildActor
+
+    public init(_ logic: CallbackActorLogic) {
+        _spawn = { id, input, parent, system, systemId in
+            let actor = Actor(
+                CallbackLogic(callback: logic, system: system),
+                id: id,
+                options: ActorOptions(systemId: systemId),
+                parent: parent,
+                system: system
+            )
+            return LogicChildActor(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
+        }
+    }
+
+    func spawn(
+        id: String,
+        input: SendableValue?,
+        parent: any ActorParentRef,
+        system: ActorSystem,
+        systemId: String?
+    ) -> any ChildActor {
+        _spawn(id, input, parent, system, systemId)
+    }
+}
