@@ -12,10 +12,10 @@ public struct StoreActorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
+        any ParentActorRepresentable,
         String?,
         Bool
-    ) -> any ChildActor
+    ) -> any ChildActorRepresentable
 
     public init<Context: Sendable & Equatable, E: Eventable>(_ logic: StoreActorLogic<Context, E>) {
         _spawn = { id, input, parent, systemId, syncSnapshot in
@@ -26,17 +26,17 @@ public struct StoreActorLogicBox: Sendable {
                 parent: parent,
                 system: parent.actorSystem
             )
-            return LogicChildActor(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
+            return ChildActorBox(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
         }
     }
 
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
+        parent: any ParentActorRepresentable,
         systemId: String?,
         syncSnapshot: Bool
-    ) -> any ChildActor {
+    ) -> any ChildActorRepresentable {
         _spawn(id, input, parent, systemId, syncSnapshot)
     }
 }

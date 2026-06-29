@@ -1,17 +1,17 @@
 /// Type-erased machine actor logic for child state machines. Spawns the child as a
-/// `LogicChildActor<MachineLogic<ChildContext>>` — one generic engine, no bespoke `MachineChildRef`.
+/// `ChildActorBox<MachineLogic<ChildContext>>` — one generic engine, no bespoke `MachineChildRef`.
 /// The inner `Actor` delivers the child's Done/Error and (for `syncSnapshot`) per-snapshot
 /// events to the parent itself; here we only wire start-vs-restore and persistence.
 public struct MachineActorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
+        any ParentActorRepresentable,
         String?,
         ActorOptions,
         Bool,
         PersistedChildSnapshot?
-    ) -> any ChildActor
+    ) -> any ChildActorRepresentable
 
     /// Uses the child machine's `context` or `contextFromInput` to build initial context.
     public init<ChildContext: Sendable>(_ machine: ResolvedMachine<ChildContext>) {
@@ -67,11 +67,11 @@ public struct MachineActorLogicBox: Sendable {
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
+        parent: any ParentActorRepresentable,
         options: ActorOptions,
         syncSnapshot: Bool,
         persistedChild: PersistedChildSnapshot? = nil
-    ) -> any ChildActor {
+    ) -> any ChildActorRepresentable {
         _spawn(id, input, parent, options.systemId, options, syncSnapshot, persistedChild)
     }
 }
@@ -82,15 +82,15 @@ private func spawnMachineChild<ChildContext: Sendable>(
     context: ChildContext,
     id: String,
     systemId: String?,
-    parent: any ActorParentRef,
+    parent: any ParentActorRepresentable,
     options: ActorOptions,
     syncSnapshot: Bool
-) -> any ChildActor {
+) -> any ChildActorRepresentable {
     let engine = Actor(
         MachineLogic(machine: machine, contextOverride: context),
         id: id, options: options, parent: parent, system: parent.actorSystem, syncSnapshot: syncSnapshot
     )
-    return LogicChildActor(
+    return ChildActorBox(
         actor: engine, id: id, systemId: systemId, inspectable: options.inspectable,
         machineId: machine.id, definitionJSON: try? machine.definitionJSON(),
         start: { inner in await inner.start(input: nil) },
@@ -104,11 +104,11 @@ private func spawnCodableMachineChild<ChildContext: Codable & Sendable>(
     context: ChildContext,
     id: String,
     systemId: String?,
-    parent: any ActorParentRef,
+    parent: any ParentActorRepresentable,
     options: ActorOptions,
     syncSnapshot: Bool,
     persistedChild: PersistedChildSnapshot?
-) -> any ChildActor {
+) -> any ChildActorRepresentable {
     let persistedRestore = machinePersistedRestore(from: persistedChild, childId: id, machineId: machine.id)
     // On restore the persisted context must win, so don't bake in a fresh contextOverride (which
     // `restoredSnapshot` would otherwise apply over the decoded context).
@@ -116,7 +116,7 @@ private func spawnCodableMachineChild<ChildContext: Codable & Sendable>(
         MachineLogic(machine: machine, contextOverride: persistedRestore == nil ? context : nil),
         id: id, options: options, parent: parent, system: parent.actorSystem, syncSnapshot: syncSnapshot
     )
-    return LogicChildActor(
+    return ChildActorBox(
         actor: engine, id: id, systemId: systemId, inspectable: options.inspectable,
         machineId: machine.id, definitionJSON: try? machine.definitionJSON(),
         start: { inner in

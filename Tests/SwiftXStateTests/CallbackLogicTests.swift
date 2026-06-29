@@ -3,7 +3,7 @@ import Foundation
 @testable import SwiftXState
 
 /// A parent stand-in that records the events its children enqueue.
-private final class RecordingParent: ActorParentRef, @unchecked Sendable {
+private final class RecordingParent: ParentActorRepresentable, @unchecked Sendable {
     let system: ActorSystem
     private let onEvent: @Sendable (String) -> Void
     init(system: ActorSystem, onEvent: @escaping @Sendable (String) -> Void) {
@@ -12,22 +12,22 @@ private final class RecordingParent: ActorParentRef, @unchecked Sendable {
     }
     var actorSystem: ActorSystem { system }
     func enqueueFromChild(_ event: any Eventable) async { onEvent(event.type) }
-    func inspectSpawnedChild(_ child: any ChildActor, machineId: String?) async {}
+    func inspectSpawnedChild(_ child: any ChildActorRepresentable, machineId: String?) async {}
 }
 
-@Suite("LogicChildActor<CallbackLogic> parity with CallbackChildRef")
+@Suite("ChildActorBox<CallbackLogic> parity with CallbackChildRef")
 struct CallbackLogicTests {
 
     private func makeChild(
         _ callback: CallbackActorLogic,
-        parent: (any ActorParentRef)? = nil,
+        parent: (any ParentActorRepresentable)? = nil,
         system: ActorSystem
-    ) -> LogicChildActor<CallbackLogic> {
+    ) -> ChildActorBox<CallbackLogic> {
         let actor = Actor(
             CallbackLogic(callback: callback, system: system),
             id: "cb", parent: parent, system: system
         )
-        return LogicChildActor(actor: actor, id: "cb", systemId: nil, input: nil, inspectable: true)
+        return ChildActorBox(actor: actor, id: "cb", systemId: nil, input: nil, inspectable: true)
     }
 
     @Test("receive → sendToParent round-trips, ordered")

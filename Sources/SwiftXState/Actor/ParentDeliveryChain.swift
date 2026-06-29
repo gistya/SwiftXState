@@ -9,7 +9,7 @@ final class ParentDeliveryChain: @unchecked Sendable {
     private let lock = NSLock()
     private var tail: Task<Void, Never>?
 
-    func deliver(to parent: (any ActorParentRef)?, _ event: any Eventable) {
+    func deliver(to parent: (any ParentActorRepresentable)?, _ event: any Eventable) {
         lock.lock()
         let previous = tail
         tail = Task { [weak parent] in

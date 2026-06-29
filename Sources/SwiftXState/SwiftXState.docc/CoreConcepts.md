@@ -91,7 +91,7 @@ assign { ctx, args in
 ```
 
 Beyond `assign`, the ``ActionRef`` family covers the other XState actions: `raise` (send an
-event back into this machine), `sendTo` / `sendParent` (message other actors), `log`, `emit`,
+event back into this machine), `sendTo` / `sendToParent` (message other actors), `log`, `emit`,
 `cancel`, `spawnChild`, and an inline escape hatch:
 
 ```swift

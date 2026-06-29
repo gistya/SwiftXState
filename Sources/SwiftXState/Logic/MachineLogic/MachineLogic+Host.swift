@@ -116,7 +116,7 @@ extension MachineLogic {
                 } else {
                     await host.deliverToChild(id: resolved.childId, event: resolved.event)
                 }
-            case let .sendParent(parentEvent):
+            case let .sendToParent(parentEvent):
                 await host.enqueueToParent(parentEvent)
             case .raise:
                 if let delayedEvent = action.delayedEvent,

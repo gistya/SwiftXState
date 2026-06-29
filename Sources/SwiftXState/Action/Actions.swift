@@ -32,7 +32,7 @@ func actionType<Context: Sendable>(for ref: ActionRef<Context>) -> String {
     case .stopChild: return "xstate.stopChild"
     case .forwardTo: return "xstate.forwardTo"
     case .sendTo: return "xstate.sendTo"
-    case .sendParent: return "xstate.sendParent"
+    case .sendToParent: return "xstate.sendToParent"
     case .raise: return "xstate.raise"
     case .cancel: return "xstate.cancel"
     case .enqueueActions: return "xstate.enqueueActions"
@@ -74,7 +74,7 @@ public func executeAction<Context: Sendable>(
             label: logAction.label,
             value: resolveLogValue(logAction, args: args)
         )
-    case .spawn, .stopChild, .forwardTo, .sendTo, .sendParent, .raise, .cancel, .enqueueActions, .emit:
+    case .spawn, .stopChild, .forwardTo, .sendTo, .sendToParent, .raise, .cancel, .enqueueActions, .emit:
         break
     }
 }

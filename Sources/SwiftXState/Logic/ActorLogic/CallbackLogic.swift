@@ -49,10 +49,10 @@ public struct CallbackActorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
+        any ParentActorRepresentable,
         ActorSystem,
         String?
-    ) -> any ChildActor
+    ) -> any ChildActorRepresentable
 
     public init(_ logic: CallbackActorLogic) {
         _spawn = { id, input, parent, system, systemId in
@@ -63,17 +63,17 @@ public struct CallbackActorLogicBox: Sendable {
                 parent: parent,
                 system: system
             )
-            return LogicChildActor(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
+            return ChildActorBox(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
         }
     }
 
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
+        parent: any ParentActorRepresentable,
         system: ActorSystem,
         systemId: String?
-    ) -> any ChildActor {
+    ) -> any ChildActorRepresentable {
         _spawn(id, input, parent, system, systemId)
     }
 }

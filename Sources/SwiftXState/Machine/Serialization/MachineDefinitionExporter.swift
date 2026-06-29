@@ -245,8 +245,8 @@ enum MachineDefinitionExporter {
             return .string("xstate.forwardTo")
         case .sendTo:
             return .string("xstate.sendTo")
-        case .sendParent:
-            return .string("xstate.sendParent")
+        case .sendToParent:
+            return .string("xstate.sendToParent")
         case .raise:
             return .string("xstate.raise")
         case .cancel:

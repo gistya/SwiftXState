@@ -6,7 +6,7 @@ public extension Actor where L: MachineActorLogic {
         _ machine: ResolvedMachine<L.MachineContext>,
         id: String? = nil,
         options: ActorOptions = ActorOptions(),
-        parent: (any ActorParentRef)? = nil,
+        parent: (any ParentActorRepresentable)? = nil,
         system: ActorSystem? = nil
     ) {
         self.init(

@@ -5,7 +5,7 @@ import Foundation
 /// Lifted out of `Actor` (it used no actor state — only the `Context` generic for
 /// `implementations`, plus free helpers) so the generics refactor's `StateActor` can spawn children
 /// through the exact same factory rather than a duplicate. The `parent` is type-erased to
-/// `any ActorParentRef`, so any actor that can parent children drives identical child creation.
+/// `any ParentActorRepresentable`, so any actor that can parent children drives identical child creation.
 func makeChildActor<Context: Sendable>(
     from source: ActorSource,
     id: String,
@@ -13,12 +13,12 @@ func makeChildActor<Context: Sendable>(
     input: SendableValue?,
     syncSnapshot: Bool,
     inspectable: Bool,
-    parent: any ActorParentRef,
+    parent: any ParentActorRepresentable,
     implementations: MachineImplementations<Context>,
     options: ActorOptions,
     persistedChild: PersistedChildSnapshot? = nil,
     opaqueRestorePolicy: OpaqueInvokeRestorePolicy = .restart
-) -> (any ChildActor)? {
+) -> (any ChildActorRepresentable)? {
     let resolved = resolveActorSource(source, implementations: implementations)
     var childOptions = options
     childOptions.systemId = systemId ?? id

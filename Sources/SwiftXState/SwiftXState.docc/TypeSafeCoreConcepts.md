@@ -69,7 +69,7 @@ on(Loaded.self, to: State.success, actions: [
 ```
 
 Contrast with the Basic path, where you'd write `assign { ctx, args in (args.event as? Loaded)?… }`.
-The other ``ActionRef`` actions (`raise`, `sendTo`, `sendParent`, `log`, …) work the same as in
+The other ``ActionRef`` actions (`raise`, `sendTo`, `sendToParent`, `log`, …) work the same as in
 <doc:CoreConcepts>.
 
 ## Guards with narrowed events, and branching

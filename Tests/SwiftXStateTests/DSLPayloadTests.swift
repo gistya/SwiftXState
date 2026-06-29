@@ -98,7 +98,7 @@ struct DSLPayloadTests {
         let typed = CounterEvent.increment(by: 42).event
         #expect(typed.type == "increment")
         #expect((typed as any Eventable) as? TypedEvent<CounterEvent> != nil)
-        if case let .increment(by)? = (typed as? TypedEvent<CounterEvent>)?.id {
+        if case let .increment(by) = (typed).id {
             #expect(by == 42)
         } else {
             Issue.record("expected increment payload")

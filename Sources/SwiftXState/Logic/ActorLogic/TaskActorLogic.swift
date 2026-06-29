@@ -17,9 +17,9 @@ public struct TaskActorLogicBox: Sendable {
     private let _spawn: @Sendable (
         String,
         SendableValue?,
-        any ActorParentRef,
+        any ParentActorRepresentable,
         String?
-    ) -> any ChildActor
+    ) -> any ChildActorRepresentable
 
     public init<Output: Sendable & Equatable>(_ logic: TaskActorLogic<Output>) {
         _spawn = { id, input, parent, systemId in
@@ -30,16 +30,16 @@ public struct TaskActorLogicBox: Sendable {
                 parent: parent,
                 system: parent.actorSystem
             )
-            return LogicChildActor(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
+            return ChildActorBox(actor: actor, id: id, systemId: systemId, input: input, inspectable: true)
         }
     }
 
     func spawn(
         id: String,
         input: SendableValue?,
-        parent: any ActorParentRef,
+        parent: any ParentActorRepresentable,
         systemId: String?
-    ) -> any ChildActor {
+    ) -> any ChildActorRepresentable {
         _spawn(id, input, parent, systemId)
     }
 }

@@ -1,8 +1,8 @@
 import Foundation
 
-/// A `ChildActor` adapter wrapping the generic `Actor` — XState's "an `ActorRef` wraps the
+/// A `ChildActorRepresentable` adapter wrapping the generic `Actor` — XState's "an `ActorRef` wraps the
 /// interpreter". One generic adapter replaces the per-kind `*ChildRef` classes: the parent talks to
-/// it through `ChildActor` while the real work runs in `Actor<L>`.
+/// it through `ChildActorRepresentable` while the real work runs in `Actor<L>`.
 ///
 /// The pieces that vary by kind are injected:
 ///   - `startAction` — how `start()` boots the inner actor (`start(input:)` for runnable children;
@@ -12,7 +12,7 @@ import Foundation
 ///   - `machineId` / `definitionJSON` — surfaced for machine children, nil otherwise.
 /// Runnable children use the convenience init, which supplies the `start(input:)` + opaque-persist
 /// defaults, so their call sites stay unchanged.
-final class LogicChildActor<L: ActorLogic>: ChildActor, @unchecked Sendable {
+final class ChildActorBox<L: ActorLogic>: ChildActorRepresentable, @unchecked Sendable {
     /// The wrapped engine. Internal (not private) so `@testable` tests can inspect a machine child's
     /// live snapshot / nested children after restore.
     let actor: Actor<L>
@@ -102,7 +102,7 @@ final class LogicChildActor<L: ActorLogic>: ChildActor, @unchecked Sendable {
     }
 }
 
-extension LogicChildActor: PersistedChildSnapshotProviding {
+extension ChildActorBox: PersistedChildSnapshotProviding {
     func makePersistedChildSnapshot() async throws -> PersistedChildSnapshot? {
         guard status != .stopped else { return nil }
         return try await persistAction(actor, status, errorMessage)

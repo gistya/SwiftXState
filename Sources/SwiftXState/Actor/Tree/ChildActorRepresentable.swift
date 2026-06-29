@@ -1,5 +1,5 @@
 /// A running child actor managed by a parent state machine actor.
-public protocol ChildActor: ActorSystemRef, AnyObject, Sendable {
+public protocol ChildActorRepresentable: ActorSystemRef, AnyObject, Sendable {
     var id: String { get }
     var status: SnapshotStatus { get }
     var errorMessage: String? { get }
@@ -13,7 +13,7 @@ public protocol ChildActor: ActorSystemRef, AnyObject, Sendable {
     func on(_ eventType: String, handler: @escaping @Sendable (EmittedEvent) -> Void) async -> Subscription
 }
 
-extension ChildActor {
+extension ChildActorRepresentable {
     public var sessionId: String { id }
     public var errorMessage: String? { nil }
     public var machineId: String? { nil }

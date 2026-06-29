@@ -10,7 +10,7 @@ import Dispatch
 /// with no hops, exactly as `StateActor` does inline — but without the actor needing to know the
 /// logic's `Context`. All the Context-specific work (the action switch, `makeChildActor`) lives in
 /// the logic; the host only exposes these non-generic primitives.
-public protocol MachineHost: _Concurrency.Actor, ActorParentRef, ActorSystemRef {
+public protocol MachineHost: _Concurrency.Actor, ParentActorRepresentable, ActorSystemRef {
     var childRegistry: ChildRegistry { get }
     var hostClock: any Clock { get }
     func emit(_ event: EmittedEvent)
@@ -22,8 +22,8 @@ public protocol MachineHost: _Concurrency.Actor, ActorParentRef, ActorSystemRef 
     func scheduleSelfEvent(timerId: String, delay: Int, event: Event)
     func scheduleChildEvent(timerId: String, delay: Int, childId: String, event: Event)
     func cancelTimer(_ timerId: String)
-    func registerChild(_ child: any ChildActor)
-    func unregisterChild(_ child: any ChildActor)
+    func registerChild(_ child: any ChildActorRepresentable)
+    func unregisterChild(_ child: any ChildActorRepresentable)
     /// The persisted snapshot to seed a child with during restore (nil in normal operation).
     func pendingChildSnapshot(_ id: String) -> PersistedChildSnapshot?
 
@@ -44,7 +44,7 @@ public protocol MachineHost: _Concurrency.Actor, ActorParentRef, ActorSystemRef 
 /// `after` / `invoke` through it. With that, one `Actor<L>` provably hosts every logic shape:
 /// hand-written reducers, runnables (callback/task/observable), and full state machines —
 /// `Actor<MachineLogic<C>>` reaches parity with `Actor`. See `LogicActorTests`.
-public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
+public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, MachineHost {
     /// The logic this actor runs. `var` (not `let`) only so the machine convenience `start(context:)`
     /// can rebuild it with a context override before the initial transition; otherwise immutable.
     var logic: L
@@ -62,7 +62,7 @@ public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     private var runCleanup: (@Sendable () -> Void)?
     private nonisolated let parentDeliveries = ParentDeliveryChain()
     // Terminal status for completing children (task/observable/transition/store) set via the scope's
-    // complete/fail; overrides the snapshot-derived status. `statusObservers` lets the ChildActor
+    // complete/fail; overrides the snapshot-derived status. `statusObservers` lets the ChildActorRepresentable
     // adapter cache status changes.
     private var terminalStatus: SnapshotStatus?
     private var lastError: String?
@@ -77,7 +77,7 @@ public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
     /// Persisted child snapshots awaiting re-spawn during `start(from:)`; empty otherwise.
     private var pendingChildSnapshots: [String: PersistedChildSnapshot] = [:]
     private let scheduler: DelayScheduler
-    private weak var parent: (any ActorParentRef)?
+    private weak var parent: (any ParentActorRepresentable)?
     private nonisolated let system: ActorSystem
     private nonisolated let options: ActorOptions
     private nonisolated let clock: any Clock
@@ -105,7 +105,7 @@ public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         _ logic: L,
         id: String = UUID().uuidString,
         options: ActorOptions = ActorOptions(),
-        parent: (any ActorParentRef)? = nil,
+        parent: (any ParentActorRepresentable)? = nil,
         system: ActorSystem? = nil,
         syncSnapshot: Bool = false
     ) {
@@ -170,10 +170,10 @@ public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         return logic.status(of: snapshot)
     }
 
-    /// The last error message (set by `fail`), for `ChildActor.errorMessage`.
+    /// The last error message (set by `fail`), for `ChildActorRepresentable.errorMessage`.
     var errorMessage: String? { lastError }
 
-    /// Observe status changes (snapshot-derived or terminal). Used by the `ChildActor` adapter to
+    /// Observe status changes (snapshot-derived or terminal). Used by the `ChildActorRepresentable` adapter to
     /// cache status synchronously. Fires immediately with the current status.
     @discardableResult
     func subscribeStatus(_ handler: @escaping @Sendable (SnapshotStatus, String?) -> Void) -> Subscription {
@@ -421,7 +421,7 @@ public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         )
     }
 
-    // MARK: ActorParentRef
+    // MARK: ParentActorRepresentable
 
     public func enqueueFromChild(_ event: any Eventable) async {
         emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: inspectionSource(for: event), event: event))
@@ -429,7 +429,7 @@ public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         await drain()
     }
 
-    public func inspectSpawnedChild(_ child: any ChildActor, machineId: String?) async {
+    public func inspectSpawnedChild(_ child: any ChildActorRepresentable, machineId: String?) async {
         emitInspection(.actor(
             rootId: inspectionRootId,
             actor: InspectionActorRef.from(child, machineId: machineId),
@@ -484,15 +484,15 @@ public actor Actor<L: ActorLogic>: ActorParentRef, ActorSystemRef, MachineHost {
         scheduler.cancel(timerId)
     }
 
-    func childActor(id: String) -> (any ChildActor)? {
+    func childActor(id: String) -> (any ChildActorRepresentable)? {
         childRegistry.get(id)
     }
 
-    public func registerChild(_ child: any ChildActor) {
+    public func registerChild(_ child: any ChildActorRepresentable) {
         _ = system.register(child)
     }
 
-    public func unregisterChild(_ child: any ChildActor) {
+    public func unregisterChild(_ child: any ChildActorRepresentable) {
         system.unregister(child)
     }
 

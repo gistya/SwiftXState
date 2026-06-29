@@ -128,7 +128,7 @@ Invoking a child machine and reacting to its result:
 )
 ```
 
-Parents and children message each other with the `sendTo` / `sendParent` / `forwardTo` actions,
+Parents and children message each other with the `sendTo` / `sendToParent` / `forwardTo` actions,
 and a snapshot exposes child snapshots via ``MachineSnapshot/children``. See <doc:AsyncWork> for
 the async-logic side, and the **SwiftXStateInspectorUI** module to watch a whole actor tree live.
 

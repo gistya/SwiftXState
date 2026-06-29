@@ -17,7 +17,7 @@ struct SendToTests {
             states: [
                 "idle": StateNodeConfig(on: [
                     "PING": .single(TransitionConfig(
-                        actions: [.sendParent(Event("PONG"))]
+                        actions: [.sendToParent(Event("PONG"))]
                     )),
                 ]),
             ]

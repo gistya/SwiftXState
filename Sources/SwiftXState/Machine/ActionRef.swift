@@ -18,7 +18,7 @@ public enum ActionRef<Context: Sendable>: Sendable {
     /// Send an event to another actor.
     case sendTo(SendToAction<Context>)
     /// Send an event to the parent actor.
-    case sendParent(Event)
+    case sendToParent(Event)
     /// Raise an event back into this machine (processed in the same or a later step).
     case raise(RaiseAction<Context>)
     /// Cancel a previously-scheduled delayed `raise`/`sendTo` by id.
