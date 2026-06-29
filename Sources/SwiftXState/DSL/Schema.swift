@@ -168,19 +168,24 @@ public struct MachineSchema<
         public var input: (@Sendable (Context) -> SendableValue?)?
         public var onDone: GuardedTransition?
         public var onError: GuardedTransition?
+        /// Transition taken each time the child's snapshot changes (XState v6's `onSnapshot`); its
+        /// presence turns on snapshot syncing for the child.
+        public var onSnapshot: GuardedTransition?
 
         public init(
             id: String,
             src: ActorSource,
             input: (@Sendable (Context) -> SendableValue?)? = nil,
             onDone: GuardedTransition? = nil,
-            onError: GuardedTransition? = nil
+            onError: GuardedTransition? = nil,
+            onSnapshot: GuardedTransition? = nil
         ) {
             self.id = id
             self.src = src
             self.input = input
             self.onDone = onDone
             self.onError = onError
+            self.onSnapshot = onSnapshot
         }
     }
 

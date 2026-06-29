@@ -216,6 +216,12 @@ public struct Invoke<
         clone(mutating: \.node.onError <- Schema.GuardedTransition(target: target))
     }
 
+    /// Transition taken each time the child's snapshot changes — XState v6's `onSnapshot`. Enabling
+    /// it turns on snapshot syncing for the child.
+    public func onSnapshot(to target: StateID) -> Self {
+        clone(mutating: \.node.onSnapshot <- Schema.GuardedTransition(target: target))
+    }
+
     /// Transition taken when the child errors — reading the error string into the parent context
     /// (XState v6's `onError`).
     public func onError(

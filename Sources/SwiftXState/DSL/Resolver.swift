@@ -52,7 +52,8 @@ public extension MachineSchema {
             src: n.src,
             input: n.input.map { make in { @Sendable (args: ActionArgs<Context>) in make(args.context) } },
             onDone: n.onDone.flatMap { guardedInput([$0]) },
-            onError: n.onError.flatMap { guardedInput([$0]) }
+            onError: n.onError.flatMap { guardedInput([$0]) },
+            onSnapshot: n.onSnapshot.flatMap { guardedInput([$0]) }
         )
     }
 

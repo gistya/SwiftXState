@@ -152,4 +152,33 @@ struct DSLInvokeChoiceTests {
         await p.actor.waitForSnapshot { $0.value.matches("completed") }
         #expect(await p.matches(.completed))
     }
+
+    // MARK: - invoke onSnapshot (v6)
+
+    enum Synced: String, StateIdentifying { case watching, synced; static var _blank: Synced { .watching } }
+    enum SyncedEvent: String, EventIdentifying { case go; static var _blank: SyncedEvent { .go } }
+
+    struct Watcher: StateMachine {
+        typealias Context = Int
+        typealias StateID = Synced
+        typealias EventID = SyncedEvent
+        var context: Int { 0 }
+        var machine: some XStateMachine {
+            XState(.watching) {
+                Invoke(id: "child", machine: Child())
+                    .onSnapshot(to: .synced)
+                    .onDone(to: .synced)
+            }.initial()
+            XState(.synced) {}
+        }
+    }
+
+    @Test func invokeOnSnapshotLowers() {
+        // The DSL carries onSnapshot through to the schema + resolves (its runtime delivery is the
+        // engine's own concern); presence of onSnapshot is what enables child snapshot syncing.
+        let invoke = Watcher().buildSchema().states[.watching]?.invokes.first
+        #expect(invoke?.onSnapshot != nil)
+        #expect(invoke?.onSnapshot?.target == .synced)
+        _ = Watcher().resolvedMachine()   // lowers without error
+    }
 }
