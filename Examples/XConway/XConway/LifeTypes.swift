@@ -1,5 +1,6 @@
 import Foundation
 import SwiftXState
+import CompositionalInit
 
 // MARK: - Rules (editable via JSON text area, "sent to the nodes")
 

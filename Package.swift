@@ -67,7 +67,7 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0"),
         // Keypath/case-path optics + functional record update — backs the typed DSL's
         // `<-` / `clone(mutating:)` / `cloned` and the `CasePath`/`WritableCasePath` prisms.
-        .package(name: "swift-compositional-init", path: "../../originalPublic/swift-compositional-init"),
+            .package(url: "https://github.com/gistya/swift-compositional-init", from: "1.0.0"),
     ],
     targets: [
         .target(
