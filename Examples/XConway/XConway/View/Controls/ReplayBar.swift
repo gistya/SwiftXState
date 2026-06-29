@@ -1,5 +1,4 @@
-//
-
+import SwiftUI
 
 struct ReplayBar: View {
     let session: LifeSession

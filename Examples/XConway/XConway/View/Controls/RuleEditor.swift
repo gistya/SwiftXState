@@ -1,3 +1,5 @@
+import SwiftUI
+
 struct RuleEditor: View {
     @Binding var editorText: String
     @State var disableApply: Bool = false

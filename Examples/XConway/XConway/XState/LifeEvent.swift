@@ -1,4 +1,5 @@
 import SwiftXState
+import CompositionalInit
 
 /// The typed event union — XState v6's `{ type, …payload }` as a Swift enum. `EventIdentifying` gives
 /// each case a discriminant `name` (via reflection) for free, so the old hand-written `type` switch

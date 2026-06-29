@@ -1,3 +1,5 @@
+import SwiftUI
+
 struct ToolBarButtons: View {
     let step: () -> Void
     let clear: () -> Void

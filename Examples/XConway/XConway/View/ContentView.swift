@@ -1,11 +1,10 @@
 import SwiftUI
-import SwiftXState
 import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var session: LifeSession?
-    @State private var editorText: String = LifeRules.conway.jsonString
+    @State var session: LifeSession?
+    @State var editorText: String = LifeRules.conway.jsonString
 
     var body: some View {
         Group {
@@ -28,6 +27,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(session = LifeSession())
+    ContentView(session: LifeSession())
         .frame(width: 960, height: 720)
 }

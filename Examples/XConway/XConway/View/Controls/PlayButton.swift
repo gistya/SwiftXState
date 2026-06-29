@@ -1,3 +1,5 @@
+import SwiftUI
+
 struct PlayButton: View {
     @Binding var isPlaying: Bool
     @Binding var isReplayMode: Bool

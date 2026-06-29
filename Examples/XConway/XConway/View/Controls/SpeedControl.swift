@@ -1,3 +1,5 @@
+import SwiftUI
+
 struct SpeedControl: View {
     let session: LifeSession
 
