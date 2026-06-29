@@ -10,104 +10,64 @@ struct PieceContext: Sendable, Equatable, Codable {
     var isAlive: Bool { square != nil }
 }
 
-enum PieceEvent: Eventable, Equatable, Sendable {
+enum PieceState: String, StateIdentifying {
+    case boot, alive, captured
+    static var _blank: PieceState { .boot }
+}
+
+/// Typed payload events — `MOVE_TO.<sq>` / `SYNC.<sq>` / `SYNC.off` type-string encoding + `parse(_:)`
+/// gone; payload read off `args.event`.
+enum PieceEvent: EventIdentifying {
     case moveTo(square: String)
     case captured
     case sync(square: String?)
 
-    var type: String {
-        switch self {
-        case let .moveTo(square): return "MOVE_TO.\(square)"
-        case .captured: return "CAPTURED"
-        case let .sync(square):
-            if let square { return "SYNC.\(square)" }
-            return "SYNC.off"
-        }
-    }
-
-    static func parse(_ event: any Eventable) -> PieceEvent? {
-        let type = event.type
-        if type == "CAPTURED" { return .captured }
-        if type.hasPrefix("MOVE_TO.") {
-            return .moveTo(square: String(type.dropFirst(8)))
-        }
-        if type == "SYNC.off" { return .sync(square: nil) }
-        if type.hasPrefix("SYNC.") {
-            return .sync(square: String(type.dropFirst(5)))
-        }
-        return nil
-    }
+    static var _blank: PieceEvent { .captured }
 }
 
-enum PieceActorMachine {
+/// A piece as a typed `StateMachine`: `boot` resolves to `alive`/`captured` from its seeded square,
+/// then tracks position via events. The old machine had two `SYNC` handlers (`SYNC.*` vs `SYNC.off`);
+/// here one `.sync` transition + an `Always` guard subsumes both.
+struct PieceActorMachine: StateMachine {
+    typealias Context = PieceContext
+    typealias StateID = PieceState
+    typealias EventID = PieceEvent
+
     static let id = "piece"
 
-    static let machine: StateMachine<PieceContext> = createMachine(
-        MachineConfig(
-            id: id,
-            initial: "boot",
-            context: PieceContext(pieceId: "wPa2", kind: .pawn, color: .white, square: nil),
-            states: [
-                "boot": StateNodeConfig(
-                    always: [
-                        TransitionConfig(target: "alive", guard: .named("isAlive")),
-                        TransitionConfig(target: "captured"),
-                    ]
-                ),
-                "alive": StateNodeConfig(
-                    on: [
-                        "MOVE_TO.*": .single(TransitionConfig(actions: [assign { ctx, args in
-                            if case let .moveTo(square) = PieceEvent.parse(args.event) {
-                                ctx.square = square
-                            }
-                        }])),
-                        "CAPTURED": .single(
-                            TransitionConfig(
-                                target: "captured",
-                                actions: [assign { ctx, _ in ctx.square = nil }]
-                            )
-                        ),
-                        "SYNC.*": .single(TransitionConfig(actions: [assign { ctx, args in
-                            applySync(&ctx, args: args)
-                        }])),
-                        "SYNC.off": .single(TransitionConfig(actions: [assign { ctx, args in
-                            applySync(&ctx, args: args)
-                        }])),
-                    ],
-                    always: [
-                        TransitionConfig(target: "captured", guard: .named("isDead")),
-                    ]
-                ),
-                "captured": StateNodeConfig(
-                    on: [
-                        "SYNC.*": .single(
-                            TransitionConfig(
-                                target: "alive",
-                                actions: [assign { ctx, args in
-                                    applySync(&ctx, args: args)
-                                }]
-                            )
-                        ),
-                        "SYNC.off": .single(TransitionConfig(actions: [assign { ctx, args in
-                            applySync(&ctx, args: args)
-                        }])),
-                    ],
-                    always: [
-                        TransitionConfig(target: "alive", guard: .named("isAlive")),
-                    ]
-                ),
-            ]
-        ),
-        implementations: MachineImplementations.legacy(
-            guards: [
-                "isAlive": { args in args.context.square != nil },
-                "isDead": { args in args.context.square == nil },
-            ]
-        )
-    )
+    var context: PieceContext { PieceContext(pieceId: "wPa2", kind: .pawn, color: .white, square: nil) }
 
-    private static func applySync(_ context: inout PieceContext, args: ActionArgs<PieceContext>) {
-        guard case let .sync(square) = PieceEvent.parse(args.event) else { return }
-        context.square = square
+    var machine: some XStateMachine {
+        XState(.boot) {
+            Always(to: .alive).when { $0.isAlive }
+            Always(to: .captured)
+        }
+        .initial()
+
+        XState(.alive) {
+            XTransition(on: PieceEvent.moveTo, to: .alive).action { args, _ in
+                var ctx = args.context
+                if case let .moveTo(square)? = args.event { ctx.square = square }
+                return ctx
+            }
+            XTransition(on: .captured, to: .captured).action { ctx in
+                var c = ctx; c.square = nil; return c
+            }
+            XTransition(on: PieceEvent.sync, to: .alive).action { args, _ in
+                var ctx = args.context
+                if case let .sync(square)? = args.event { ctx.square = square }
+                return ctx
+            }
+            Always(to: .captured).when { !$0.isAlive }
+        }
+
+        XState(.captured) {
+            XTransition(on: PieceEvent.sync, to: .captured).action { args, _ in
+                var ctx = args.context
+                if case let .sync(square)? = args.event { ctx.square = square }
+                return ctx
+            }
+            Always(to: .alive).when { $0.isAlive }
+        }
     }
 }
