@@ -41,6 +41,46 @@ struct MachineViewTests {
         #expect(light.context.cycles == 1)
     }
 
+    // A parallel machine: two regions active at once (the AND case).
+    enum Fmt: String, StateIdentifying, CaseIterable {
+        case editing, bold, underline, on, off
+        static var _blank: Fmt { .editing }
+    }
+    enum FmtEvent: String, EventIdentifying { case toggleBold, toggleUnderline; static var _blank: FmtEvent { .toggleBold } }
+    struct Editor: StateMachine {
+        typealias Context = Int
+        typealias StateID = Fmt
+        typealias EventID = FmtEvent
+        var context: Int { 0 }
+        var machine: some XStateMachine {
+            XState(.editing) {
+                XState(.bold) {
+                    XState(.off) { XTransition(on: .toggleBold, to: .on) }.initial()
+                    XState(.on) { XTransition(on: .toggleBold, to: .off) }
+                }
+                XState(.underline) {
+                    XState(.off) { XTransition(on: .toggleUnderline, to: .on) }.initial()
+                    XState(.on) { XTransition(on: .toggleUnderline, to: .off) }
+                }
+            }
+            .parallel()
+            .initial()
+        }
+    }
+
+    @Test func parallelLayoutsRender() async {
+        let store = MachineStore(Editor())
+        // Two regions both reach their `off` initial → two active leaves named "off".
+        await waitUntil { store.configuration?.activeLeaves.count == 2 }
+
+        for layout in [MachineLayout.zStack, .vStack, .hStack, .tabs] {
+            let view = MachineView(store, layout: layout) { state, _ in
+                Text(state.name).frame(width: 80, height: 60)
+            }
+            #expect(ImageRenderer(content: view).cgImage != nil)
+        }
+    }
+
     @Test func machineViewRendersActiveState() async {
         let light = MachineStore(DemoTrafficLight())
         await waitUntil { light.configuration == .atomic(.red) }

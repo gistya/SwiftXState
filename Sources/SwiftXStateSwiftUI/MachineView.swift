@@ -50,35 +50,70 @@ public struct Machine<M: StateMachine>: DynamicProperty {
 ///     }
 /// }
 /// ```
+/// How `MachineView` arranges the **active leaves** — the AND/OR → container half of the statechart
+/// correspondence. A compound (OR) state has one active leaf, so layout is moot; a **parallel** (AND)
+/// state has several simultaneously-active leaves, and this chooses how to lay them out: overlapped
+/// (`.zStack`, the default), side by side / stacked, or one tab per region.
+public enum MachineLayout: Sendable {
+    case zStack
+    case vStack
+    case hStack
+    case tabs
+}
+
 public struct MachineView<M: StateMachine, Content: View>: View {
     @State private var store: MachineStore<M>
+    private let layout: MachineLayout
     private let content: (M.StateID, MachineStore<M>) -> Content
 
     /// Own a fresh machine for the lifetime of this view.
     public init(
         _ machine: M,
+        layout: MachineLayout = .zStack,
         @ViewBuilder content: @escaping (M.StateID, MachineStore<M>) -> Content
     ) {
         _store = State(initialValue: MachineStore(machine))
+        self.layout = layout
         self.content = content
     }
 
     /// Render an existing store (e.g. from `@Machine` or a shared `MainStore`).
     public init(
         _ store: MachineStore<M>,
+        layout: MachineLayout = .zStack,
         @ViewBuilder content: @escaping (M.StateID, MachineStore<M>) -> Content
     ) {
         _store = State(initialValue: store)
+        self.layout = layout
         self.content = content
     }
 
     public var body: some View {
-        ZStack {
-            ForEach(activeLeaves(of: store.configuration), id: \.self) { leaf in
-                content(leaf, store)
+        Group {
+            let leaves = activeLeaves(of: store.configuration)
+            switch layout {
+            case .zStack:
+                ZStack { cells(leaves) }
+            case .vStack:
+                VStack { cells(leaves) }
+            case .hStack:
+                HStack { cells(leaves) }
+            case .tabs:
+                TabView {
+                    ForEach(leaves, id: \.self) { leaf in
+                        content(leaf, store).tabItem { Text(leaf.name) }
+                    }
+                }
             }
         }
         .animation(.default, value: store.configuration)
+    }
+
+    @ViewBuilder
+    private func cells(_ leaves: [M.StateID]) -> some View {
+        ForEach(leaves, id: \.self) { leaf in
+            content(leaf, store)
+        }
     }
 }
 
