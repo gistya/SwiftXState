@@ -5,11 +5,9 @@ import Testing
 
 @Suite("SwiftXChess replay integration")
 struct SwiftXChessReplayIntegrationTests {
-    @Test("ChessEvent parse and rules work outside the machine")
+    @Test("Chess rules work outside the machine")
     func rulesHandleTapDirectly() {
         var context = ChessContext.initial()
-        let event = ChessEvent.tap(Square(row: 1, col: 4))
-        #expect(ChessEvent.parse(event) != nil)
         ChessRules.handleTap(&context, at: Square(row: 1, col: 4))
         #expect(context.selected == Square(row: 1, col: 4))
         ChessRules.handleTap(&context, at: Square(row: 3, col: 4))
@@ -18,17 +16,16 @@ struct SwiftXChessReplayIntegrationTests {
 
     @Test("TAP events update chess context on live actor")
     func tapUpdatesContext() async {
-        let actor = await createActor(ChessMachineFactory.machine).start()
+        let actor = await createActor(ChessGameMachine.resolved).start()
         var snapshot = await actor.snapshot
-        #expect(snapshot.matches(ChessGameState.playing))
-        #expect(snapshot.typed(as: ChessGameState.self).inState(.playing))
+        #expect(snapshot.matches("game.playing"))
 
         let tapEvent = ChessEvent.tap(Square(row: 1, col: 4))
         let transitions = selectTransitions(event: tapEvent, snapshot: snapshot)
         #expect(!transitions.isEmpty)
 
         let (next, _) = transition(
-            ChessMachineFactory.machine,
+            ChessGameMachine.resolved,
             snapshot: snapshot,
             event: tapEvent
         )
@@ -48,7 +45,7 @@ struct SwiftXChessReplayIntegrationTests {
     @Test("enter replay freezes session and scrub restores board positions")
     func replayScrubRestoresBoard() async {
         let recorder = InspectionRecorder()
-        let machine = ChessMachineFactory.machine
+        let machine = ChessGameMachine.resolved
         let actor = await createActor(
             machine,
             options: ActorOptions(inspect: recorder.observe())
@@ -106,7 +103,7 @@ struct SwiftXChessReplayIntegrationTests {
     @Test("snapshot context decodes to matching time-travel board")
     func snapshotDecodeMatchesTimeTravel() async {
         let recorder = InspectionRecorder()
-        let machine = ChessMachineFactory.machine
+        let machine = ChessGameMachine.resolved
         let actor = await createActor(
             machine,
             options: ActorOptions(inspect: recorder.observe())
@@ -160,7 +157,7 @@ struct SwiftXChessReplayIntegrationTests {
         let recorder = InspectionRecorder()
         let gate = Gate()
         let actor = await createActor(
-            ChessMachineFactory.machine,
+            ChessGameMachine.resolved,
             options: ActorOptions(inspect: gate.observe(recorder))
         ).start()
 
@@ -209,7 +206,7 @@ struct SwiftXChessReplayIntegrationTests {
     @Test("verify replay matches recorded snapshots")
     func verifyRecordedGame() async {
         let recorder = InspectionRecorder()
-        let machine = ChessMachineFactory.machine
+        let machine = ChessGameMachine.resolved
         let actor = await createActor(
             machine,
             options: ActorOptions(inspect: recorder.observe())

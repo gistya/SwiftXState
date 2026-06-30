@@ -112,7 +112,7 @@ private actor OpeningInspectSink {
 /// Wires the base tree actor and watcher. The watcher never sends to the tree actor.
 public final class OpeningTreeSession: @unchecked Sendable {
     public let dataset: OpeningDataset
-    public let actor: Actor<OpeningTreeContext>
+    public let actor: Actor<MachineLogic<OpeningTreeContext>>
     public let trace: OpeningTransitionTrace
     private let watcher: OpeningWatcher
     private let inspectSink: OpeningInspectSink

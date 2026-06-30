@@ -25,6 +25,10 @@ struct ChessGameMachine: StateMachine {
 
     static let id = "chess"
 
+    /// The resolved engine machine — for replay time-travel, `verifyReplay`, inspector registration,
+    /// and graph visualization (anywhere a `ResolvedMachine` is needed rather than a running actor).
+    static var resolved: ResolvedMachine<ChessContext> { ChessGameMachine().resolvedMachine(id: id) }
+
     var context: ChessContext { .initial() }
 
     /// Root is parallel: the `game` and `castling` regions run at once (was a `.root` parallel wrapper

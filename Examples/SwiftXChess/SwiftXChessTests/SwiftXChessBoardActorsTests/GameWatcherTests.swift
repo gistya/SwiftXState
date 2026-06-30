@@ -284,26 +284,26 @@ struct GameWatcherTests {
         #expect(snapshot.context.plyCount == 3)
     }
 
-    private func tap(_ actor: Actor<GameWatcherContext>, row: Int, col: Int) async {
+    private func tap(_ actor: Actor<MachineLogic<GameWatcherContext>>, row: Int, col: Int) async {
         await actor.send(Event("TAP.\(row).\(col)"))
         try? await Task.sleep(for: .milliseconds(30))
     }
 
-    private func squareContext(_ actor: Actor<GameWatcherContext>, coord: String) async -> SquareContext? {
+    private func squareContext(_ actor: Actor<MachineLogic<GameWatcherContext>>, coord: String) async -> SquareContext? {
         guard let child = await actor.childActor(id: BoardActorIds.square(coord)) as? MachineChildRef<SquareContext> else {
             return nil
         }
         return await child.actor.snapshot.context
     }
 
-    private func pieceContext(_ actor: Actor<GameWatcherContext>, id: String) async -> PieceContext? {
+    private func pieceContext(_ actor: Actor<MachineLogic<GameWatcherContext>>, id: String) async -> PieceContext? {
         guard let child = await actor.childActor(id: BoardActorIds.piece(id: id)) as? MachineChildRef<PieceContext> else {
             return nil
         }
         return await child.actor.snapshot.context
     }
 
-    private func squareState(_ actor: Actor<GameWatcherContext>, coord: String) async -> String? {
+    private func squareState(_ actor: Actor<MachineLogic<GameWatcherContext>>, coord: String) async -> String? {
         guard let child = await actor.childActor(id: BoardActorIds.square(coord)) as? MachineChildRef<SquareContext> else {
             return nil
         }

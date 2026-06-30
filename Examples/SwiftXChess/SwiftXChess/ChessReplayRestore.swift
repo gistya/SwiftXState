@@ -98,7 +98,7 @@ enum ChessReplayRestore {
             context.castlingRights = restored.castlingRights
             context.pendingPromotion = restored.pendingPromotion
         } else if let traveled = timeTravel(
-            ChessMachineFactory.machine,
+            ChessGameMachine.resolved,
             context: ChessContext.initial(),
             session: session,
             toStep: stepIndex

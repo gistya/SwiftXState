@@ -8,9 +8,9 @@ import SwiftXStateInspectURLSession
 @MainActor
 @Observable
 final class DistributedChessSession {
-    let actor: Actor<GameWatcherContext>
+    let actor: Actor<MachineLogic<GameWatcherContext>>
     /// The machine the actor runs — exposed so a graph view can visualize this exact session.
-    let machine: StateMachine<GameWatcherContext>
+    let machine: ResolvedMachine<GameWatcherContext>
     private let treeSession: OpeningTreeSession
     private var bridge: InspectBridge?
     let recorder = InspectionRecorder()
