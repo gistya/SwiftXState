@@ -105,6 +105,12 @@ extension MachineLogic {
                 await host.deliverToChild(id: resolveChildTarget(target, args: args), event: event)
             case let .sendTo(sendToAction):
                 let args = ActionArgs(context: context, event: event)
+                // Typed cross-actor event: deliver verbatim so the payload survives (the string
+                // `Event` resolution path would flatten it). Delay isn't supported for this channel.
+                if case let .eventable(typedEvent) = sendToAction.event {
+                    await host.deliverToChild(id: resolveChildTarget(sendToAction.target, args: args), event: typedEvent)
+                    continue
+                }
                 let resolved = resolveSendTo(sendToAction, args: args, delays: machine.implementations.delays)
                 if let delayMs = resolved.delayMs {
                     host.scheduleChildEvent(

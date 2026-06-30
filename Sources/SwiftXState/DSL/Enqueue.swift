@@ -48,10 +48,17 @@ public final class Enqueue<Context: Sendable, EventID: EventIdentifying>: @unche
         collected.append(SwiftXState.raise(Event(id.name)))
     }
 
-    /// Send an event to a child actor by id (discriminant only — no payload, per the engine's
-    /// string-`Event` sendTo channel).
+    /// Send a typed event to a child actor by id — carries the event's **payload** (the typed
+    /// cross-actor channel; was discriminant-only).
     public func sendTo(_ childId: String, _ id: EventID) {
-        collected.append(.sendTo(SendToAction(target: .fixed(childId), event: .fixed(Event(id.name)))))
+        collected.append(SwiftXState.sendTo(childId, eventable: TypedEvent(id)))
+    }
+
+    /// Send a **child's own** typed event to a child — typed cross-actor messaging where the child
+    /// runs a different machine. `enq.sendTo(squareId, SquareEvent.occupy(pieceId: id))`; the child
+    /// recovers it, payload and all, off `args.event`.
+    public func sendTo<ChildEvent: EventIdentifying>(_ childId: String, _ event: ChildEvent) {
+        collected.append(SwiftXState.sendTo(childId, eventable: TypedEvent(event)))
     }
 
     /// Emit an event to `on(_:)` listeners.

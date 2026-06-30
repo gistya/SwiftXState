@@ -5,6 +5,9 @@ public struct SendToAction<Context: Sendable>: Sendable {
     public enum EventSource: Sendable {
         case fixed(Event)
         case expression(@Sendable (ActionArgs<Context>) -> Event)
+        /// A fully-typed event delivered to the child verbatim — carries its payload (unlike the
+        /// string `Event` cases). Used for typed cross-actor messaging (`enq.sendTo(childId, ChildEvent)`).
+        case eventable(any Eventable)
     }
 
     public let target: ChildTarget<Context>
@@ -44,6 +47,10 @@ func resolveSendToEvent<Context: Sendable>(
         return event
     case let .expression(expression):
         return expression(args)
+    case let .eventable(event):
+        // The payload-preserving delivery happens in the side-effect runner; this string fallback is
+        // only reached if a typed sendTo flows through the `Event`-based resolution path.
+        return Event(event.type)
     }
 }
 
@@ -77,6 +84,11 @@ func resolveSendTo<Context: Sendable>(
 /// Sends an event to a child actor, mirroring XState's `sendTo`.
 public func sendTo<Context: Sendable>(_ childId: String, _ event: Event) -> ActionRef<Context> {
     .sendTo(SendToAction(target: .fixed(childId), event: .fixed(event)))
+}
+
+/// Sends a fully-typed event (carrying its payload) to a child actor — the typed cross-actor channel.
+public func sendTo<Context: Sendable>(_ childId: String, eventable event: any Eventable) -> ActionRef<Context> {
+    .sendTo(SendToAction(target: .fixed(childId), event: .eventable(event)))
 }
 
 /// Sends a dynamically resolved event to a child actor.
