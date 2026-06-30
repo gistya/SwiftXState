@@ -244,210 +244,168 @@ enum GameWatcherRules {
     }
 }
 
-enum GameWatcherMachine {
+enum GameWatcherState: String, StateIdentifying {
+    case boot, game, active, turn, idle, selecting, promoting, finished, replaying
+    static var _blank: GameWatcherState { .boot }
+}
+
+/// The chess orchestrator as a typed `StateMachine` (was `enum GameWatcherMachine` + hand-assembled
+/// `MachineConfig`/`StateNodeConfig`/`enqueueActions`). `boot` spawns the 96 board actors + 2 inspector
+/// boards from its entry, then resolves to `game`; `game.active.turn` runs the play loop
+/// (idle/selecting/promoting driven by always-guards over context), with `finished`/`replaying`
+/// siblings. Cross-actor board commands now flow through typed `enq.sendTo` (P2a); the
+/// `replaying ↔ game.active.turn.idle` jumps are unique-name absolute targets (P2b).
+struct GameWatcherMachine: StateMachine {
+    typealias Context = GameWatcherContext
+    typealias StateID = GameWatcherState
+    typealias EventID = ChessEvent
+
     static let id = "game-watcher"
+
+    /// When `false` (inspector summary), `boot` skips spawning — the graph is the same shape, the
+    /// runtime still spawns 96 off-inspector board actors elsewhere.
+    let includeBoardSpawns: Bool
+    /// When `true`, the 96 per-square/piece board actors stream to inspectors too (a stress test —
+    /// kills the web client, fine natively).
+    let inspectableBoardActors: Bool
+
+    init(includeBoardSpawns: Bool = true, inspectableBoardActors: Bool = false) {
+        self.includeBoardSpawns = includeBoardSpawns
+        self.inspectableBoardActors = inspectableBoardActors
+    }
+
+    var context: GameWatcherContext { .initial() }
+
+    var machine: some XStateMachine {
+        bootState()
+        gameState()
+    }
 
     /// - Parameter inspectableBoardActors: when `true`, the 96 per-square/piece board actors
     ///   are streamed to inspectors too (a deliberate stress test — this count kills the web
     ///   client but the native inspector handles it).
-    static func make(inspectableBoardActors: Bool = false) -> StateMachine<GameWatcherContext> {
-        machineConfig(includeBoardSpawns: true, inspectableBoardActors: inspectableBoardActors)
+    static func make(inspectableBoardActors: Bool = false) -> ResolvedMachine<GameWatcherContext> {
+        GameWatcherMachine(includeBoardSpawns: true, inspectableBoardActors: inspectableBoardActors)
+            .resolvedMachine(id: id)
     }
 
     /// Compact graph for Stately Inspector — runtime still spawns 96 off-inspector board actors.
-    static func inspectorSummaryMachine() -> StateMachine<GameWatcherContext> {
-        machineConfig(includeBoardSpawns: false, inspectableBoardActors: false)
+    static func inspectorSummaryMachine() -> ResolvedMachine<GameWatcherContext> {
+        GameWatcherMachine(includeBoardSpawns: false).resolvedMachine(id: id)
     }
 
-    private static func machineConfig(includeBoardSpawns: Bool, inspectableBoardActors: Bool) -> StateMachine<GameWatcherContext> {
-        let initial = GameWatcherContext.initial()
-        var boot = StateNodeConfig<GameWatcherContext>(always: [TransitionConfig(target: "game")])
-        if includeBoardSpawns {
-            boot.entry = BoardActorSpawn.entryActions(layout: initial.layout, inspectableBoardActors: inspectableBoardActors)
+    // MARK: - States
+
+    private typealias St = XState<GameWatcherContext, ChessEvent, GameWatcherState>
+    private typealias Tr = XTransition<GameWatcherContext, ChessEvent, GameWatcherState>
+
+    private func bootState() -> St {
+        let boot = XState(.boot) { Always(to: .game) }.initial()
+        guard includeBoardSpawns else { return boot }
+        let inspectable = inspectableBoardActors
+        return boot.onEntry { args, enq in
+            BoardActorSpawn.spawnBoard(into: enq, layout: args.context.layout, inspectableBoardActors: inspectable)
+            return args.context
         }
-        let description = includeBoardSpawns
-            ? "Chess orchestrator — one inspector graph; 96 board actors run off-inspector"
-            : "Chess orchestrator (inspector summary; 96 board actors run off-graph)"
-        return createMachine(
-            MachineConfig(
-                id: id,
-                initial: "boot",
-                context: initial,
-                states: [
-                    "boot": boot,
-                    "game": gameState(),
-                ],
-                description: description
-            ),
-            implementations: implementations()
-        )
     }
 
-    private static func implementations() -> MachineImplementations<GameWatcherContext> {
-        MachineImplementations.legacy(
-            guards: [
-                "hasSelection": { args in
-                    args.context.selected != nil && args.context.pendingPromotion == nil
-                },
-                "noSelection": { args in args.context.selected == nil },
-                "hasPromotion": { args in args.context.pendingPromotion != nil },
-                "noPromotion": { args in args.context.pendingPromotion == nil },
-                "hasOutcome": { args in args.context.outcome != nil },
-            ]
-        )
-    }
-
-    private static func gameState() -> StateNodeConfig<GameWatcherContext> {
-        StateNodeConfig(
-            initial: "active",
-            states: [
-                "active": StateNodeConfig(
-                    initial: "turn",
-                    states: [
-                        "turn": StateNodeConfig(
-                            initial: "idle",
-                            states: [
-                                "idle": StateNodeConfig(
-                                    always: [
-                                        TransitionConfig(
-                                            target: "selecting",
-                                            guard: .named("hasSelection")
-                                        ),
-                                        TransitionConfig(
-                                            target: "promoting",
-                                            guard: .named("hasPromotion")
-                                        ),
-                                    ]
-                                ),
-                                "selecting": StateNodeConfig(
-                                    always: [
-                                        TransitionConfig(
-                                            target: "idle",
-                                            guard: .named("noSelection")
-                                        ),
-                                        TransitionConfig(
-                                            target: "promoting",
-                                            guard: .named("hasPromotion")
-                                        ),
-                                    ]
-                                ),
-                                "promoting": StateNodeConfig(
-                                    always: [
-                                        TransitionConfig(
-                                            target: "idle",
-                                            guard: .named("noPromotion")
-                                        ),
-                                    ]
-                                ),
-                            ],
-                            on: interactionHandlers()
-                        ),
-                    ],
-                    always: [
-                        TransitionConfig(target: "finished", guard: .named("hasOutcome")),
-                    ]
-                ),
-                "finished": StateNodeConfig(
-                    on: [
-                        ChessEvent.newGame.type: .single(
-                            TransitionConfig(target: "boot", actions: newGameActions())
-                        ),
-                        ChessEvent.enterReplay.type: .single(
-                            TransitionConfig(target: "#game-watcher.game.replaying", actions: [assign { ctx, _ in
-                                GameWatcherReplay.enter(&ctx)
-                            }])
-                        ),
-                    ]
-                ),
-                "replaying": StateNodeConfig(
-                    on: [
-                        ChessEvent.exitReplay.type: .single(
-                            TransitionConfig(
-                                target: "#game-watcher.game.active.turn.idle",
-                                actions: [assign { ctx, _ in
-                                    GameWatcherReplay.exit(&ctx)
-                                }]
-                            )
-                        ),
-                        ChessEvent.newGame.type: .single(
-                            TransitionConfig(target: "boot", actions: newGameActions())
-                        ),
-                        "REPLAY_SCRUB.*": .single(TransitionConfig(actions: [
-                            enqueueActions { builder in
-                                builder.enqueue(assign { ctx, args in
-                                    GameWatcherReplay.scrub(&ctx, args: args)
-                                })
-                                syncBoardInspector(builder: builder)
-                            },
-                        ])),
-                    ]
-                ),
-            ]
-        )
-    }
-
-    private static func interactionHandlers() -> [String: TransitionInput<GameWatcherContext>] {
-        let handlers: [String: TransitionInput<GameWatcherContext>] = [
-            "TAP.*": .single(TransitionConfig(actions: [
-                enqueueActions { builder in
-                    var context = builder.context
-                    guard let event = ChessEvent.parse(builder.event),
-                          case let .tap(square) = event else { return }
-                    guard let commit = GameWatcherRules.handleTap(&context, at: square) else {
-                        let selected = context.selected
-                        builder.enqueue(assign { ctx, _ in
-                            ctx.selected = selected
-                        })
-                        return
+    private func gameState() -> St {
+        XState(.game) {
+            XState(.active) {
+                XState(.turn) {
+                    XState(.idle) {
+                        Always(to: .selecting).when { $0.selected != nil && $0.pendingPromotion == nil }
+                        Always(to: .promoting).when { $0.pendingPromotion != nil }
+                    }.initial()
+                    XState(.selecting) {
+                        Always(to: .idle).when { $0.selected == nil }
+                        Always(to: .promoting).when { $0.pendingPromotion != nil }
                     }
-                    let updated = context
-                    builder.enqueue(assign { ctx, _ in
-                        syncContext(&ctx, from: updated)
-                    })
-                    dispatch(commit.commands, builder: builder)
-                },
-            ])),
-            "PROMOTE.*": .single(TransitionConfig(actions: [
-                enqueueActions { builder in
-                    var context = builder.context
-                    guard let event = ChessEvent.parse(builder.event),
-                          case let .promote(kind) = event,
-                          let commit = GameWatcherRules.handlePromotion(&context, piece: kind) else {
-                        return
+                    XState(.promoting) {
+                        Always(to: .idle).when { $0.pendingPromotion == nil }
                     }
-                    let updated = context
-                    builder.enqueue(assign { ctx, _ in
-                        syncContext(&ctx, from: updated)
-                    })
-                    dispatch(commit.commands, builder: builder)
-                },
-            ])),
-            ChessEvent.newGame.type: .single(
-                TransitionConfig(target: "boot", actions: newGameActions())
-            ),
-            ChessEvent.enterReplay.type: .single(
-                TransitionConfig(target: "#game-watcher.game.replaying", actions: [assign { ctx, _ in
-                    GameWatcherReplay.enter(&ctx)
-                }])
-            ),
-        ]
-        return handlers
+                    tapHandler()
+                    promoteHandler()
+                    newGameTransition()
+                    enterReplayTransition()
+                }.initial()
+                Always(to: .finished).when { $0.outcome != nil }
+            }.initial()
+            XState(.finished) {
+                newGameTransition()
+                enterReplayTransition()
+            }
+            XState(.replaying) {
+                exitReplayTransition()
+                newGameTransition()
+                scrubHandler()
+            }
+        }
     }
 
-    private static func newGameActions() -> [ActionRef<GameWatcherContext>] {
-        [
-            enqueueActions { builder in
-                for childId in builder.context.layout.allChildIds {
-                    builder.enqueue(stopChild(childId))
-                }
-                builder.enqueue(assign { ctx, _ in
-                    let fresh = GameWatcherContext.initial()
-                    syncContext(&ctx, from: fresh)
-                    ChessReplayBridge.clearPendingSession()
-                })
-                syncBoardInspector(builder: builder)
-            },
-        ]
+    // MARK: - Handlers (self-targeting `turn` ≈ internal: the substates are pure functions of context,
+    // so the momentary re-entry to `idle` is immediately re-derived by the always-guards).
+
+    private func tapHandler() -> Tr {
+        XTransition(on: ChessEvent.tap, to: .turn).action { args, enq in
+            var context = args.context
+            guard case let .tap(square)? = args.event else { return context }
+            // No move: `handleTap` already updated `selected` in `context` — return it.
+            guard let commit = GameWatcherRules.handleTap(&context, at: square) else { return context }
+            Self.dispatch(commit.commands, into: enq)
+            return context
+        }
+    }
+
+    private func promoteHandler() -> Tr {
+        XTransition(on: ChessEvent.promote, to: .turn).action { args, enq in
+            var context = args.context
+            guard case let .promote(kind)? = args.event,
+                  let commit = GameWatcherRules.handlePromotion(&context, piece: kind) else {
+                return context
+            }
+            Self.dispatch(commit.commands, into: enq)
+            return context
+        }
+    }
+
+    private func newGameTransition() -> Tr {
+        XTransition(on: .newGame, to: .boot).action { args, enq in
+            var context = args.context
+            for childId in context.layout.allChildIds { enq.stopChild(childId) }
+            let fresh = GameWatcherContext.initial()
+            Self.syncContext(&context, from: fresh)
+            ChessReplayBridge.clearPendingSession()
+            Self.syncBoardInspector(context: context, into: enq)
+            return context
+        }
+    }
+
+    private func enterReplayTransition() -> Tr {
+        XTransition(on: .enterReplay, to: .replaying).action { args, _ in
+            var context = args.context
+            GameWatcherReplay.enter(&context)
+            return context
+        }
+    }
+
+    private func exitReplayTransition() -> Tr {
+        XTransition(on: .exitReplay, to: .idle).action { args, _ in
+            var context = args.context
+            GameWatcherReplay.exit(&context)
+            return context
+        }
+    }
+
+    private func scrubHandler() -> Tr {
+        XTransition(on: ChessEvent.replayScrub, to: .replaying).action { args, enq in
+            var context = args.context
+            if case let .replayScrub(step)? = args.event {
+                GameWatcherReplay.syncSnapshot(&context, step: step)
+            }
+            Self.syncBoardInspector(context: context, into: enq)
+            return context
+        }
     }
 
     private static func syncContext(_ target: inout GameWatcherContext, from source: GameWatcherContext) {
@@ -467,36 +425,39 @@ enum GameWatcherMachine {
         target.liveSnapshot = source.liveSnapshot
     }
 
+    /// Fan a move's board commands out to the typed square/piece children (P2a — payloads survive,
+    /// where the old `OCCUPY.<id>` encoded the payload in the event type) plus the string-driven
+    /// inspector boards (the inspector speaks its own `SQUARE.*` wildcard vocabulary).
     private static func dispatch(
         _ commands: [GameWatcherCommand],
-        builder: EnqueueActionsBuilder<GameWatcherContext>
+        into enq: Enqueue<GameWatcherContext, ChessEvent>
     ) {
         for command in commands {
             switch command {
             case let .squareClear(coord):
-                builder.sendTo(BoardActorIds.square(coord), Event("CLEAR"))
+                enq.sendTo(BoardActorIds.square(coord), SquareEvent.clear)
             case let .squareOccupy(coord, pieceId):
-                builder.sendTo(BoardActorIds.square(coord), Event("OCCUPY.\(pieceId)"))
+                enq.sendTo(BoardActorIds.square(coord), SquareEvent.occupy(pieceId: pieceId))
             case let .pieceMoveTo(pieceId, coord):
-                builder.sendTo(BoardActorIds.piece(id: pieceId), Event("MOVE_TO.\(coord)"))
+                enq.sendTo(BoardActorIds.piece(id: pieceId), PieceEvent.moveTo(square: coord))
             case let .pieceCaptured(pieceId):
-                builder.sendTo(BoardActorIds.piece(id: pieceId), Event("CAPTURED"))
+                enq.sendTo(BoardActorIds.piece(id: pieceId), PieceEvent.captured)
             }
             if let inspectorEvent = BoardInspectorSync.inspectorEvent(for: command) {
                 for mode in BoardMode.allCases {
-                    builder.sendTo(BoardInspectorMachine.childId(mode), inspectorEvent)
+                    enq.sendTo(BoardInspectorMachine.childId(mode), inspectorEvent.type)
                 }
             }
         }
     }
 
-    private static func syncBoardInspector(builder: EnqueueActionsBuilder<GameWatcherContext>) {
-        for event in BoardInspectorSync.events(
-            occupants: builder.context.occupants,
-            layout: builder.context.layout
-        ) {
+    private static func syncBoardInspector(
+        context: GameWatcherContext,
+        into enq: Enqueue<GameWatcherContext, ChessEvent>
+    ) {
+        for event in BoardInspectorSync.events(occupants: context.occupants, layout: context.layout) {
             for mode in BoardMode.allCases {
-                builder.sendTo(BoardInspectorMachine.childId(mode), event)
+                enq.sendTo(BoardInspectorMachine.childId(mode), event.type)
             }
         }
     }
@@ -518,14 +479,6 @@ enum GameWatcherReplay {
         context.replaySession = nil
         context.replayStep = 0
         context.restoreLiveSnapshot()
-    }
-
-    static func scrub(_ context: inout GameWatcherContext, args: ActionArgs<GameWatcherContext>) {
-        guard let event = ChessEvent.parse(args.event),
-              case let .replayScrub(step) = event else {
-            return
-        }
-        syncSnapshot(&context, step: step)
     }
 
     static func syncSnapshot(_ context: inout GameWatcherContext, step: Int) {
