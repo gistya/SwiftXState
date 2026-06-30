@@ -1,18 +1,17 @@
 import Foundation
 import SwiftXState
 
-/// Every state in the chess machine. `root` is a parallel wrapper holding the two regions; `game` is
-/// a compound (playing / gameOver / replaying); `castling` is parallel over four sides, each a
-/// compound `available` / `forfeited`. (`available` / `forfeited` are shared across the four sides —
-/// the typed `Configuration` keeps them distinct by their parent path.)
+/// Every state in the chess machine. The machine *root* is parallel (`isParallel`) over the two
+/// top-level regions: `game` is a compound (playing / gameOver / replaying); `castling` is parallel
+/// over four sides, each a compound `available` / `forfeited`. (`available` / `forfeited` are shared
+/// across the four sides — the typed `Configuration` keeps them distinct by their parent path.)
 enum ChessState: String, StateIdentifying {
-    case root
     case game, castling
     case playing, gameOver, replaying
     case whiteKingside, whiteQueenside, blackKingside, blackQueenside
     case available, forfeited
 
-    static var _blank: ChessState { .root }
+    static var _blank: ChessState { .game }
 }
 
 /// The chess game as a typed `StateMachine` — was `ChessMachineFactory` over `createMachine` /
@@ -28,11 +27,14 @@ struct ChessGameMachine: StateMachine {
 
     var context: ChessContext { .initial() }
 
+    /// Root is parallel: the `game` and `castling` regions run at once (was a `.root` parallel wrapper
+    /// state — `isParallel` drops the extra `root.` path segment).
+    var isParallel: Bool { true }
+
     var machine: some XStateMachine {
-        XState(.root) {
-            // ── game region ──────────────────────────────────────────────────────────────
-            XState(.game) {
-                XState(.playing) {
+        // ── game region ──────────────────────────────────────────────────────────────────
+        XState(.game) {
+            XState(.playing) {
                     XTransition(on: ChessEvent.tap, to: .playing).action { args, _ in
                         var ctx = args.context
                         guard ctx.replaySession == nil, case let .tap(square)? = args.event else { return ctx }
@@ -68,17 +70,14 @@ struct ChessGameMachine: StateMachine {
                 }
             }
 
-            // ── castling region (parallel over the four sides) ───────────────────────────
-            XState(.castling) {
-                castlingSide(.whiteKingside, forfeits: ChessRules.forfeitsWhiteKingside)
-                castlingSide(.whiteQueenside, forfeits: ChessRules.forfeitsWhiteQueenside)
-                castlingSide(.blackKingside, forfeits: ChessRules.forfeitsBlackKingside)
-                castlingSide(.blackQueenside, forfeits: ChessRules.forfeitsBlackQueenside)
-            }
-            .parallel()
+        // ── castling region (parallel over the four sides) ───────────────────────────────
+        XState(.castling) {
+            castlingSide(.whiteKingside, forfeits: ChessRules.forfeitsWhiteKingside)
+            castlingSide(.whiteQueenside, forfeits: ChessRules.forfeitsWhiteQueenside)
+            castlingSide(.blackKingside, forfeits: ChessRules.forfeitsBlackKingside)
+            castlingSide(.blackQueenside, forfeits: ChessRules.forfeitsBlackQueenside)
         }
         .parallel()
-        .initial()
     }
 
     /// One castling side: `available` until a tap implies a move that forfeits this side's rights,
