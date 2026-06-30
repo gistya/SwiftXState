@@ -28,13 +28,22 @@ public protocol StateMachine<Context, EventID, StateID>: MachineSchemable, Senda
     /// (`context: ({ input }) => …`) arrives with the typed-input phase.
     var context: Context { get }
 
+    /// Whether the machine *root* is parallel — XState v6's `createMachine({ type: 'parallel' })`:
+    /// every top-level state runs simultaneously, with no `initial`. Defaults to `false`; override
+    /// with `var isParallel: Bool { true }` for a parallel-root machine (e.g. a board of independent
+    /// squares). The per-state analogue is `XState(...).parallel()`.
+    var isParallel: Bool { get }
+
     @MachineBuilder<Context, EventID, StateID>
     var machine: Body { get }
 }
 
 public extension StateMachine {
-    /// Fold the declarative `machine` block into a concrete `MachineSchema`.
+    /// Sequential root by default.
+    var isParallel: Bool { false }
+
+    /// Fold the declarative `machine` block into a concrete `MachineSchema`, carrying the root-parallel flag.
     func buildSchema() -> MachineSchema<Context, EventID, StateID> {
-        machine.folded(into: MachineSchema<Context, EventID, StateID>())
+        machine.folded(into: MachineSchema<Context, EventID, StateID>()).withParallel(isParallel)
     }
 }

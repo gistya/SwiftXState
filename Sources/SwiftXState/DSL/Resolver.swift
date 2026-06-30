@@ -16,9 +16,10 @@ public extension MachineSchema {
         }
         return createMachine(MachineConfig<Context>(
             id: id,
-            initial: initialState?.name,
+            initial: isParallel ? nil : initialState?.name,
             context: context,
-            states: stateConfigs
+            states: stateConfigs,
+            type: isParallel ? .parallel : nil
         ))
     }
 

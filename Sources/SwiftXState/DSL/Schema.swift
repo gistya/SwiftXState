@@ -197,17 +197,23 @@ public struct MachineSchema<
     public private(set) var states: [StateID: StateNode]
     public private(set) var order: [StateID]
     public private(set) var initialState: StateID?
+    /// Whether the machine *root* is parallel (its top-level states all run at once, no `initial`) —
+    /// XState's `createMachine({ type: 'parallel' })`. Set from `StateMachine.isParallel`; the
+    /// per-state `.parallel()` modifier is the nested-node analogue.
+    public private(set) var isParallel: Bool
 
     public init() {
         states = [:]
         order = []
         initialState = nil
+        isParallel = false
     }
 
-    init(states: [StateID: StateNode], order: [StateID], initialState: StateID?) {
+    init(states: [StateID: StateNode], order: [StateID], initialState: StateID?, isParallel: Bool = false) {
         self.states = states
         self.order = order
         self.initialState = initialState
+        self.isParallel = isParallel
     }
 
     /// Add a state node — first declaration of an id wins, declaration order is recorded, and the
@@ -219,11 +225,17 @@ public struct MachineSchema<
         return Self(
             states: newStates,
             order: order + [node.id],
-            initialState: initialState ?? (node.isInitial ? node.id : nil)
+            initialState: initialState ?? (node.isInitial ? node.id : nil),
+            isParallel: isParallel
         )
     }
 
     public func folded(into schema: Self) -> Self {
         order.reduce(schema) { $0.adding(states[$1]!) }
+    }
+
+    /// A copy with the root-parallel flag set (used by `StateMachine.buildSchema`).
+    public func withParallel(_ flag: Bool) -> Self {
+        Self(states: states, order: order, initialState: initialState, isParallel: flag)
     }
 }
