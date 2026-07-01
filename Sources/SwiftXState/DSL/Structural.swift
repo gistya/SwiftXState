@@ -15,7 +15,7 @@ import CompositionalInit
 ///     Always(to: .declined)
 /// }
 /// ```
-public struct Always<
+public struct XAlways<
     Context: Sendable,
     EventID: EventIdentifying,
     StateID: StateIdentifying
@@ -53,7 +53,7 @@ public struct Always<
 ///     After(.seconds(5), to: .timedOut)
 /// }
 /// ```
-public struct After<
+public struct XAfter<
     Context: Sendable,
     EventID: EventIdentifying,
     StateID: StateIdentifying
@@ -100,7 +100,7 @@ public struct After<
 ///     XState(.done) {}.final()
 /// }
 /// ```
-public struct OnDone<
+public struct XOnDone<
     Context: Sendable,
     EventID: EventIdentifying,
     StateID: StateIdentifying
@@ -159,7 +159,7 @@ public struct OnDone<
 ///     Invoke(id: "timer", machine: TimerMachine()).onDone(to: .done)
 /// }
 /// ```
-public struct Invoke<
+public struct XInvoke<
     Context: Sendable,
     EventID: EventIdentifying,
     StateID: StateIdentifying

@@ -16,14 +16,14 @@ public struct LifeMachine: StateMachine {
     public var context: LifeContext { .empty() }
 
     public var machine: some XStateMachine {
-        XState(.running) {
+        State(.running) {
             // Payload events — referenced by case path, payload read off args.event.
-            XTransition(on: .toggleCell, to: .running).action { args, _ in
+            Transition(on: .toggleCell, to: .running).action { args, _ in
                 var ctx = args.context
                 if case let .toggleCell(x, y)? = args.event { ctx[x, y].toggle() }
                 return ctx
             }
-            XTransition(on: LifeEvent.randomize, to: .running).action { args, _ in
+            Transition(on: LifeEvent.randomize, to: .running).action { args, _ in
                 var ctx = args.context
                 var density = 0.28
                 if case let .randomize(d)? = args.event { density = d }
@@ -32,7 +32,7 @@ public struct LifeMachine: StateMachine {
                 ctx.generation = 0
                 return ctx
             }
-            XTransition(on: LifeEvent.loadTemplate, to: .running).action { args, _ in
+            Transition(on: LifeEvent.loadTemplate, to: .running).action { args, _ in
                 var ctx = args.context
                 guard case let .loadTemplate(name, atX, atY)? = args.event,
                       let tmpl = LifeTemplate(rawValue: name) else { return ctx }
@@ -45,40 +45,49 @@ public struct LifeMachine: StateMachine {
                 }
                 return ctx
             }
-            XTransition(on: LifeEvent.setRulesJSON, to: .running).action { args, _ in
+            Transition(on: LifeEvent.setRulesJSON, to: .running).action { args, _ in
                 var ctx = args.context
                 if case let .setRulesJSON(json)? = args.event, let parsed = LifeRules.from(json: json) {
                     ctx.rules = parsed
                 }
                 return ctx
             }
-            XTransition(on: LifeEvent.setSpeed, to: .running).action { args, _ in
+            Transition(on: LifeEvent.setSpeed, to: .running).action { args, _ in
                 var ctx = args.context
                 if case let .setSpeed(s)? = args.event { ctx.speed = max(0.5, min(60.0, s)) }
                 return ctx
             }
-            XTransition(on: LifeEvent.restore, to: .running).action { args, _ in
+            Transition(on: LifeEvent.restore, to: .running).action { args, _ in
                 if case let .restore(saved)? = args.event { return saved }
                 return args.context
             }
 
             // Payloadless events — plain case, pure context transform.
-            XTransition(on: .step, to: .running).action { ctx in
+            Transition(on: .step, to: .running).action { ctx in
                 var c = ctx
                 c.cells = nextGeneration(cells: c.cells, width: c.width, height: c.height, rules: c.rules)
                 c.generation += 1
                 return c
             }
-            XTransition(on: .clear, to: .running).action { ctx in
+            Transition(on: .clear, to: .running).action { ctx in
                 var c = ctx; c.reset(); return c
             }
-            XTransition(on: .play, to: .running).action { ctx in
+            Transition(on: .play, to: .running).action { ctx in
                 var c = ctx; c.isPlaying = true; return c
             }
-            XTransition(on: .pause, to: .running).action { ctx in
+            Transition(on: .pause, to: .running).action { ctx in
                 var c = ctx; c.isPlaying = false; return c
             }
         }
         .initial()
     }
+}
+
+// MARK: Workaroud for compiler issue.
+
+// See Swift Evolution pitch:
+// https://forums.swift.org/t/pitch-implicit-member-expressions-for-function-typed-parameters/87892/6
+
+extension Map where In == Int, Out == LifeEvent {
+    static var toggleCell: Map<(x: Int, y: Int), LifeEvent> { .init(transform: LifeEvent.toggleCell) }
 }

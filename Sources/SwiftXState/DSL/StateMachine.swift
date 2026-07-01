@@ -19,7 +19,13 @@
 public protocol StateMachine<Context, EventID, StateID>: MachineSchemable, Sendable {
     /// The element type of the `machine` block — any machine component for this schema identity.
     typealias XStateMachine = SchemaReducible<Context, EventID, StateID>
-
+    typealias Always = XAlways<Context, EventID, StateID>
+    typealias After = XAfter<Context, EventID, StateID>
+    typealias OnDone = XOnDone<Context, EventID, StateID>
+    typealias Invoke = XInvoke<Context, EventID, StateID>
+    typealias State = XState<Context, EventID, StateID>
+    typealias Transition = XTransition<Context, EventID, StateID>
+    
     associatedtype Body: XStateMachine
 
     /// The machine's initial context — XState v6's `createMachine({ context })`. Declared on the

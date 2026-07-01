@@ -300,7 +300,7 @@ struct GameWatcherMachine: StateMachine {
     private typealias Tr = XTransition<GameWatcherContext, ChessEvent, GameWatcherState>
 
     private func bootState() -> St {
-        let boot = XState(.boot) { Always(to: .game) }.initial()
+        let boot = State(.boot) { XAlways(to: .game) }.initial()
         guard includeBoardSpawns else { return boot }
         let inspectable = inspectableBoardActors
         return boot.onEntry { args, enq in

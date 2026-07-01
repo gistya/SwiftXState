@@ -71,3 +71,43 @@ public struct XTransition<
         clone(mutating: \.node.action <- handler)
     }
 }
+
+// MARK: Workaroud for compiler issue.
+
+// See Swift Evolution pitch:
+// https://forums.swift.org/t/pitch-implicit-member-expressions-for-function-typed-parameters/87892/6
+
+/// Workaround for Swift compiler inference limitation described in this Swift evolution pitch:
+/// https://forums.swift.org/t/pitch-implicit-member-expressions-for-function-typed-parameters/87892/6
+///
+/// Due to the above limitation of the compiler, for  any `myEvent` case that has associated value(s),
+/// you will not be able to simply use the dot-syntax `Transition(on: .myEvent, ...)` but instead
+/// you will have to use `Transition(on: MyEvent.myEvent, ...)`, unless you use the following
+/// workaround.
+///
+/// ## Workaround
+///
+/// In your `StateMachine` implementation, add an extension like so:
+/// ```swift
+/// extension Map where In == Int, Out == MyEvent {
+///     static var myEvent: Map<(REPLACE_THIS_WITH_YOUR_PAYLOAD_TYPE), MyEvent> {
+///         .init(transform: MyEvent.myEvent)
+///     }
+/// }
+/// ```
+///
+/// Thenceforth you shall be able to `Transition(on: .myEvent, ...)` without compiler errors.
+/// Thanks to fellow Austinite Rob Mayoff for this workaround!
+
+public struct Map<In, Out> {
+    public let transform: @Sendable (In) -> Out
+    public init(transform: @Sendable @escaping (In) -> Out) {
+        self.transform = transform
+    }
+}
+
+public extension XTransition {
+    init<Payload>(_ map: Map<Payload, EventID>, to target: StateID) {
+        self.init(on: map.transform, to: target)
+    }
+}

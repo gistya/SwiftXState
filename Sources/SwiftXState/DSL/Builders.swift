@@ -87,30 +87,34 @@ public enum StateBuilder<
     StateID: StateIdentifying
 > {
     public typealias Body = StateBody<Context, EventID, StateID>
-    public typealias Tr = XTransition<Context, EventID, StateID>
-    public typealias St = XState<Context, EventID, StateID>
+    public typealias Always = XAlways<Context, EventID, StateID>
+    public typealias After = XAfter<Context, EventID, StateID>
+    public typealias OnDone = XOnDone<Context, EventID, StateID>
+    public typealias Invoke = XInvoke<Context, EventID, StateID>
+    public typealias State = XState<Context, EventID, StateID>
+    public typealias Transition = XTransition<Context, EventID, StateID>
 
-    public static func buildExpression(_ transition: Tr) -> Body {
+    public static func buildExpression(_ transition: Transition) -> Body {
         Body(transitions: [transition.node])
     }
 
-    public static func buildExpression(_ state: St) -> Body {
+    public static func buildExpression(_ state: State) -> Body {
         Body(children: [state.node], initialChild: state.isInitial ? state.id : nil)
     }
 
-    public static func buildExpression(_ always: Always<Context, EventID, StateID>) -> Body {
+    public static func buildExpression(_ always: Always) -> Body {
         Body(always: [always.node])
     }
 
-    public static func buildExpression(_ after: After<Context, EventID, StateID>) -> Body {
+    public static func buildExpression(_ after: After) -> Body {
         Body(after: [after.entry])
     }
 
-    public static func buildExpression(_ onDone: OnDone<Context, EventID, StateID>) -> Body {
+    public static func buildExpression(_ onDone: OnDone) -> Body {
         Body(onDone: [onDone.node])
     }
 
-    public static func buildExpression(_ invoke: Invoke<Context, EventID, StateID>) -> Body {
+    public static func buildExpression(_ invoke: Invoke) -> Body {
         Body(invokes: [invoke.node])
     }
 
