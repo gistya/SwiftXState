@@ -29,43 +29,35 @@ struct BoardActorTests {
 
     @Test("square OCCUPY and CLEAR")
     func squareOccupyClear() async {
-        let actor = await createActor(SquareActorMachine.machine)
-            .start(context: SquareContext(coord: "e4", occupantId: nil))
+        let actor = createActor(SquareActorMachine())
+        await actor.start(context: SquareContext(coord: "e4", occupantId: nil))
+        #expect(await actor.matches(path: "empty"))
 
-        var snapshot = await actor.snapshot
-        #expect(snapshot.matches("empty"))
-
-        await actor.send(Event("OCCUPY.wPe2"))
+        await actor.send(.occupy(pieceId: "wPe2"))
         try? await Task.sleep(for: .milliseconds(20))
-        snapshot = await actor.snapshot
-        #expect(snapshot.matches("occupied"))
-        #expect(snapshot.context.occupantId == "wPe2")
+        #expect(await actor.matches(path: "occupied"))
+        #expect(await actor.context.occupantId == "wPe2")
 
-        await actor.send(Event("CLEAR"))
+        await actor.send(.clear)
         try? await Task.sleep(for: .milliseconds(20))
-        snapshot = await actor.snapshot
-        #expect(snapshot.matches("empty"))
-        #expect(snapshot.context.occupantId == nil)
+        #expect(await actor.matches(path: "empty"))
+        #expect(await actor.context.occupantId == nil)
     }
 
     @Test("piece MOVE_TO and CAPTURED")
     func pieceMoveCaptured() async {
-        let actor = await createActor(PieceActorMachine.machine)
-            .start(context: PieceContext(pieceId: "wPe2", kind: .pawn, color: .white, square: "e2"))
+        let actor = createActor(PieceActorMachine())
+        await actor.start(context: PieceContext(pieceId: "wPe2", kind: .pawn, color: .white, square: "e2"))
+        #expect(await actor.matches(path: "alive"))
+        #expect(await actor.context.square == "e2")
 
-        var snapshot = await actor.snapshot
-        #expect(snapshot.matches("alive"))
-        #expect(snapshot.context.square == "e2")
-
-        await actor.send(Event("MOVE_TO.e4"))
+        await actor.send(.moveTo(square: "e4"))
         try? await Task.sleep(for: .milliseconds(20))
-        snapshot = await actor.snapshot
-        #expect(snapshot.context.square == "e4")
+        #expect(await actor.context.square == "e4")
 
-        await actor.send(Event("CAPTURED"))
+        await actor.send(.captured)
         try? await Task.sleep(for: .milliseconds(20))
-        snapshot = await actor.snapshot
-        #expect(snapshot.matches("captured"))
-        #expect(snapshot.context.square == nil)
+        #expect(await actor.matches(path: "captured"))
+        #expect(await actor.context.square == nil)
     }
 }

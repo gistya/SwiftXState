@@ -21,21 +21,21 @@ struct SwiftXChessReplayIntegrationTests {
         #expect(snapshot.matches("game.playing"))
 
         let tapEvent = ChessEvent.tap(Square(row: 1, col: 4))
-        let transitions = selectTransitions(event: tapEvent, snapshot: snapshot)
+        let transitions = selectTransitions(event: tapEvent.event, snapshot: snapshot)
         #expect(!transitions.isEmpty)
 
         let (next, _) = transition(
             ChessGameMachine.resolved,
             snapshot: snapshot,
-            event: tapEvent
+            event: tapEvent.event
         )
         #expect(next.context.selected == Square(row: 1, col: 4))
 
-        await actor.send(tapEvent)
+        await actor.send(tapEvent.event)
         snapshot = await actor.snapshot
         #expect(snapshot.context.selected == Square(row: 1, col: 4))
 
-        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
         snapshot = await actor.snapshot
         #expect(snapshot.context.selected == nil)
         #expect(snapshot.context.board[Square(row: 3, col: 4)]?.color == .white)
@@ -52,8 +52,8 @@ struct SwiftXChessReplayIntegrationTests {
         ).start()
 
         // White pawn e2 -> e4
-        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
-        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
 
         let live = await actor.snapshot.context
         #expect(live.board[Square(row: 3, col: 4)]?.color == .white)
@@ -66,7 +66,7 @@ struct SwiftXChessReplayIntegrationTests {
         #expect(session.steps.count > 2)
 
         ChessReplayBridge.setPendingSession(session)
-        await actor.send(ChessEvent.enterReplay)
+        await actor.send(ChessEvent.enterReplay.event)
 
         let replaying = await actor.snapshot.context
         #expect(replaying.replaySession != nil)
@@ -82,7 +82,7 @@ struct SwiftXChessReplayIntegrationTests {
         )?.context
         #expect(replaying.board == expectedEnd?.board)
 
-        await actor.send(ChessEvent.replayScrub(0))
+        await actor.send(ChessEvent.replayScrub(0).event)
         let atStart = await actor.snapshot.context
         #expect(atStart.replayStep == 0)
         let expectedStart = timeTravel(
@@ -93,7 +93,7 @@ struct SwiftXChessReplayIntegrationTests {
         )?.context
         #expect(atStart.board == expectedStart?.board)
 
-        await actor.send(ChessEvent.replayScrub(0))
+        await actor.send(ChessEvent.replayScrub(0).event)
         let backToStart = await actor.snapshot.context
         #expect(backToStart.replayStep == 0)
         #expect(backToStart.board[Square(row: 1, col: 4)]?.kind == .pawn)
@@ -109,8 +109,8 @@ struct SwiftXChessReplayIntegrationTests {
             options: ActorOptions(inspect: recorder.observe())
         ).start()
 
-        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
-        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
 
         guard let session = recorder.session(), session.steps.count > 2 else {
             Issue.record("Expected recorded session with moves")
@@ -161,10 +161,10 @@ struct SwiftXChessReplayIntegrationTests {
             options: ActorOptions(inspect: gate.observe(recorder))
         ).start()
 
-        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
-        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
-        await actor.send(ChessEvent.tap(Square(row: 6, col: 4)))
-        await actor.send(ChessEvent.tap(Square(row: 4, col: 4)))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
+        await actor.send(ChessEvent.tap(Square(row: 6, col: 4)).event)
+        await actor.send(ChessEvent.tap(Square(row: 4, col: 4)).event)
 
         guard let recorded = recorder.session() else {
             Issue.record("Expected recorded session")
@@ -174,7 +174,7 @@ struct SwiftXChessReplayIntegrationTests {
 
         gate.setEnabled(false)
         ChessReplayBridge.setPendingSession(recorded)
-        await actor.send(ChessEvent.enterReplay)
+        await actor.send(ChessEvent.enterReplay.event)
 
         var snapshot = await actor.snapshot
         #expect(snapshot.context.replaySession?.steps.count == recorded.steps.count)
@@ -184,7 +184,7 @@ struct SwiftXChessReplayIntegrationTests {
         func scrub(to step: Int) async {
             let clamped = min(max(step, 0), stepCount)
             guard clamped != snapshot.context.replayStep else { return }
-            await actor.send(ChessEvent.replayScrub(clamped))
+            await actor.send(ChessEvent.replayScrub(clamped).event)
             snapshot = await actor.snapshot
         }
 
@@ -198,7 +198,7 @@ struct SwiftXChessReplayIntegrationTests {
         #expect(snapshot.context.board[Square(row: 4, col: 4)]?.color == .black)
 
         gate.setEnabled(true)
-        await actor.send(ChessEvent.exitReplay)
+        await actor.send(ChessEvent.exitReplay.event)
         let final = await actor.snapshot
         #expect(final.context.replaySession == nil)
     }
@@ -212,8 +212,8 @@ struct SwiftXChessReplayIntegrationTests {
             options: ActorOptions(inspect: recorder.observe())
         ).start()
 
-        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)))
-        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
 
         guard let session = recorder.session() else {
             Issue.record("Expected recorded session")
