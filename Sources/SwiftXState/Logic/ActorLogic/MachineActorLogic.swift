@@ -1,5 +1,5 @@
 /// A logic that wraps a `ResolvedMachine` — the capability behind the machine-shaped `Actor`
-/// conveniences (`Actor(_ machine:)`, `start(context:)`, `getSnapshot()`, `typed(as:)`). Only
+/// conveniences (`Actor(_ machine:)`, `start(context:)`, `getSnapshot()`). Only
 /// `MachineLogic` conforms; it lets those conveniences live on `Actor where L: MachineActorLogic`
 /// without `Actor` itself knowing about state machines.
 public protocol MachineActorLogic: ActorLogic where Snapshot == MachineSnapshot<MachineContext> {

@@ -36,15 +36,6 @@ public extension Actor where L: MachineActorLogic {
 
 }
 
-public extension Actor {
-    /// Re-brands this actor with a compile-time state family (`TypedActor`). Constrained to the
-    /// concrete `MachineLogic` so `self` is exactly the `Actor<MachineLogic<Context>>` `TypedActor` wraps.
-    nonisolated func typed<Context, Brand: StateID>(as _: Brand.Type = Brand.self) -> TypedActor<Context, Brand>
-    where L == MachineLogic<Context> {
-        TypedActor(self)
-    }
-}
-
 public extension Actor where L: MachineActorLogic & PersistableLogic {
     /// Restores a persisted snapshot, optionally overriding the decoded `context`. Non-throwing to
     /// match the previous `Actor.start(from:context:)`; a decode failure leaves the actor unstarted.
