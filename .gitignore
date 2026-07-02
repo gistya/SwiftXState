@@ -19,3 +19,9 @@ docs/
 
 # Planning docs (local only)
 plan.md
+
+# Agent skills are shared with the repo; the rest of .claude stays local
+# (overrides the global *.claude ignore for this repo only)
+!.claude/
+.claude/*
+!.claude/skills/
