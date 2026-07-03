@@ -224,12 +224,15 @@ func isWildcardEventDescriptor(_ descriptor: String) -> Bool {
     descriptor == wildcardEventDescriptor || descriptor.hasSuffix(".*")
 }
 
-func enabledTransitions<Context: Sendable>(
+/// The FIRST transition (in declaration order) whose guard passes — XState's rule for choosing among
+/// several transitions declared for the same event on one node. Returning *all* enabled ones would
+/// let `microstep` enter multiple targets simultaneously and make the winner depend on ordering.
+func firstEnabledTransition<Context: Sendable>(
     _ transitions: [ResolvedTransition<Context>],
     snapshot: MachineSnapshot<Context>,
     event: any Eventable
-) -> [ResolvedTransition<Context>] {
-    transitions.filter { transition in
+) -> ResolvedTransition<Context>? {
+    transitions.first { transition in
         let args = ActionArgs(context: snapshot.context, event: event)
         return evaluateGuard(
             transition.config.guardRef,
@@ -245,11 +248,11 @@ func selectTransitionsForNode<Context: Sendable>(
     event: any Eventable,
     snapshot: MachineSnapshot<Context>
 ) -> [ResolvedTransition<Context>] {
-    if let exact = node.transitions[event.type] {
-        let enabled = enabledTransitions(exact, snapshot: snapshot, event: event)
-        if !enabled.isEmpty {
-            return enabled
-        }
+    // A node takes at most ONE transition per event: the first candidate (in declaration order)
+    // whose guard passes. Exact matches take precedence over partial-wildcard descriptors.
+    if let exact = node.transitions[event.type],
+       let first = firstEnabledTransition(exact, snapshot: snapshot, event: event) {
+        return [first]
     }
 
     let partialDescriptors = node.transitions.keys
@@ -260,13 +263,8 @@ func selectTransitionsForNode<Context: Sendable>(
         guard eventDescriptorMatch(eventType: event.type, descriptor: descriptor) == .partialWildcard else {
             continue
         }
-        let enabled = enabledTransitions(
-            node.transitions[descriptor] ?? [],
-            snapshot: snapshot,
-            event: event
-        )
-        if !enabled.isEmpty {
-            return enabled
+        if let first = firstEnabledTransition(node.transitions[descriptor] ?? [], snapshot: snapshot, event: event) {
+            return [first]
         }
     }
 
@@ -305,9 +303,8 @@ func selectTransitionsFromAtomicStates<Context: Sendable>(
         for node in chain {
             if wildcardFallback {
                 guard let wildcard = node.transitions[wildcardEventDescriptor] else { continue }
-                let enabled = enabledTransitions(wildcard, snapshot: snapshot, event: event)
-                if !enabled.isEmpty {
-                    transitions.append(contentsOf: enabled)
+                if let first = firstEnabledTransition(wildcard, snapshot: snapshot, event: event) {
+                    transitions.append(first)
                     break
                 }
             } else {
@@ -344,6 +341,13 @@ func selectTransitions<Context: Sendable>(
 }
 
 /// The direct child of a parallel parent containing `source`, or `source` itself.
+/// The node that bounds a transition's exit set. Inside a parallel machine a transition must not exit
+/// beyond its own region, so we stop at the region node (the child of the nearest `.parallel`
+/// ancestor). When there is *no* parallel ancestor, the whole hierarchical path is fair game and the
+/// bound is the machine root — returning `source` here would clamp the exit set to the source's own
+/// subtree and leave intermediate ancestors active (e.g. a transition out of a doubly-nested invoke
+/// state exits the invoke node but never its parent). `computeTransitionExitNodes` still preserves the
+/// real domain via its `targetUnderNode` check, so root is a safe upper bound, not an over-exit.
 func transitionRegionRoot<Context: Sendable>(for source: StateNode<Context>) -> StateNode<Context> {
     var current = source
     while let parent = current.parent {
@@ -352,7 +356,7 @@ func transitionRegionRoot<Context: Sendable>(for source: StateNode<Context>) -> 
         }
         current = parent
     }
-    return source
+    return current
 }
 
 func isWithinRegion<Context: Sendable>(
