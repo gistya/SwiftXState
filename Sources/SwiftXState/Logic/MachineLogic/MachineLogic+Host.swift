@@ -1,12 +1,12 @@
 import Foundation
 
 /// The effectful side of `MachineLogic`'s `ActorLogic` conformance: the machine orchestration
-/// (side-effect dispatch, `after`, `invoke`) run against a `MachineHost`. This is the same logic
+/// (side-effect dispatch, `after`, `invoke`) run against a `MachineHosting`. This is the same logic
 /// `StateActor` performs inline, lifted to run on the generic `Actor` via the `isolated` host
 /// aspect — the Context-specific work (the action switch, `makeChildActor`) lives here in the logic,
 /// while the host supplies only Context-agnostic primitives (timers, child registry, emit, parent).
 extension MachineLogic {
-    public func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> MachineSnapshot<Context> {
+    public func started<H: MachineHosting>(input: SendableValue?, host: isolated H) async -> MachineSnapshot<Context> {
         let (snapshot, actions) = initialSnapshot(input: input, context: contextOverride)
         var result = await runEffects(snapshot, actions: actions, event: SystemEvent.`init`, host: host)
         // Startup `.action` events are emitted by Actor *after* the `.actor` registration
@@ -18,7 +18,7 @@ extension MachineLogic {
         return result
     }
 
-    public func handle<H: MachineHost>(
+    public func handle<H: MachineHosting>(
         _ event: any Eventable,
         _ snapshot: MachineSnapshot<Context>,
         host: isolated H
@@ -55,7 +55,7 @@ extension MachineLogic {
     }
 
     /// Emits an `@xstate.action` event per inspectable action (mirrors `Actor.inspectAction`).
-    private func emitActionInspection<H: MachineHost>(
+    private func emitActionInspection<H: MachineHosting>(
         _ actions: [ExecutableAction<Context>],
         event: any Eventable,
         host: isolated H
@@ -73,7 +73,7 @@ extension MachineLogic {
 
     // MARK: side-effect dispatch (mirrors ActionEffectRunner, against Context-agnostic primitives)
 
-    private func runEffects<H: MachineHost>(
+    private func runEffects<H: MachineHosting>(
         _ snapshot: MachineSnapshot<Context>,
         actions: [ExecutableAction<Context>],
         event: any Eventable,
@@ -154,7 +154,7 @@ extension MachineLogic {
 
     // MARK: after / invoke (mirror StateActor.updateDelayedTransitions / updateChildActors)
 
-    private func applyAfter<H: MachineHost>(
+    private func applyAfter<H: MachineHosting>(
         entered: StateNodeSet<Context>,
         exited: StateNodeSet<Context>,
         snapshot: MachineSnapshot<Context>,
@@ -179,7 +179,7 @@ extension MachineLogic {
         }
     }
 
-    private func applyInvokes<H: MachineHost>(
+    private func applyInvokes<H: MachineHosting>(
         entered: StateNodeSet<Context>,
         exited: StateNodeSet<Context>,
         snapshot: MachineSnapshot<Context>,
@@ -232,7 +232,7 @@ extension MachineLogic {
 
     // MARK: restore (re-spawn children for a hydrated snapshot)
 
-    public func restoreChildren<H: MachineHost>(
+    public func restoreChildren<H: MachineHosting>(
         _ snapshot: MachineSnapshot<Context>,
         host: isolated H
     ) async -> MachineSnapshot<Context> {
@@ -246,7 +246,7 @@ extension MachineLogic {
 
     /// Re-spawns children created by `spawnChild` entry actions when hydrating (mirrors
     /// `Actor.restoreSpawnChildren`).
-    private func restoreSpawnChildren<H: MachineHost>(
+    private func restoreSpawnChildren<H: MachineHosting>(
         _ snapshot: MachineSnapshot<Context>,
         host: isolated H
     ) async -> MachineSnapshot<Context> {
@@ -274,7 +274,7 @@ extension MachineLogic {
 
     // MARK: child primitives
 
-    private func spawnChild<H: MachineHost>(
+    private func spawnChild<H: MachineHosting>(
         _ spawn: SpawnRef<Context>,
         args: ActionArgs<Context>,
         host: isolated H
@@ -302,14 +302,14 @@ extension MachineLogic {
         }
     }
 
-    private func stopChild<H: MachineHost>(id: String, host: isolated H) async {
+    private func stopChild<H: MachineHosting>(id: String, host: isolated H) async {
         guard let child = host.childRegistry.remove(id) else { return }
         host.childRegistry.markStopped(id)
         host.unregisterChild(child)
         await child.stop()
     }
 
-    private func syncedChildren<H: MachineHost>(
+    private func syncedChildren<H: MachineHosting>(
         previous: [String: ChildActorSnapshot],
         host: isolated H
     ) -> [String: ChildActorSnapshot] {

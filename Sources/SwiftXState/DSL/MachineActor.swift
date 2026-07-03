@@ -103,6 +103,25 @@ public struct MachineActor<M: StateMachine>: Sendable {
             handler(schema.configuration(from: snapshot.value), snapshot.context)
         }
     }
+
+    /// An `AsyncStream` of the typed `(Configuration<StateID>?, Context)` — the async-sequence sibling of
+    /// `subscribe(_:)`, projecting the engine `snapshots` stream through the schema. Additive; the callback
+    /// `subscribe` is unchanged. `.bufferingNewest(1)` (the UI default) — coalesces to the latest
+    /// projection for a slow `@Observable` consumer. For every intermediate snapshot, or a different
+    /// policy, consume `actor.snapshots(bufferingPolicy:)` on the underlying engine actor and project.
+    public var snapshots: AsyncStream<(Configuration<StateID>?, Context)> {
+        let schema = schema
+        let base = actor.snapshots()
+        return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
+            let task = Task {
+                for await snapshot in base {
+                    continuation.yield((schema.configuration(from: snapshot.value), snapshot.context))
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
 }
 
 // MARK: - Construction

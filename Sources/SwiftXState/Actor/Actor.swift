@@ -3,48 +3,16 @@ import Foundation
 import Dispatch
 #endif
 
-/// The Context-agnostic runtime resources an effectful `ActorLogic` needs from its host actor while
-/// handling an event — timers, children, parent/system wiring, emit. Because `Actor` provides
-/// this and `ActorLogic.handle` takes the host as an **`isolated`** parameter, an effectful logic
-/// (`MachineLogic`) runs its side-effect dispatch / `after` / `invoke` *inside the actor's isolation*
-/// with no hops, exactly as `StateActor` does inline — but without the actor needing to know the
-/// logic's `Context`. All the Context-specific work (the action switch, `makeChildActor`) lives in
-/// the logic; the host only exposes these non-generic primitives.
-public protocol MachineHost: _Concurrency.Actor, ParentActorRepresentable, ActorSystemRef {
-    var childRegistry: ChildRegistry { get }
-    var hostClock: any Clock { get }
-    func emit(_ event: EmittedEvent)
-    func deliverToChild(id childId: String, event: any Eventable) async
-    func enqueueToParent(_ event: any Eventable) async
-    /// Synchronously enqueue an event to the parent on the ordered delivery chain (for reducer-style
-    /// children like `fromTransition`, whose scope `sendToParent` is synchronous).
-    func sendToParentOrdered(_ event: any Eventable)
-    func scheduleSelfEvent(timerId: String, delay: Int, event: Event)
-    func scheduleChildEvent(timerId: String, delay: Int, childId: String, event: Event)
-    func cancelTimer(_ timerId: String)
-    func registerChild(_ child: any ChildActorRepresentable)
-    func unregisterChild(_ child: any ChildActorRepresentable)
-    /// The persisted snapshot to seed a child with during restore (nil in normal operation).
-    func pendingChildSnapshot(_ id: String) -> PersistedChildSnapshot?
-
-    // Inspection primitives, so an effectful logic can emit `.microstep` / `.action` events as it
-    // runs. `emitInspection` keeps the `@autoclosure` guard (no Mirror-encode without an inspector).
-    var inspectionActorRef: InspectionActorRef { get }
-    var inspectionRootId: String { get }
-    var recordsMicrosteps: Bool { get }
-    func emitInspection(_ event: @autoclosure () -> InspectionEvent?)
-}
-
 /// The generic actor *core*: a mailbox + run-to-completion
 /// loop + observers, parameterized purely by an `ActorLogic`. It folds events into snapshots via the
 /// logic and notifies subscribers, owning no `Context` itself.
 ///
 /// It also owns the Context-agnostic runtime resources (timer scheduler, child registry, actor
-/// system, parent) and conforms to `MachineHost`, so an *effectful* logic can run side effects /
+/// system, parent) and conforms to `MachineHosting`, so an *effectful* logic can run side effects /
 /// `after` / `invoke` through it. With that, one `Actor<L>` provably hosts every logic shape:
 /// hand-written reducers, runnables (callback/task/observable), and full state machines —
 /// `Actor<MachineLogic<C>>` reaches parity with `Actor`. See `LogicActorTests`.
-public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, MachineHost {
+public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, MachineHosting {
     /// The logic this actor runs. `var` (not `let`) only so the machine convenience `start(context:)`
     /// can rebuild it with a context override before the initial transition; otherwise immutable.
     var logic: L
@@ -53,6 +21,9 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     private var isProcessing = false
     private var observers: [(id: Int, handler: @Sendable (L.Snapshot) -> Void)] = []
     private var nextObserverID = 0
+    /// Continuation registry for the additive `snapshots(bufferingPolicy:)` AsyncStream API. Fed by the
+    /// same `notify` as `observers` (the callback path is unchanged); shares the `nextObserverID` id space.
+    private var snapshotContinuations: [Int: AsyncStream<L.Snapshot>.Continuation] = [:]
     private var runTask: Task<Void, Never>?
     // Runnable-logic (callback/task/observable) support: incoming-event receivers (lock-boxed so a
     // background `run` can register without a racing hop), the run's cleanup, and one serial chain
@@ -319,6 +290,8 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
             _snapshot = stopped
             notify(stopped)
         }
+        for continuation in snapshotContinuations.values { continuation.finish() }
+        snapshotContinuations.removeAll()
     }
 
     /// Applies a snapshot pushed by `ActorLogic.run`. Dropped once the logic is no longer active,
@@ -335,7 +308,7 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         await drain()
     }
 
-    /// Listens for `emit(…)` events (the `MachineHost.emit` sink). `"*"` matches all.
+    /// Listens for `emit(…)` events (the `MachineHosting.emit` sink). `"*"` matches all.
     @discardableResult
     public func on(_ eventType: String, handler: @escaping @Sendable (EmittedEvent) -> Void) -> Subscription {
         emitListeners.on(eventType, handler: handler)
@@ -354,6 +327,44 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
 
     private func removeObserver(id: Int) {
         observers.removeAll { $0.id == id }
+    }
+
+    /// An `AsyncStream` of snapshots — the async-sequence sibling of `subscribe(_:)`, added *alongside*
+    /// it: both are fed by the same `notify`, and the callback path is unchanged. `AsyncStream` is
+    /// unicast, so each call mints an independent stream + continuation, registered on the actor. The
+    /// current snapshot (if the actor has started) is replayed as the first element — BehaviorSubject
+    /// semantics, matching `subscribe`. Default `.bufferingNewest(1)`: a slow consumer coalesces to the
+    /// latest snapshot (correct for `@Observable` / SwiftUI, and bounds memory to one element per
+    /// subscriber); pass `.unbounded` when you must observe every intermediate snapshot (e.g. a
+    /// state-sequence waiter). Cancellation is by ending the `for await` loop (or cancelling its task),
+    /// which fires the stream's `onTermination` and deregisters the continuation.
+    ///
+    /// Note the one behavioural nuance vs `subscribe`: because registration hops onto the actor,
+    /// the replayed "current" value is the snapshot at *registration time*, not at the call site.
+    public nonisolated func snapshots(
+        bufferingPolicy: AsyncStream<L.Snapshot>.Continuation.BufferingPolicy = .bufferingNewest(1)
+    ) -> AsyncStream<L.Snapshot> {
+        AsyncStream(bufferingPolicy: bufferingPolicy) { continuation in
+            Task { await self.registerSnapshotStream(continuation) }
+        }
+    }
+
+    private func registerSnapshotStream(_ continuation: AsyncStream<L.Snapshot>.Continuation) {
+        if let snapshot = _snapshot { continuation.yield(snapshot) }   // current-value replay (matches subscribe)
+        guard terminalStatus == nil else {                             // already stopped: replay-then-finish
+            continuation.finish()
+            return
+        }
+        let id = nextObserverID
+        nextObserverID += 1
+        snapshotContinuations[id] = continuation
+        continuation.onTermination = { [weak self] _ in
+            Task { await self?.removeSnapshotContinuation(id) }
+        }
+    }
+
+    private func removeSnapshotContinuation(_ id: Int) {
+        snapshotContinuations[id] = nil
     }
 
     private func drainLoop() async {
@@ -384,6 +395,9 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     private func notify(_ snapshot: L.Snapshot) {
         for observer in observers {
             observer.handler(snapshot)
+        }
+        for continuation in snapshotContinuations.values {
+            continuation.yield(snapshot)          // additive fan-out; callbacks above are the backbone
         }
         notifyStatus()
         deliverChildCompletion(snapshot)
@@ -438,7 +452,7 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         ))
     }
 
-    // MARK: MachineHost
+    // MARK: MachineHosting
 
     public func emit(_ event: EmittedEvent) {
         emitListeners.notify(event)

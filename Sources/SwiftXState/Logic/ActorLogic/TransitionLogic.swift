@@ -17,13 +17,13 @@ struct TransitionLogic<Context: Sendable & Equatable>: ActorLogic {
     func step(_ snapshot: State, on event: any Eventable) -> State { snapshot }  // overridden by handle
     func status(of snapshot: State) -> SnapshotStatus { .active }
 
-    func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> State {
+    func started<H: MachineHosting>(input: SendableValue?, host: isolated H) async -> State {
         let state = State(context: logic.resolveInitialContext(input))
         if syncSnapshot { pushSnapshot(state.context, host: host) }
         return state
     }
 
-    func handle<H: MachineHost>(_ event: any Eventable, _ snapshot: State, host: isolated H) async -> State {
+    func handle<H: MachineHosting>(_ event: any Eventable, _ snapshot: State, host: isolated H) async -> State {
         let scope = TransitionActorScope(
             input: nil,
             system: host.actorSystem,
@@ -35,7 +35,7 @@ struct TransitionLogic<Context: Sendable & Equatable>: ActorLogic {
         return next
     }
 
-    private func pushSnapshot<H: MachineHost>(_ context: Context, host: isolated H) {
+    private func pushSnapshot<H: MachineHosting>(_ context: Context, host: isolated H) {
         host.sendToParentOrdered(SnapshotActorEvent(
             actorId: host.sessionId,
             snapshot: ChildActorSnapshot(id: host.sessionId, status: .active, value: String(describing: context))

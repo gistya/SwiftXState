@@ -250,6 +250,8 @@ public final class Store<Context: Sendable, E: Eventable>: @unchecked Sendable w
     private var _snapshot: StoreSnapshot<Context>
     private let initialSnapshotValue: StoreSnapshot<Context>
     private var observers: [(StoreSnapshot<Context>) -> Void] = []
+    private var snapshotContinuations: [Int: AsyncStream<StoreSnapshot<Context>>.Continuation] = [:]
+    private var nextContinuationID = 0
     private let mutators: [String: StoreMutator<Context, E>]
     private let assigners: [String: StoreAssigner<Context, E>]
     private let emitListeners = EmitListeners()
@@ -308,6 +310,14 @@ public final class Store<Context: Sendable, E: Eventable>: @unchecked Sendable w
         lock.unlock()
 
         notify(stoppedSnapshot)
+        // Detach continuations under the lock, then `finish()` OUTSIDE it: `finish()` invokes each
+        // stream's `onTermination` synchronously, which re-acquires `lock` — finishing under the lock
+        // would self-deadlock (NSLock is non-recursive).
+        lock.lock()
+        let finishing = Array(snapshotContinuations.values)
+        snapshotContinuations.removeAll()
+        lock.unlock()
+        for continuation in finishing { continuation.finish() }
         notifyInspectors(StoreInspectionEvent(kind: .snapshot, snapshot: stoppedSnapshot))
         emitListeners.removeAll()
     }
@@ -340,6 +350,38 @@ public final class Store<Context: Sendable, E: Eventable>: @unchecked Sendable w
             defer { self?.lock.unlock() }
             if index < self?.observers.count ?? 0 {
                 self?.observers.remove(at: index)
+            }
+        }
+    }
+
+    /// An `AsyncStream` of snapshots — the async-sequence sibling of `subscribe(_:)`, added *alongside* it
+    /// (both fed by the same `notify`; the callback path is unchanged). Each call mints an independent
+    /// stream + continuation (`AsyncStream` is unicast), keyed by id — so cancellation is exact, unlike the
+    /// index-based callback unsubscribe. The current snapshot is replayed as the first element
+    /// (BehaviorSubject semantics). Default `.bufferingNewest(1)` (coalesce to latest for a slow consumer);
+    /// pass `.unbounded` to observe every intermediate snapshot.
+    public func snapshots(
+        bufferingPolicy: AsyncStream<StoreSnapshot<Context>>.Continuation.BufferingPolicy = .bufferingNewest(1)
+    ) -> AsyncStream<StoreSnapshot<Context>> {
+        AsyncStream(bufferingPolicy: bufferingPolicy) { continuation in
+            lock.lock()
+            continuation.yield(_snapshot)                 // current-value replay — under lock, before registration
+            let terminal = _snapshot.status != .active
+            let id = nextContinuationID
+            if !terminal {
+                nextContinuationID += 1
+                snapshotContinuations[id] = continuation
+            }
+            lock.unlock()
+            if terminal {
+                continuation.finish()
+                return
+            }
+            continuation.onTermination = { [weak self] _ in
+                guard let self else { return }
+                self.lock.lock()
+                self.snapshotContinuations[id] = nil
+                self.lock.unlock()
             }
         }
     }
@@ -456,6 +498,9 @@ public final class Store<Context: Sendable, E: Eventable>: @unchecked Sendable w
     private func notify(_ snapshot: StoreSnapshot<Context>) {
         lock.lock()
         let current = observers
+        // Yield to stream continuations under the lock: `yield` is non-blocking, so this preserves strict
+        // ordering vs concurrent registration/notify without holding the lock across the callback loop.
+        for continuation in snapshotContinuations.values { continuation.yield(snapshot) }
         lock.unlock()
         for observer in current {
             observer(snapshot)

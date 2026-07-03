@@ -39,12 +39,12 @@ public protocol ActorLogic: Sendable {
     /// Produce the initial snapshot, *running any startup side effects* against the host. The default
     /// is the pure `initialState` (no effects). An effectful logic (`MachineLogic`) overrides this to
     /// run entry actions / initial `after` / initial `invoke` through the host's runtime resources.
-    func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> Snapshot
+    func started<H: MachineHosting>(input: SendableValue?, host: isolated H) async -> Snapshot
 
     /// Fold one event into the next snapshot, *running any side effects* against the host. The
     /// default is the pure `step`. `MachineLogic` overrides this to run the macrostep's side-effect
     /// actions, reschedule `after`, and reconcile `invoke` children — all via `host`'s primitives.
-    func handle<H: MachineHost>(_ event: any Eventable, _ snapshot: Snapshot, host: isolated H) async -> Snapshot
+    func handle<H: MachineHosting>(_ event: any Eventable, _ snapshot: Snapshot, host: isolated H) async -> Snapshot
 
     // Inspection hooks — declared as requirements (not just extension methods) so a generic
     // `Actor<L>` dispatches to the conformer's override, not the no-op default.
@@ -84,11 +84,11 @@ public extension ActorLogic {
 
     func setUp(_ scope: ActorScope<Snapshot>) -> (@Sendable () -> Void)? { nil }
 
-    func started<H: MachineHost>(input: SendableValue?, host: isolated H) async -> Snapshot {
+    func started<H: MachineHosting>(input: SendableValue?, host: isolated H) async -> Snapshot {
         initialState(input: input)
     }
 
-    func handle<H: MachineHost>(_ event: any Eventable, _ snapshot: Snapshot, host: isolated H) async -> Snapshot {
+    func handle<H: MachineHosting>(_ event: any Eventable, _ snapshot: Snapshot, host: isolated H) async -> Snapshot {
         step(snapshot, on: event)
     }
 

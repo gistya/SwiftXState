@@ -13,5 +13,5 @@ public protocol PersistableLogic: ActorLogic {
 
     /// Re-spawn the children implied by a restored snapshot (`invoke` children + `spawnChild` entry
     /// actions), seeding each with its persisted state via the host, and return the synced snapshot.
-    func restoreChildren<H: MachineHost>(_ snapshot: Snapshot, host: isolated H) async -> Snapshot
+    func restoreChildren<H: MachineHosting>(_ snapshot: Snapshot, host: isolated H) async -> Snapshot
 }

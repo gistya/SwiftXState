@@ -137,7 +137,7 @@ await counter.send(Event("INC"))
 ```
 
 The newly public types: `Actor<L>`, `ActorLogic`, `MachineLogic`, `MachineActorLogic`,
-`ActorScope`, `MachineHost`, and `PersistableLogic`. `MachineLogic<Context>` is the
+`ActorScope`, `MachineHosting`, and `PersistableLogic`. `MachineLogic<Context>` is the
 built-in logic behind every state-machine actor — which is why the actor type is now
 `Actor<MachineLogic<Context>>`.
 
