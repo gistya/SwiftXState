@@ -42,6 +42,12 @@ extension GraphLayout {
         }) {
             columns[ranks[kid] ?? 0].append(kid)
         }
+        
+        struct Dat {
+            var id: String
+            var key: Double
+            var tie: Int
+        }
 
         // 2. Barycenter ordering (undirected adjacency among direct children).
         let adjacency = directChildAdjacency(parentID: parentID, kids: kids, model: model)
@@ -62,7 +68,7 @@ extension GraphLayout {
                         return Double(ns.reduce(0, +)) / Double(ns.count)
                     }
                     columns[ci] = columns[ci]
-                        .map { (id: $0, key: barycenter($0), tie: currentPos[$0] ?? 0) }
+                        .map { Dat(id: $0, key: barycenter($0), tie: currentPos[$0] ?? 0) }
                         .sorted { $0.key != $1.key ? $0.key < $1.key : $0.tie < $1.tie }
                         .map(\.id)
                 }
