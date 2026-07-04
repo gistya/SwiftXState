@@ -56,15 +56,6 @@ public protocol Contextual {
 /// common surface every machine component (`SchemaReducible`, `ResolvedMachine`, `MachineSchema`) shares.
 public protocol MachineSchemable: Contextual, EventIdentifiable, StateIdentifiable {}
 
-// MARK: - String instantiation (the untyped escape hatch)
-
-/// `String` as a (deliberately unsafe) identifier — this is what makes the string DSL just the
-/// `StateID == String` / `EventID == String` instantiation of the one typed core. You lose
-/// state-vs-event distinction and typo-checking; that's the point of the escape hatch.
-extension String: @retroactive PropertyInitializable {
-    public static var _blank: String { "" }
-}
-
 extension String: StateIdentifying, EventIdentifying {
     public var name: String { self }
 }
