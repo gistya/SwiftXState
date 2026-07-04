@@ -182,8 +182,9 @@ public extension MachineSchema {
         var grouped: [String: [TransitionConfig<Context>]] = [:]
         var keyOrder: [String] = []
         for t in transitions {
-            // A case-matched transition (no `event`) routes under the wildcard, gated by `caseMatch`.
-            let key = t.event?.name ?? wildcardEventDescriptor
+            // Route by: the explicit event name; else a derived payload-case name (`Blankable` payloads);
+            // else the wildcard `*` (a payload case gated only by `caseMatch`).
+            let key = t.event?.name ?? t.eventName ?? wildcardEventDescriptor
             if grouped[key] == nil { keyOrder.append(key) }
             grouped[key, default: []].append(transitionConfig(t, paths: paths))
         }

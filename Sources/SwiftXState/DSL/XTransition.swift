@@ -42,9 +42,37 @@ public struct XTransition<
 
     /// Route a payload event by its **case initializer** — `XTransition(on: CounterEvent.increment, to: …)`.
     /// The cleanest form: pass the unapplied case (`Event.increment`); the case path is derived by
-    /// reflection (`EventID: Equatable`, which every `EventIdentifying` is).
+    /// reflection (`EventID: Equatable`, which every `EventIdentifying` is). Registers under the wildcard
+    /// `*` (no recoverable case name); prefer the `Blankable`-payload overloads below, which name it.
     public init<Payload>(on caseInit: @escaping @Sendable (Payload) -> EventID, to target: StateID) {
         self.init(on: CasePath(caseInit), to: target)
+    }
+
+    // MARK: Named payload events (Blankable components → the case name is recoverable)
+    //
+    // When the payload component types are `Blankable`, construct a sample of the case and read its name
+    // via `Mirror` (`.name`), so the transition routes under `"increment"` instead of `*` — visible in
+    // the engine, the exported definition JSON, and the inspector graph. The sample is discarded; its
+    // value never matters. One overload per associated-value arity (a tuple can't be one generic param).
+
+    /// One associated value: `XTransition(on: SoundtrackEvent.setVolume, to: …)`.
+    public init<A: Blankable>(on caseInit: @escaping @Sendable (A) -> EventID, to target: StateID) {
+        node = Schema.TransitionNode(event: nil, eventName: caseInit(A._blank).name, target: target)
+    }
+
+    /// Two associated values: `XTransition(on: SoundtrackEvent.setInsertSlot, to: …)`.
+    public init<A: Blankable, B: Blankable>(on caseInit: @escaping @Sendable (A, B) -> EventID, to target: StateID) {
+        node = Schema.TransitionNode(event: nil, eventName: caseInit(A._blank, B._blank).name, target: target)
+    }
+
+    /// Three associated values: `XTransition(on: SoundtrackEvent.playbackPrepared, to: …)`.
+    public init<A: Blankable, B: Blankable, C: Blankable>(on caseInit: @escaping @Sendable (A, B, C) -> EventID, to target: StateID) {
+        node = Schema.TransitionNode(event: nil, eventName: caseInit(A._blank, B._blank, C._blank).name, target: target)
+    }
+
+    /// Four associated values.
+    public init<A: Blankable, B: Blankable, C: Blankable, D: Blankable>(on caseInit: @escaping @Sendable (A, B, C, D) -> EventID, to target: StateID) {
+        node = Schema.TransitionNode(event: nil, eventName: caseInit(A._blank, B._blank, C._blank, D._blank).name, target: target)
     }
 
     /// Only take this transition when the predicate holds (context-only).

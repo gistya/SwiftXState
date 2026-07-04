@@ -106,6 +106,10 @@ public struct MachineSchema<
         /// A case matcher (from `XTransition(on: Event.increment, …)`) — when set, the transition is
         /// registered under the wildcard event and taken only when the incoming event is this case.
         public var caseMatch: (@Sendable (EventID) -> Bool)?
+        /// The derived case name for a payload-carrying event (`"setVolume"`), when the payload types are
+        /// `Blankable` so the DSL could construct a sample and read its name. Routes the transition under
+        /// this name instead of the wildcard `*` — so the engine, exported JSON, and graph all show it.
+        public var eventName: String?
         public let target: StateID
         public var `guard`: Guard?
         /// An **event-aware** guard — XState's `({ context, event }) => bool`. Gets the typed
@@ -116,6 +120,7 @@ public struct MachineSchema<
         public init(
             event: EventID?,
             caseMatch: (@Sendable (EventID) -> Bool)? = nil,
+            eventName: String? = nil,
             target: StateID,
             guard: Guard? = nil,
             eventGuard: (@Sendable (Context, EventID?) -> Bool)? = nil,
@@ -124,6 +129,7 @@ public struct MachineSchema<
             self.event = event
             self.eventGuard = eventGuard
             self.caseMatch = caseMatch
+            self.eventName = eventName
             self.target = target
             self.guard = `guard`
             self.action = action
