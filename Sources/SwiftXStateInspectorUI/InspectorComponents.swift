@@ -86,6 +86,18 @@ enum InspectorTime {
     static func string(_ timestamp: TimeInterval) -> String {
         formatter.string(from: Date(timeIntervalSince1970: timestamp))
     }
+
+    /// `HH:mm:ss.nnnnnnnnn` — nanosecond precision, with the whole-second part and the fractional
+    /// nanoseconds both derived from the same integer `nanos` so the displayed value is exact
+    /// (a `TimeInterval` can't carry this resolution).
+    static func nanoString(_ nanos: UInt64) -> String {
+        let seconds = nanos / 1_000_000_000
+        let fractional = nanos % 1_000_000_000          // 0 ..< 1e9, always fits in 9 digits
+        let hms = formatter.string(from: Date(timeIntervalSince1970: TimeInterval(seconds)))
+        let digits = String(fractional)
+        let padded = String(repeating: "0", count: 9 - digits.count) + digits
+        return "\(hms).\(padded)"
+    }
 }
 
 extension SnapshotStatus {

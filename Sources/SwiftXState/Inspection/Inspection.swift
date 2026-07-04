@@ -1,4 +1,23 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
+
+/// Wall-clock nanoseconds since the Unix epoch. `TimeInterval` (a `Double`) can't hold true
+/// nanosecond resolution near the current epoch (~200ns ULP), so inspection stamps this integer
+/// clock in addition to the `Double` `timestamp` for nanosecond-precise ordering/display.
+@inlinable
+public func wallClockNanosecondsSince1970() -> UInt64 {
+    #if canImport(Darwin) || canImport(Glibc)
+    var ts = timespec()
+    clock_gettime(CLOCK_REALTIME, &ts)
+    return UInt64(ts.tv_sec) &* 1_000_000_000 &+ UInt64(ts.tv_nsec)
+    #else
+    return UInt64((Date().timeIntervalSince1970 * 1_000_000_000).rounded())
+    #endif
+}
 
 /// Inspection event kinds, aligned with XState's `@xstate.*` protocol.
 public enum InspectionEventKind: String, Sendable, Equatable, Codable {
@@ -185,6 +204,9 @@ public struct InspectionEvent: Sendable, Equatable, Codable {
     public let parentSessionId: String?
     public let definitionJSON: String?
     public let timestamp: TimeInterval
+    /// Wall-clock nanoseconds since the Unix epoch — full-precision counterpart of `timestamp` (which,
+    /// being a `Double`, loses sub-microsecond resolution). Use for nanosecond-precise display/ordering.
+    public let timestampNanos: UInt64
 
     public init(
         kind: InspectionEventKind,
@@ -197,7 +219,7 @@ public struct InspectionEvent: Sendable, Equatable, Codable {
         transitions: [InspectionTransitionInfo]? = nil,
         parentSessionId: String? = nil,
         definitionJSON: String? = nil,
-        timestamp: TimeInterval = Date().timeIntervalSince1970
+        timestampNanos: UInt64 = wallClockNanosecondsSince1970()
     ) {
         self.kind = kind
         self.rootId = rootId
@@ -209,7 +231,8 @@ public struct InspectionEvent: Sendable, Equatable, Codable {
         self.transitions = transitions
         self.parentSessionId = parentSessionId
         self.definitionJSON = definitionJSON
-        self.timestamp = timestamp
+        self.timestampNanos = timestampNanos
+        self.timestamp = Double(timestampNanos) / 1_000_000_000
     }
 }
 

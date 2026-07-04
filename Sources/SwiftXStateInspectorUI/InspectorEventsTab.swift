@@ -45,7 +45,7 @@ struct InspectorEventsTab: View {
             HStack(alignment: .firstTextBaseline) {
                 EventKindBadge(kind: entry.kind)
                 Spacer()
-                Text(InspectorTime.string(entry.timestamp))
+                Text(InspectorTime.nanoString(entry.timestampNanos))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(style.secondaryText)
             }

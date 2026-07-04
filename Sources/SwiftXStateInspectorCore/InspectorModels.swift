@@ -45,6 +45,8 @@ public struct FeedEntry: Identifiable, Sendable {
 
     public var kind: InspectionEventKind { event.kind }
     public var timestamp: TimeInterval { event.timestamp }
+    /// Wall-clock nanoseconds since the epoch — full-precision timestamp for nanosecond display.
+    public var timestampNanos: UInt64 { event.timestampNanos }
     public var sessionID: String { event.actor.sessionID }
     public var sourceSessionID: String? { event.source?.sessionID }
     public var eventType: String? { event.event?.type }
