@@ -8,7 +8,9 @@ public extension MachineSchema {
     /// engine's `assign`/`guard` refs. The result runs on the existing `Actor` / `MachineLogic` /
     /// macrostep unchanged — the typed DSL is, in the end, an alternate constructor for a machine.
     func resolve(id: String? = nil, context: Context? = nil) -> ResolvedMachine<Context> {
-        let paths = pathsByName()
+        // `id ?? "(machine)"` is exactly the machine id the engine stamps onto node ids
+        // (ResolvedMachine.id), so absolute targets come out as canonical `#machineId.path`.
+        let paths = pathsByName(machineId: id ?? "(machine)")
         var stateConfigs: [String: StateNodeConfig<Context>] = [:]
         for stateID in order {
             guard let node = states[stateID] else { continue }
@@ -23,23 +25,25 @@ public extension MachineSchema {
         ))
     }
 
-    /// Map each state-id `name` to its full dotted path(s) from the root (no machine-id prefix). A name
-    /// with exactly one path is **unique** and can be targeted absolutely; a shared name (e.g. the
-    /// four castling sides' `available`) keeps several paths and must resolve relatively.
-    private func pathsByName() -> [String: [String]] {
+    /// Map each state-id `name` to its full dotted path(s) — **machine-id prefixed**, matching the
+    /// engine's node ids (`machineId.a.b.c`). A name with exactly one path is **unique** and can be
+    /// targeted absolutely; a shared name (e.g. the four castling sides' `available`) keeps several
+    /// paths and must resolve relatively.
+    private func pathsByName(machineId: String) -> [String: [String]] {
         var map: [String: [String]] = [:]
         func walk(_ node: StateNode, prefix: String) {
-            let path = prefix.isEmpty ? node.id.name : "\(prefix).\(node.id.name)"
+            let path = "\(prefix).\(node.id.name)"
             map[node.id.name, default: []].append(path)
             for child in node.children { walk(child, prefix: path) }
         }
-        for stateID in order { if let node = states[stateID] { walk(node, prefix: "") } }
+        for stateID in order { if let node = states[stateID] { walk(node, prefix: machineId) } }
         return map
     }
 
-    /// Lower a transition target id to an engine target string: a **unique** name becomes an absolute
-    /// `#full.path` (so deep cross-branch jumps like `replaying → game.active.turn.idle` resolve via
-    /// the engine's id map); a **shared** name stays bare for local sibling resolution.
+    /// Lower a transition target id to an engine target string: a **unique** name becomes the canonical
+    /// absolute id `#machineId.full.path` (the standard XState `#` form, so it resolves in the engine,
+    /// the exported definition JSON, the native graph, and the Stately web inspector alike); a
+    /// **shared** name stays bare for local sibling resolution.
     private static func targetString(_ id: StateID, paths: [String: [String]]) -> String {
         if let p = paths[id.name], p.count == 1 { return "#\(p[0])" }
         return id.name
