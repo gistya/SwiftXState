@@ -37,6 +37,20 @@ private func makeTrafficParallelMachine() -> ResolvedMachine<Int> {
     )
 }
 
+/// A typed-DSL machine whose unique state names make the resolver emit ABSOLUTE `#path` targets
+/// (the shape the chess / GameWatcher machines produce, unlike the old-API fixture above with bare
+/// targets). Regression fixture for the definition-JSON builder dropping those edges.
+private struct TogglerMachine: StateMachine {
+    typealias Context = Int
+    typealias StateID = String
+    typealias EventID = String
+    var context: Int { 0 }
+    var machine: some XStateMachine {
+        State("off") { Transition(on: "toggle", to: "on") }.initial()
+        State("on") { Transition(on: "toggle", to: "off") }
+    }
+}
+
 @Suite("GraphModelBuilder walks the real machine")
 struct GraphModelBuilderTests {
     @Test("Builds every node from the live tree, not scaffolding")
@@ -240,6 +254,21 @@ struct GraphModelBuilderTests {
         let typedEdges = Set(typed.edges.map { "\($0.from)->\($0.to)" })
         let jsonEdges = Set(fromJSON.edges.map { "\($0.from)->\($0.to)" })
         #expect(typedEdges == jsonEdges)
+    }
+
+    @Test("Absolute #path targets from the typed DSL still connect edges via definition JSON")
+    func absoluteTargetsConnectFromDefinition() throws {
+        // Unique names make the resolver emit machineId-less absolute targets (#on / #off). The
+        // definition-JSON builder must resolve those to toggler.on / toggler.off — regression: it
+        // only matched the raw path, dropping every unique-name transition arrow.
+        let machine = TogglerMachine().resolvedMachine(id: "toggler")
+        let json = try machine.definitionJSON()
+        let model = GraphModelBuilder.build(fromDefinitionJSON: json, machineID: "toggler")
+
+        let endpoints = Set(model.edges.map { "\($0.from)->\($0.to)" })
+        #expect(endpoints.contains("toggler.off->toggler.on"))
+        #expect(endpoints.contains("toggler.on->toggler.off"))
+        #expect(model.edges.count == 2)   // both arrows connected; none dropped
     }
 }
 #endif

@@ -361,8 +361,15 @@ public enum GraphModelBuilder {
         func resolve(source: String, target: String) -> String? {
             if target.isEmpty { return nil }
             if target.hasPrefix("#") {
+                // Mirror the engine's `resolveTarget` for `#id`: a custom state id, then the id
+                // verbatim (`#machineId.path`), then the machineId-prefixed shorthand (`#path`, which
+                // the DSL resolver emits for unique-name absolute targets). Missing this last form is
+                // what dropped most transition arrows once unique targets became absolute.
                 let raw = String(target.dropFirst())
-                return idAlias[raw] ?? (nodeIDs.contains(raw) ? raw : nil)
+                if let aliased = idAlias[raw] { return aliased }
+                if nodeIDs.contains(raw) { return raw }
+                let prefixed = "\(machineID).\(raw)"
+                return nodeIDs.contains(prefixed) ? prefixed : nil
             }
             if target.hasPrefix(".") {
                 guard let parent = parentOf[source] else { return nil }
