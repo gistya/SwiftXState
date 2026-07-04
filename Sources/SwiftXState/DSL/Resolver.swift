@@ -21,7 +21,8 @@ public extension MachineSchema {
             initial: isParallel ? nil : initialState?.name,
             context: context,
             states: stateConfigs,
-            type: isParallel ? .parallel : nil
+            type: isParallel ? .parallel : nil,
+            useAutoLayoutForInspection: useAutoLayoutForInspection
         ))
     }
 

@@ -2,7 +2,13 @@ import Foundation
 
 enum MachineDefinitionExporter {
     static func export<Context: Sendable>(_ machine: ResolvedMachine<Context>) throws -> String {
-        let document = exportNode(machine.root, machineId: machine.id)
+        var document = exportNode(machine.root, machineId: machine.id)
+        // Emit the inspector auto-layout opt-out at the machine root. Omitted when `true` (the default)
+        // so existing definitions are unchanged; the importer treats a missing key as `true`.
+        if !machine.config.useAutoLayoutForInspection, case var .object(root) = document {
+            root["useAutoLayoutForInspection"] = .bool(false)
+            document = .object(root)
+        }
         return try JSONValue.encode(document)
     }
 

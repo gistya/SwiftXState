@@ -40,6 +40,13 @@ public protocol StateMachine<Context, EventID, StateID>: MachineSchemable, Senda
     /// squares). The per-state analogue is `XState(...).parallel()`.
     var isParallel: Bool { get }
 
+    /// Whether the inspector graph should auto-lay-out this machine (the layered/Sugiyama engine that
+    /// spaces states, routes edges through channels, and disambiguates parallel transitions). Defaults
+    /// to `true`. Set `var useAutoLayoutForInspection: Bool { false }` for a machine whose states carry
+    /// their own meaningful geometry — e.g. a chess board's 8×8 grid — so the inspector preserves that
+    /// fixed arrangement (via `GraphStyle.nodeLayoutOverride`) instead of reflowing it.
+    var useAutoLayoutForInspection: Bool { get }
+
     @MachineBuilder<Context, EventID, StateID>
     var machine: Body { get }
 }
@@ -48,8 +55,14 @@ public extension StateMachine {
     /// Sequential root by default.
     var isParallel: Bool { false }
 
-    /// Fold the declarative `machine` block into a concrete `MachineSchema`, carrying the root-parallel flag.
+    /// Auto-layout the inspector graph by default.
+    var useAutoLayoutForInspection: Bool { true }
+
+    /// Fold the declarative `machine` block into a concrete `MachineSchema`, carrying the root-parallel
+    /// and inspector-auto-layout flags.
     func buildSchema() -> MachineSchema<Context, EventID, StateID> {
-        machine.folded(into: MachineSchema<Context, EventID, StateID>()).withParallel(isParallel)
+        machine.folded(into: MachineSchema<Context, EventID, StateID>())
+            .withParallel(isParallel)
+            .withAutoLayout(useAutoLayoutForInspection)
     }
 }

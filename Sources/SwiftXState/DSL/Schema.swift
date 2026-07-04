@@ -207,19 +207,25 @@ public struct MachineSchema<
     /// XState's `createMachine({ type: 'parallel' })`. Set from `StateMachine.isParallel`; the
     /// per-state `.parallel()` modifier is the nested-node analogue.
     public private(set) var isParallel: Bool
+    /// Whether the inspector graph should auto-lay-out this machine. Set from
+    /// `StateMachine.useAutoLayoutForInspection` (default `true`); carried through resolution into the
+    /// exported definition JSON so the renderer can preserve a fixed arrangement when it is `false`.
+    public private(set) var useAutoLayoutForInspection: Bool
 
     public init() {
         states = [:]
         order = []
         initialState = nil
         isParallel = false
+        useAutoLayoutForInspection = true
     }
 
-    init(states: [StateID: StateNode], order: [StateID], initialState: StateID?, isParallel: Bool = false) {
+    init(states: [StateID: StateNode], order: [StateID], initialState: StateID?, isParallel: Bool = false, useAutoLayoutForInspection: Bool = true) {
         self.states = states
         self.order = order
         self.initialState = initialState
         self.isParallel = isParallel
+        self.useAutoLayoutForInspection = useAutoLayoutForInspection
     }
 
     /// Add a state node — first declaration of an id wins, declaration order is recorded, and the
@@ -232,7 +238,8 @@ public struct MachineSchema<
             states: newStates,
             order: order + [node.id],
             initialState: initialState ?? (node.isInitial ? node.id : nil),
-            isParallel: isParallel
+            isParallel: isParallel,
+            useAutoLayoutForInspection: useAutoLayoutForInspection
         )
     }
 
@@ -242,6 +249,11 @@ public struct MachineSchema<
 
     /// A copy with the root-parallel flag set (used by `StateMachine.buildSchema`).
     public func withParallel(_ flag: Bool) -> Self {
-        Self(states: states, order: order, initialState: initialState, isParallel: flag)
+        Self(states: states, order: order, initialState: initialState, isParallel: flag, useAutoLayoutForInspection: useAutoLayoutForInspection)
+    }
+
+    /// A copy with the inspector auto-layout flag set (used by `StateMachine.buildSchema`).
+    public func withAutoLayout(_ flag: Bool) -> Self {
+        Self(states: states, order: order, initialState: initialState, isParallel: isParallel, useAutoLayoutForInspection: flag)
     }
 }

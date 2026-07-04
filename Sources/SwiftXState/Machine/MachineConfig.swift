@@ -22,6 +22,10 @@ public struct MachineConfig<Context: Sendable>: Sendable {
     public var output: OutputResolver<Context>?
     /// Optional human-readable description, carried into the exported definition JSON.
     public var description: String?
+    /// Whether the inspector graph should auto-lay-out this machine (default `true`). Carried into the
+    /// exported definition JSON so a type-erased inspector can honor it. See
+    /// `StateMachine.useAutoLayoutForInspection`.
+    public var useAutoLayoutForInspection: Bool
 
     public init(
         id: String? = nil,
@@ -34,7 +38,8 @@ public struct MachineConfig<Context: Sendable>: Sendable {
         exit: [ActionRef<Context>]? = nil,
         type: StateNodeType? = nil,
         output: OutputResolver<Context>? = nil,
-        description: String? = nil
+        description: String? = nil,
+        useAutoLayoutForInspection: Bool = true
     ) {
         self.id = id
         self.initial = initial
@@ -47,5 +52,6 @@ public struct MachineConfig<Context: Sendable>: Sendable {
         self.type = type
         self.output = output
         self.description = description
+        self.useAutoLayoutForInspection = useAutoLayoutForInspection
     }
 }

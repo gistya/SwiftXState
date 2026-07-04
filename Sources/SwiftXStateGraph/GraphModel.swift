@@ -111,17 +111,23 @@ public struct GraphModel: Sendable, Equatable {
     public let rootID: String
     public let nodes: [GraphNode]
     public let edges: [GraphEdge]
+    /// Whether the layout engine should auto-lay-out this machine (the layered/Sugiyama flow with
+    /// edge routing + disambiguation). When `false`, the renderer preserves a fixed arrangement —
+    /// today's simple layout plus any `GraphStyle.nodeLayoutOverride` — instead of reflowing.
+    /// Sourced from `StateMachine.useAutoLayoutForInspection` via the exported definition JSON.
+    public let useAutoLayoutForInspection: Bool
 
     /// Fast lookup by node id.
     public let nodesByID: [String: GraphNode]
     /// Child node ids keyed by parent id, in definition order.
     public let childrenByID: [String: [String]]
 
-    public init(machineID: String, rootID: String, nodes: [GraphNode], edges: [GraphEdge]) {
+    public init(machineID: String, rootID: String, nodes: [GraphNode], edges: [GraphEdge], useAutoLayoutForInspection: Bool = true) {
         self.machineID = machineID
         self.rootID = rootID
         self.nodes = nodes
         self.edges = edges
+        self.useAutoLayoutForInspection = useAutoLayoutForInspection
 
         var byID: [String: GraphNode] = [:]
         byID.reserveCapacity(nodes.count)
@@ -152,6 +158,7 @@ public struct GraphModel: Sendable, Equatable {
     public var structureHash: Int {
         var hasher = Hasher()
         hasher.combine(machineID)
+        hasher.combine(useAutoLayoutForInspection)
         for node in nodes.sorted(by: { $0.id < $1.id }) {
             hasher.combine(node.id)
             hasher.combine(node.parentID)
@@ -247,7 +254,10 @@ public enum GraphModelBuilder {
         }
 
         walk(machine.root, parentID: nil)
-        return GraphModel(machineID: machine.id, rootID: machine.root.id, nodes: nodes, edges: edges)
+        return GraphModel(
+            machineID: machine.id, rootID: machine.root.id, nodes: nodes, edges: edges,
+            useAutoLayoutForInspection: machine.config.useAutoLayoutForInspection
+        )
     }
 
     // MARK: Build from an exported definition (type-erased)
@@ -266,6 +276,9 @@ public enum GraphModelBuilder {
     /// Builds a `GraphModel` from a decoded definition object.
     public static func build(fromDefinition definition: JSONValue, machineID: String) -> GraphModel {
         guard case let .object(root) = definition else { return .empty }
+
+        // Inspector auto-layout opt-out (default `true` when the key is absent — see the exporter).
+        let autoLayout: Bool = { if case let .bool(b)? = root["useAutoLayoutForInspection"] { return b }; return true }()
 
         var nodes: [GraphNode] = []
         var idAlias: [String: String] = [:]        // custom `id:` -> path-derived id
@@ -391,7 +404,7 @@ public enum GraphModelBuilder {
             edges.append(GraphEdge(id: "e\(edgeSeq)", from: edge.source, to: targetID, label: edge.label, kind: edge.kind, isGuarded: edge.guarded))
         }
 
-        return GraphModel(machineID: machineID, rootID: machineID, nodes: nodes, edges: edges)
+        return GraphModel(machineID: machineID, rootID: machineID, nodes: nodes, edges: edges, useAutoLayoutForInspection: autoLayout)
     }
 
     /// Maps a raw event-type key to a display label + edge kind, or `nil` to drop it.
