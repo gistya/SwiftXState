@@ -1,13 +1,13 @@
 {
-  "originHash" : "c56db49d154f072f504464b8223c6bb309e1d2a75d35bb73f75bcd4023744eb9",
+  "originHash" : "b9d159f86d342013d531d83851d9905665d844b14e6138ea44912ee58e6accd6",
   "pins" : [
     {
       "identity" : "swift-compositional-init",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/swift-compositional-init",
       "state" : {
-        "revision" : "2633ee5b9837df48031714e41912d8ca77183f18",
-        "version" : "1.0.0"
+        "revision" : "46115c8285305135cb288a1bf05b9f69297bc619",
+        "version" : "1.1.2"
       }
     },
     {

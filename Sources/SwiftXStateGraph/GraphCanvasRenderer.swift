@@ -324,15 +324,10 @@ struct GraphCanvas: View {
 
     // MARK: Auto-layout edge helpers
 
-    /// A stable colour for an edge, derived deterministically from its event label (a process-stable
-    /// FNV-1a hash, *not* `hashValue`, so colours never shift between runs or snapshot baselines). This
-    /// is the primary cue mapping a transition line to its label; the lane dash is the secondary cue.
+    /// The primary cue mapping a transition line to its label — a stable per-event colour (see
+    /// `GraphEdge.stableHue`). The lane dash is the secondary cue.
     private func eventColor(for edge: GraphEdge) -> Color {
-        let seed = edge.label.isEmpty ? "kind:\(edge.kind)" : edge.label
-        var h: UInt64 = 1469598103934665603              // FNV-1a offset basis
-        for byte in seed.utf8 { h = (h ^ UInt64(byte)) &* 1099511628211 }
-        let hue = Double(h % 3600) / 3600.0
-        return Color(hue: hue, saturation: 0.60, brightness: 0.82)
+        Color(hue: edge.stableHue, saturation: 0.60, brightness: 0.82)
     }
 
     /// A per-lane dash so parallel same-pair edges stay distinguishable even when their event colours
