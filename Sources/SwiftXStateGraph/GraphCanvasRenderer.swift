@@ -176,8 +176,10 @@ struct GraphCanvas: View {
     // MARK: Edges
 
     private func drawEdges(in context: inout GraphicsContext, showLabels: Bool) {
-        // Fan out edges that share an endpoint pair so duplicates / back-edges don't overlap.
         let ordered = model.edges.sorted { $0.id < $1.id }
+        let autoLayout = model.useAutoLayoutForInspection
+        // Fan out edges that share an endpoint pair so duplicates / back-edges don't overlap. Used only
+        // for the legacy (opted-out) path; the auto-layout path carries its lane data on each route.
         var laneCount: [String: Int] = [:]
         for edge in ordered { laneCount[pairKey(edge), default: 0] += 1 }
         var laneSeen: [String: Int] = [:]
@@ -185,19 +187,34 @@ struct GraphCanvas: View {
         for edge in ordered {
             guard let fromRect = layout.frame(edge.from), let toRect = layout.frame(edge.to) else { continue }
             let emphasized = edge.from == selectedID || edge.to == selectedID
-            let color = emphasized ? style.activeEdgeColor : style.edgeColor
+            // Per-event colour ties each line to its label when auto-layout is on; opted-out machines
+            // (e.g. the chess board grid) keep the classic neutral edge colour.
+            let color = emphasized ? style.activeEdgeColor : (autoLayout ? eventColor(for: edge) : style.edgeColor)
             let width = emphasized ? style.activeEdgeWidth : style.edgeWidth
-            let dash = edge.isGuarded ? style.guardedEdgeDash : []
 
+            if edge.isSelfLoop {
+                let dash = edge.isGuarded ? style.guardedEdgeDash : []
+                drawSelfLoop(in: &context, rect: fromRect, edge: edge, color: color, width: width, dash: dash,
+                             showLabel: showLabels, tint: autoLayout ? color : nil)
+                continue
+            }
+
+            // Auto-layout: draw the pre-routed edge (distinct ports + lane fan + along-line label).
+            if let route = layout.route(edge.id) {
+                let dash = edge.isGuarded ? style.guardedEdgeDash : laneDash(index: route.laneIndex, count: route.laneCount)
+                drawRoutedEdge(in: &context, route: route, color: color, width: width, dash: dash)
+                if showLabels, !edge.label.isEmpty {
+                    drawRoutedLabel(in: &context, text: edge.label, at: route.labelAnchor, angle: route.labelAngle, tint: color)
+                }
+                continue
+            }
+
+            // Legacy centre-to-centre curve (auto-layout opted out).
+            let dash = edge.isGuarded ? style.guardedEdgeDash : []
             let key = pairKey(edge)
             let lane = laneSeen[key, default: 0]
             laneSeen[key] = lane + 1
             let lanes = laneCount[key, default: 1]
-
-            if edge.isSelfLoop {
-                drawSelfLoop(in: &context, rect: fromRect, edge: edge, color: color, width: width, dash: dash, showLabel: showLabels)
-                continue
-            }
 
             let toCenter = CGPoint(x: toRect.midX, y: toRect.midY)
             let fromCenter = CGPoint(x: fromRect.midX, y: fromRect.midY)
@@ -251,7 +268,7 @@ struct GraphCanvas: View {
 
     private func drawSelfLoop(
         in context: inout GraphicsContext, rect: CGRect, edge: GraphEdge,
-        color: Color, width: CGFloat, dash: [CGFloat], showLabel: Bool
+        color: Color, width: CGFloat, dash: [CGFloat], showLabel: Bool, tint: Color? = nil
     ) {
         let r = style.selfLoopRadius
         let anchor = CGPoint(x: rect.midX, y: rect.minY)
@@ -267,7 +284,7 @@ struct GraphCanvas: View {
         context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, dash: dash))
         drawArrowhead(in: &context, tip: right, direction: CGPoint(x: 0.2, y: 1), color: color)
         if showLabel, !edge.label.isEmpty {
-            drawEdgeLabel(in: &context, text: edge.label, at: CGPoint(x: anchor.x, y: anchor.y - r * 1.5))
+            drawEdgeLabel(in: &context, text: edge.label, at: CGPoint(x: anchor.x, y: anchor.y - r * 1.5), tint: tint)
         }
     }
 
@@ -284,7 +301,7 @@ struct GraphCanvas: View {
         context.fill(path, with: .color(color))
     }
 
-    private func drawEdgeLabel(in context: inout GraphicsContext, text: String, at point: CGPoint) {
+    private func drawEdgeLabel(in context: inout GraphicsContext, text: String, at point: CGPoint, tint: Color? = nil) {
         let resolved = context.resolve(
             Text(text)
                 .font(.system(size: style.edgeLabelFontSize, weight: .medium))
@@ -298,8 +315,71 @@ struct GraphCanvas: View {
             width: textSize.width + pad * 2,
             height: textSize.height + pad
         )
-        context.fill(Path(roundedRect: bg, cornerRadius: 4), with: .color(style.edgeLabelBackground))
+        let pill = Path(roundedRect: bg, cornerRadius: 4)
+        context.fill(pill, with: .color(style.edgeLabelBackground))
+        // A tinted outline in the edge colour ties the label to its line (the disambiguation cue).
+        if let tint { context.stroke(pill, with: .color(tint), lineWidth: 1.5) }
         context.draw(resolved, at: point, anchor: .center)
+    }
+
+    // MARK: Auto-layout edge helpers
+
+    /// A stable colour for an edge, derived deterministically from its event label (a process-stable
+    /// FNV-1a hash, *not* `hashValue`, so colours never shift between runs or snapshot baselines). This
+    /// is the primary cue mapping a transition line to its label; the lane dash is the secondary cue.
+    private func eventColor(for edge: GraphEdge) -> Color {
+        let seed = edge.label.isEmpty ? "kind:\(edge.kind)" : edge.label
+        var h: UInt64 = 1469598103934665603              // FNV-1a offset basis
+        for byte in seed.utf8 { h = (h ^ UInt64(byte)) &* 1099511628211 }
+        let hue = Double(h % 3600) / 3600.0
+        return Color(hue: hue, saturation: 0.60, brightness: 0.82)
+    }
+
+    /// A per-lane dash so parallel same-pair edges stay distinguishable even when their event colours
+    /// happen to be similar. Lane 0 (and any single edge) stays solid.
+    private func laneDash(index: Int, count: Int) -> [CGFloat] {
+        guard count > 1, index > 0 else { return [] }
+        switch index % 4 {
+        case 1: return [7, 4]
+        case 2: return [2, 3]
+        default: return [7, 3, 2, 3]
+        }
+    }
+
+    private func drawRoutedEdge(in context: inout GraphicsContext, route: EdgeRoute, color: Color, width: CGFloat, dash: [CGFloat]) {
+        guard route.points.count == 3 else { return }
+        let start = route.points[0], control = route.points[1], end = route.points[2]
+        let tangent = CGPoint(x: end.x - control.x, y: end.y - control.y)
+        let tlen = max(hypot(tangent.x, tangent.y), 1)
+        let unit = CGPoint(x: tangent.x / tlen, y: tangent.y / tlen)
+        // Pull the stroke back so it meets the arrowhead base, not the tip.
+        let lineEnd = CGPoint(x: end.x - unit.x * style.arrowLength, y: end.y - unit.y * style.arrowLength)
+        var path = Path()
+        path.move(to: start)
+        path.addQuadCurve(to: lineEnd, control: control)
+        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, dash: dash))
+        drawArrowhead(in: &context, tip: end, direction: unit, color: color)
+    }
+
+    /// Draws the label rotated along the edge tangent (already flipped upright by the router), the pill
+    /// outlined in the edge colour so it reads as belonging to that line.
+    private func drawRoutedLabel(in context: inout GraphicsContext, text: String, at anchor: CGPoint, angle: CGFloat, tint: Color) {
+        context.drawLayer { layer in
+            layer.translateBy(x: anchor.x, y: anchor.y)
+            layer.rotate(by: .radians(Double(angle)))
+            let resolved = layer.resolve(
+                Text(text)
+                    .font(.system(size: style.edgeLabelFontSize, weight: .medium))
+                    .foregroundStyle(style.edgeLabelColor)
+            )
+            let ts = resolved.measure(in: CGSize(width: 400, height: 100))
+            let pad: CGFloat = 4
+            let bg = CGRect(x: -ts.width / 2 - pad, y: -ts.height / 2 - pad / 2, width: ts.width + pad * 2, height: ts.height + pad)
+            let pill = Path(roundedRect: bg, cornerRadius: 4)
+            layer.fill(pill, with: .color(style.edgeLabelBackground))
+            layer.stroke(pill, with: .color(tint), lineWidth: 1.5)
+            layer.draw(resolved, at: .zero, anchor: .center)
+        }
     }
 
     // MARK: Initial-state indicators

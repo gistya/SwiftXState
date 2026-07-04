@@ -2,6 +2,34 @@
 import CoreGraphics
 import Foundation
 
+/// A routed transition, produced by the auto-layout engine so the renderer can draw a ported,
+/// lane-separated, along-the-line-labelled edge instead of a naive centre-to-centre curve. All
+/// points are absolute logical coordinates. Only present when the machine opts into auto-layout;
+/// self-loops are not routed here (the renderer draws those directly).
+public struct EdgeRoute: Sendable, Equatable {
+    public let edgeID: String
+    /// Control polyline: `[startPort, control, endPort]` — a quadratic Bézier the renderer strokes.
+    public var points: [CGPoint]
+    /// Point on the curve where the label pill is anchored (staggered per lane so pills don't stack).
+    public var labelAnchor: CGPoint
+    /// Tangent angle at `labelAnchor` (radians), already flipped to keep the text upright.
+    public var labelAngle: CGFloat
+    /// This edge's index among the edges sharing its unordered node pair — feeds the renderer's
+    /// dash/outline tie-break when two same-pair lanes hash to similar colours.
+    public let laneIndex: Int
+    /// How many edges share this edge's unordered node pair (lane count).
+    public let laneCount: Int
+
+    public init(edgeID: String, points: [CGPoint], labelAnchor: CGPoint, labelAngle: CGFloat, laneIndex: Int, laneCount: Int) {
+        self.edgeID = edgeID
+        self.points = points
+        self.labelAnchor = labelAnchor
+        self.labelAngle = labelAngle
+        self.laneIndex = laneIndex
+        self.laneCount = laneCount
+    }
+}
+
 /// The result of laying out a `GraphModel`: an absolute frame (in logical
 /// coordinates) for every node, plus the overall content bounds. Containers
 /// (compound / parallel) get frames that fully enclose their descendants, which
@@ -10,10 +38,21 @@ public struct GraphLayoutResult: Sendable, Equatable {
     public var frames: [String: CGRect]
     /// The bounding rectangle of every frame, used to center/fit the graph.
     public var bounds: CGRect
+    /// Routed edges keyed by edge id. Empty when the machine opts out of auto-layout
+    /// (`useAutoLayoutForInspection == false`), in which case the renderer falls back to its
+    /// classic centre-to-centre curves.
+    public var routes: [String: EdgeRoute]
+
+    public init(frames: [String: CGRect], bounds: CGRect, routes: [String: EdgeRoute] = [:]) {
+        self.frames = frames
+        self.bounds = bounds
+        self.routes = routes
+    }
 
     public static let empty = GraphLayoutResult(frames: [:], bounds: .zero)
 
     public func frame(_ id: String) -> CGRect? { frames[id] }
+    public func route(_ edgeID: String) -> EdgeRoute? { routes[edgeID] }
 }
 
 /// A deterministic, dependency-free layout engine for statecharts.
@@ -55,9 +94,19 @@ public enum GraphLayout {
                 measureCustom(id: id, kids: kids, override: override)
             } else if node.type == .parallel {
                 measureParallel(id: id, kids: kids)
+            } else if model.useAutoLayoutForInspection {
+                measureCompoundAuto(id: id, kids: kids)
             } else {
                 measureCompound(id: id, kids: kids)
             }
+        }
+
+        /// Auto-layout path (`useAutoLayoutForInspection`): a layered flow with barycenter
+        /// crossing-minimization and neighbour-aligned coordinate assignment (see `GraphAutoLayout`).
+        func measureCompoundAuto(id: String, kids: [String]) {
+            let result = GraphLayout.autoCompoundLayout(parentID: id, kids: kids, model: model, style: style, sizes: sizes)
+            for (kid, pos) in result.local { childLocal[kid] = pos }
+            finalizeContainer(id: id, contentSize: result.content, style: style)
         }
 
         /// Places children at consumer-supplied centers, then sizes the container to enclose them.
@@ -162,8 +211,31 @@ public enum GraphLayout {
             }
         }
 
+        // MARK: Refit pass (bottom-up) — grow each container to wrap its children.
+
+        // After the assign pass has applied any per-node drag offsets, a container's frame (sized at
+        // measure time) may no longer enclose a child that was dragged out. Re-derive each container's
+        // frame from the union of its final child frames plus padding/header. This is a no-op when
+        // nothing was dragged (the union + insets reproduces the measured size), so it costs nothing in
+        // the common case while making regions expand to contain dragged-apart substates.
+        func refit(_ id: String) {
+            let kids = model.children(of: id)
+            for kid in kids { refit(kid) }
+            guard !kids.isEmpty, model.node(id)?.type.isContainer == true else { return }
+            var union = CGRect.null
+            for kid in kids { if let f = frames[kid] { union = union.union(f) } }
+            guard !union.isNull else { return }
+            let pad = style.regionPadding
+            let header = style.regionHeaderHeight
+            frames[id] = CGRect(
+                x: union.minX - pad, y: union.minY - header,
+                width: union.width + pad * 2, height: union.height + header + pad
+            )
+        }
+
         measure(model.rootID)
         assign(model.rootID, origin: .zero)
+        refit(model.rootID)
 
         // MARK: Bounds
 
@@ -171,7 +243,13 @@ public enum GraphLayout {
         for frame in frames.values { bounds = bounds.union(frame) }
         if bounds.isNull { bounds = .zero }
 
-        return GraphLayoutResult(frames: frames, bounds: bounds)
+        // Route edges over the final frames (ports + lanes + along-line labels) only when this machine
+        // opts into auto-layout; otherwise the renderer uses its classic centre-to-centre curves.
+        let routes = model.useAutoLayoutForInspection
+            ? routeEdges(model: model, frames: frames, style: style)
+            : [:]
+
+        return GraphLayoutResult(frames: frames, bounds: bounds, routes: routes)
     }
 
     // MARK: - Helpers
@@ -191,7 +269,7 @@ public enum GraphLayout {
     /// the initial state, following internal transitions in a deterministic BFS. Back
     /// edges (cycles) are ignored because their target is already ranked, which keeps the
     /// flow flowing forward — and makes structurally-identical regions lay out identically.
-    private static func rankChildren(parentID: String, kids: [String], model: GraphModel) -> [String: Int] {
+    static func rankChildren(parentID: String, kids: [String], model: GraphModel) -> [String: Int] {
         let childSet = Set(kids)
         let order = Dictionary(uniqueKeysWithValues: kids.map { ($0, model.node($0)?.order ?? 0) })
 
