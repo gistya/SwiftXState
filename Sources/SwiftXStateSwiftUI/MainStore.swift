@@ -33,7 +33,9 @@ public final class MachineStore<M: StateMachine>: AnyMachineStore {
     /// Lifecycle status: `.active` / `.done` / `.error` / `.stopped`.
     public private(set) var status: SnapshotStatus = .active
 
-    @ObservationIgnored private var subscription: Subscription?
+    /// The single serial task that drains the actor's projected snapshot stream. One consumer (not a
+    /// task-per-snapshot) is what keeps updates in arrival order — see `start()`.
+    @ObservationIgnored private var driveTask: Task<Void, Never>?
 
     /// Build a store from a machine declaration. The actor is started and subscribed asynchronously;
     /// `configuration` is `nil` and `context` is the declared initial context until the first
@@ -56,7 +58,7 @@ public final class MachineStore<M: StateMachine>: AnyMachineStore {
     private func start() {
         let actor = self.actor
         let box = WeakStoreBox(self)
-        Task { [box, actor] in
+        driveTask = Task { [box, actor] in
             let initial = await actor.start()
             let context = await actor.context
             let status = await actor.status
@@ -65,13 +67,20 @@ public final class MachineStore<M: StateMachine>: AnyMachineStore {
                 box.object?.context = context
                 box.object?.status = status
             }
-            let subscription = await actor.subscribe { configuration, context in
-                Task { @MainActor [box] in
+            // Drain the projected snapshot stream from a SINGLE serial consumer so updates are
+            // applied in the order the actor emitted them. The previous
+            // `subscribe { Task { @MainActor … } }` spawned a fresh unstructured task per snapshot,
+            // and unstructured tasks have no ordering guarantee: a fast back-to-back
+            // loading → ready could apply `ready` first and `loading` second, stranding the UI on
+            // the stale `loading` state (only reproduces when the effect is very fast). A single
+            // `for await` is FIFO, and `snapshots` (bufferingNewest(1)) always converges to the
+            // latest snapshot, so the store can never end on a superseded one.
+            for await (configuration, context) in actor.snapshots {
+                await MainActor.run { [box] in
                     box.object?.configuration = configuration
                     box.object?.context = context
                 }
             }
-            await MainActor.run { [box] in box.object?.subscription = subscription }
         }
     }
 
@@ -81,12 +90,13 @@ public final class MachineStore<M: StateMachine>: AnyMachineStore {
         let actor = self.actor
         let box = WeakStoreBox(self)
         Task { [box, actor] in
-            let configuration = await actor.send(id)
-            let context = await actor.context
+            _ = await actor.send(id)
+            // `configuration` / `context` flow exclusively through the ordered snapshot drain in
+            // `start()`. Writing them here too would reintroduce a second, unordered writer that
+            // could clobber a newer snapshot with this event's now-stale result. Only `status`
+            // (not carried on the snapshot stream) is applied here.
             let status = await actor.status
             await MainActor.run { [box] in
-                box.object?.configuration = configuration
-                box.object?.context = context
                 box.object?.status = status
             }
         }
@@ -98,7 +108,7 @@ public final class MachineStore<M: StateMachine>: AnyMachineStore {
     /// Whether a dotted path of state names is active (for nested compound/parallel states).
     public func matches(path: String) -> Bool { configuration?.matches(path: path) ?? false }
 
-    deinit { subscription?.cancel() }
+    deinit { driveTask?.cancel() }
 }
 
 // MARK: - Erased view (for the collator / dashboards)
