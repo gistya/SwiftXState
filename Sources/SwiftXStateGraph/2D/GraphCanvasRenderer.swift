@@ -157,6 +157,10 @@ struct GraphCanvas: View {
         var laneCount: [String: Int] = [:]
         for edge in ordered { laneCount[pairKey(edge), default: 0] += 1 }
         var laneSeen: [String: Int] = [:]
+        // Fan multiple self-loops on the same node so none is hidden beneath another.
+        var selfLoopCount: [String: Int] = [:]
+        for edge in ordered where edge.isSelfLoop { selfLoopCount[edge.from, default: 0] += 1 }
+        var selfLoopSeen: [String: Int] = [:]
 
         for edge in ordered {
             guard let fromRect = layout.frame(edge.from), let toRect = layout.frame(edge.to) else { continue }
@@ -171,8 +175,11 @@ struct GraphCanvas: View {
                 // Put the loop on the node's right when the space directly above is occupied by a
                 // stacked sibling (so its label doesn't tuck behind that node).
                 let onRight = spaceAboveBlocked(fromRect, excluding: edge.from)
+                let idx = selfLoopSeen[edge.from, default: 0]
+                selfLoopSeen[edge.from] = idx + 1
                 drawSelfLoop(in: &context, rect: fromRect, edge: edge, color: color, width: width, dash: dash,
-                             showLabel: showLabels, tint: autoLayout ? color : nil, onRight: onRight)
+                             showLabel: showLabels, tint: autoLayout ? color : nil, onRight: onRight,
+                             loopIndex: idx, loopCount: selfLoopCount[edge.from, default: 1])
                 continue
             }
 
@@ -245,15 +252,19 @@ struct GraphCanvas: View {
 
     private func drawSelfLoop(
         in context: inout GraphicsContext, rect: CGRect, edge: GraphEdge,
-        color: Color, width: CGFloat, dash: [CGFloat], showLabel: Bool, tint: Color? = nil, onRight: Bool = false
+        color: Color, width: CGFloat, dash: [CGFloat], showLabel: Bool, tint: Color? = nil, onRight: Bool = false,
+        loopIndex: Int = 0, loopCount: Int = 1
     ) {
         let r = style.selfLoopRadius
+        // Fan multiple self-loops on the same node apart (top → spread across X, right → down Y) so a
+        // second/third self-transition isn't hidden beneath the first.
+        let fan = CGFloat(loopIndex) - CGFloat(loopCount - 1) / 2
         var path = Path()
         let arrowTip: CGPoint, arrowDir: CGPoint, labelPoint: CGPoint
 
         if onRight {
             // A loop bulging off the node's right edge, label to its right — clears a stacked sibling above.
-            let anchor = CGPoint(x: rect.maxX, y: rect.midY)
+            let anchor = CGPoint(x: rect.maxX, y: rect.midY + fan * r * 2.3)
             let top = CGPoint(x: anchor.x, y: anchor.y - r * 0.5)
             let bottom = CGPoint(x: anchor.x, y: anchor.y + r * 0.5)
             path.move(to: top)
@@ -267,7 +278,7 @@ struct GraphCanvas: View {
             labelPoint = CGPoint(x: anchor.x + r * 1.4 + estimatedLabelWidth(edge.label) / 2, y: anchor.y)
         } else {
             // A loop bulging off the node's top, label above.
-            let anchor = CGPoint(x: rect.midX, y: rect.minY)
+            let anchor = CGPoint(x: rect.midX + fan * r * 2.4, y: rect.minY)
             let left = CGPoint(x: anchor.x - r * 0.5, y: anchor.y)
             let right = CGPoint(x: anchor.x + r * 0.5, y: anchor.y)
             path.move(to: left)

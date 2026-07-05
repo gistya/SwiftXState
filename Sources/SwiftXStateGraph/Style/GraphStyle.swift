@@ -35,8 +35,6 @@ public struct GraphStyle: Sendable {
     public var nodeCornerRadius: CGFloat = 10
     public var nodeBorderWidth: CGFloat = 1.5
     public var nodeMinWidth: CGFloat = 104
-    /// Taller than the label needs, deliberately — gives edge ports (distributed down each side) and
-    /// their labels vertical room so the arrows around a state aren't cramped.
     public var nodeMinHeight: CGFloat = 44
     public var nodePadding: CGFloat = 16
     public var nodeShadowRadius: CGFloat = 4
@@ -69,6 +67,10 @@ public struct GraphStyle: Sendable {
     public var regionBorderWidth: CGFloat = 1.5
     public var regionHeaderHeight: CGFloat = 30
     public var regionPadding: CGFloat = 22
+    /// Extra vertical padding added to a region box beyond `regionPadding` — makes the grey container
+    /// box taller than its states strictly need, giving the arrows and labels around them (top
+    /// self-loops especially) room to breathe.
+    public var regionVerticalPadding: CGFloat = 34
     /// Vertical gap between stacked regions inside a parallel state.
     public var regionSpacing: CGFloat = 28
 

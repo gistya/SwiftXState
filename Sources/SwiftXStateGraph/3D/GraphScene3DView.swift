@@ -67,8 +67,12 @@ struct GraphScene3DView {
             var clo = SIMD3<Float>(repeating: .greatestFiniteMagnitude)
             var chi = SIMD3<Float>(repeating: -.greatestFiniteMagnitude)
             for d in descendants { let s = simd3(p(d)); clo = simd_min(clo, s); chi = simd_max(chi, s) }
-            let pad = nodeHalf + 0.4
-            clo -= pad; chi += pad
+            // Extra vertical padding: the region box is deliberately taller than it needs to be so the
+            // arrows and their labels around its states have room (top self-loops especially).
+            let padXZ = nodeHalf + 0.4
+            let padY = nodeHalf + 1.2
+            clo -= SIMD3<Float>(padXZ, padY, padXZ)
+            chi += SIMD3<Float>(padXZ, padY, padXZ)
             let sizeV = chi - clo
             let cube = SCNBox(width: CGFloat(sizeV.x), height: CGFloat(sizeV.y), length: CGFloat(sizeV.z), chamferRadius: 0.12)
             cube.firstMaterial = glassMat
@@ -86,6 +90,9 @@ struct GraphScene3DView {
         // Edges: a cylinder + arrowhead grouped under one node named "edge|from|to", with the label
         // billboarded and ATTACHED to that group so it travels with the arrow.
         let autoLayout = model.useAutoLayoutForInspection
+        var selfLoopCount: [String: Int] = [:]
+        for edge in model.edges where edge.isSelfLoop { selfLoopCount[edge.from, default: 0] += 1 }
+        var selfLoopSeen: [String: Int] = [:]
         for edge in model.edges {
             guard pos3D[edge.from] != nil, pos3D[edge.to] != nil else { continue }
             let highlighted = edge.from == selectedID || edge.to == selectedID
@@ -93,8 +100,10 @@ struct GraphScene3DView {
                                     : (autoLayout ? edgeColor3D(edge) : PlatformColor(style.edgeColor))
 
             if edge.isSelfLoop {
+                let idx = selfLoopSeen[edge.from, default: 0]; selfLoopSeen[edge.from] = idx + 1
                 let loop = selfLoop3D(at: simd3(p(edge.from)), radius: nodeHalf, color: color,
-                                      label: showLabels ? edge.label : "")
+                                      label: showLabels ? edge.label : "",
+                                      loopIndex: idx, loopCount: selfLoopCount[edge.from, default: 1])
                 loop.name = "edge|\(edge.from)|\(edge.to)"
                 scene.rootNode.addChildNode(loop)
                 continue
@@ -116,11 +125,15 @@ struct GraphScene3DView {
             arrow.name = "arrow|\(edge.from)|\(edge.to)"
             group.addChildNode(arrow)
             if showLabels, !edge.label.isEmpty, let lbl = labelPlaneNode(edge.label, worldHeight: 0.32, fontSize: 12) {
-                // Child of the CYLINDER, so the label's rotation is pinned to the arrow (it does not
-                // swivel to face the camera). Offset perpendicular-forward (local +Z) off the tube so it
-                // never clips into the arrow. cylinder local origin = edge midpoint, local +Y = the edge.
-                lbl.position = vec(0, 0, 0.026 + 0.16)
-                cyl.addChildNode(lbl)
+                // Pinned to the edge group (rotates with the scene, not the camera) but kept UPRIGHT:
+                // it faces +Z and is tilted only by the arrow's screen-projected angle, so the top edge
+                // stays roughly horizontal (a slight lean on diagonal arrows). Offset forward in Z so it
+                // never clips the tube.
+                var angle = atan2(Double(pb.y - pa.y), Double(pb.x - pa.x))
+                if cos(angle) < 0 { angle += .pi }
+                lbl.eulerAngles = vec(0, 0, CGFloat(angle))
+                lbl.position = vecF((start + tip) / 2 + SIMD3<Float>(0, 0, 0.18))
+                group.addChildNode(lbl)
             }
             scene.rootNode.addChildNode(group)
         }
@@ -128,8 +141,7 @@ struct GraphScene3DView {
         // Leaf nodes as brushed-metal plates at their 3D position, label billboarded on the front.
         for node in model.nodes where !node.type.isContainer {
             let s = CGFloat(style.node3DSize) * scale
-            // Taller box: gives the side ports (and their labels) vertical room.
-            let box = SCNBox(width: s * 1.7, height: s * 1.6, length: s, chamferRadius: CGFloat(style.nodeCornerRadius) * scale)
+            let box = SCNBox(width: s * 1.7, height: s, length: s, chamferRadius: CGFloat(style.nodeCornerRadius) * scale)
             let mat = brushedMetalMaterial()
             box.materials = [mat]
             let snode = SCNNode(geometry: box)
@@ -215,9 +227,12 @@ struct GraphScene3DView {
     }
 
     /// A self-loop as a small torus + arrowhead at a node's position (billboarded label above it).
-    private func selfLoop3D(at center: SIMD3<Float>, radius nodeHalf: Float, color: PlatformColor, label: String) -> SCNNode {
+    private func selfLoop3D(at center: SIMD3<Float>, radius nodeHalf: Float, color: PlatformColor, label: String,
+                            loopIndex: Int = 0, loopCount: Int = 1) -> SCNNode {
+        // Fan multiple self-loops on the same node apart along X so none hides beneath another.
+        let fan = Float(loopIndex) - Float(loopCount - 1) / 2
         let container = SCNNode()
-        container.position = vec(CGFloat(center.x), CGFloat(center.y + nodeHalf + 0.28), CGFloat(center.z))
+        container.position = vec(CGFloat(center.x + fan * 0.62), CGFloat(center.y + nodeHalf + 0.28), CGFloat(center.z))
         let loopR: CGFloat = 0.26
         let ring = SCNTorus(ringRadius: loopR, pipeRadius: 0.024)
         let mat = SCNMaterial(); mat.diffuse.contents = color; mat.lightingModel = .constant

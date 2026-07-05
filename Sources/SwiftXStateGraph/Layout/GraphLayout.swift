@@ -135,11 +135,12 @@ public enum GraphLayout {
         func finalizeContainer(id: String, contentSize: CGSize, style: GraphStyle) {
             let pad = style.regionPadding
             let header = style.regionHeaderHeight
+            let vpad = style.regionVerticalPadding      // extra breathing room top + bottom
             sizes[id] = CGSize(
                 width: contentSize.width + pad * 2,
-                height: contentSize.height + header + pad
+                height: contentSize.height + header + pad + vpad * 2
             )
-            contentInset[id] = CGPoint(x: pad, y: header)
+            contentInset[id] = CGPoint(x: pad, y: header + vpad)
         }
 
         // MARK: Assign pass (top-down, applying manual drag offsets cumulatively)
@@ -175,9 +176,12 @@ public enum GraphLayout {
             guard !union.isNull else { return }
             let pad = style.regionPadding
             let header = style.regionHeaderHeight
+            let vpad = style.regionVerticalPadding
+            // Mirror finalizeContainer's insets (header + vpad on top, pad + vpad on the bottom) so the
+            // refit keeps the region's extra vertical breathing room instead of shrinking it back.
             frames[id] = CGRect(
-                x: union.minX - pad, y: union.minY - header,
-                width: union.width + pad * 2, height: union.height + header + pad
+                x: union.minX - pad, y: union.minY - header - vpad,
+                width: union.width + pad * 2, height: union.height + header + pad + vpad * 2
             )
         }
 
