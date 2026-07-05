@@ -83,13 +83,30 @@ extension GraphLayout {
             }
         }
 
-        // 3a. Column x-origins from cumulative widths + rank spacing.
+        // 3a. Column x-origins. Each inter-column gap is widened by how many edges route through it, so
+        // busy gaps get room for all their channel tracks (the main "spread it out automatically" knob)
+        // and quiet gaps stay tight.
         let colWidth: [CGFloat] = columns.map { col in col.map { size($0).width }.max() ?? 0 }
+        let trackGap: CGFloat = max(16, style.edgeLabelFontSize * 1.5)
+        var colOf: [String: Int] = [:]
+        for (ci, col) in columns.enumerated() { for id in col { colOf[id] = ci } }
+        func columnOf(_ nodeID: String) -> Int? {   // map any descendant up to its direct-child column
+            var current: String? = nodeID
+            while let c = current { if let ci = colOf[c] { return ci }; current = model.node(c)?.parentID }
+            return nil
+        }
+        var crossings = [Int](repeating: 0, count: max(columns.count - 1, 0))
+        for edge in model.edges where !edge.isSelfLoop {
+            guard let ca = columnOf(edge.from), let cb = columnOf(edge.to) else { continue }
+            if ca == cb { if ca < crossings.count { crossings[ca] += 1 } }   // same-column C uses the gap to the right
+            else { for gap in min(ca, cb)..<max(ca, cb) { crossings[gap] += 1 } }
+        }
         var colX: [CGFloat] = []
         var x: CGFloat = 0
         for ci in columns.indices {
             colX.append(x)
-            x += colWidth[ci] + (ci < columns.count - 1 ? rankGap : 0)
+            x += colWidth[ci]
+            if ci < columns.count - 1 { x += rankGap + CGFloat(crossings[ci]) * trackGap }
         }
         let contentWidth = x
 
@@ -266,6 +283,40 @@ extension GraphLayout {
         }
 
         let trackGap: CGFloat = max(16, style.edgeLabelFontSize * 1.5)
+
+        // 4. Assign a distinct vertical track to every edge crossing a given column gap, spread across
+        //    that gap's open interval and ordered by Y so tracks don't cross. Columns are recovered from
+        //    the leaf frames (nodes in a column share midX); edges that don't map cleanly (nested /
+        //    multi-column) fall back to a mid-gap lane. This is what actually de-crowds the channels.
+        var colMinX: [CGFloat: CGFloat] = [:], colMaxX: [CGFloat: CGFloat] = [:]
+        for (id, f) in frames where model.node(id)?.type.isContainer == false {
+            let c = (f.midX * 100).rounded()
+            colMinX[c] = min(colMinX[c] ?? .greatestFiniteMagnitude, f.minX)
+            colMaxX[c] = max(colMaxX[c] ?? -.greatestFiniteMagnitude, f.maxX)
+        }
+        let colCenters = colMinX.keys.sorted()
+        func colIdx(_ nodeID: String) -> Int? {
+            guard let f = frames[nodeID] else { return nil }
+            return colCenters.firstIndex(of: (f.midX * 100).rounded())
+        }
+        var channelXOverride: [Int: CGFloat] = [:]
+        var gapBuckets: [Int: [Int]] = [:]
+        for i in edges.indices where !cls[i].sameColumn {
+            guard let ca = colIdx(edges[i].from), let cb = colIdx(edges[i].to), ca != cb else { continue }
+            gapBuckets[min(ca, cb), default: []].append(i)
+        }
+        for (g, idxs) in gapBuckets {
+            guard g + 1 < colCenters.count,
+                  let left = colMaxX[colCenters[g]], let right = colMinX[colCenters[g + 1]], right > left else { continue }
+            let ordered = idxs.sorted {
+                let ma = (exitPort[$0].y + entryPort[$0].y) / 2, mb = (exitPort[$1].y + entryPort[$1].y) / 2
+                return ma != mb ? ma < mb : edges[$0].id < edges[$1].id
+            }
+            for (slot, i) in ordered.enumerated() {
+                channelXOverride[i] = left + (right - left) * CGFloat(slot + 1) / CGFloat(ordered.count + 1)
+            }
+        }
+
         var routes: [String: EdgeRoute] = [:]
 
         for i in edges.indices {
@@ -274,11 +325,14 @@ extension GraphLayout {
             let exit = exitPort[i], entry = entryPort[i]
             let laneOff = (CGFloat(laneIndex[i]) - CGFloat(laneCount[i] - 1) / 2) * trackGap
 
-            // Channel x for the vertical run: mid-gap for a normal edge (fanned by lane); just outside
-            // the node for a same-column "C".
-            var channelX = cls[i].sameColumn
-                ? max(exit.x, to.maxX) + 34 + CGFloat(laneIndex[i]) * trackGap
-                : (exit.x + entry.x) / 2 + laneOff
+            // Channel x for the vertical run: the assigned per-gap track for a normal edge; just outside
+            // the node for a same-column "C"; a mid-gap lane as the fallback.
+            var channelX: CGFloat
+            if cls[i].sameColumn {
+                channelX = max(exit.x, to.maxX) + 34 + CGFloat(laneIndex[i]) * trackGap
+            } else {
+                channelX = channelXOverride[i] ?? ((exit.x + entry.x) / 2 + laneOff)
+            }
 
             // Manual drag: slide the vertical channel horizontally, the label along it vertically.
             let drag = edgeOffsets[edge.id] ?? .zero
