@@ -150,6 +150,9 @@ struct BoardInspectorMachine: StateMachine {
     }
 
     var isParallel: Bool { true }
+    // The 8×8 board carries meaningful fixed geometry (a chess grid via GraphStyle.nodeLayoutOverride),
+    // so opt out of the inspector's layered auto-layout — it would reflow the grid into a flow chart.
+    var useAutoLayoutForInspection: Bool { false }
     var context: BoardInspectorContext { .initial(layout: layout) }
 
     var machine: some XStateMachine {

@@ -177,30 +177,48 @@ extension GraphLayout {
         for (_, unsorted) in groups {
             let edges = unsorted.sorted { ($0.from, $0.to, $0.label) < ($1.from, $1.to, $1.label) }
             let n = edges.count
+
+            // A single perpendicular for the whole pair, derived from its *canonical* (low→high id)
+            // orientation. Using each edge's own direction would make an A→B and a B→A lane fan to the
+            // same side and coincide (their reversed direction cancels the reversed lane offset); a
+            // shared reference fans them to opposite sides so both curves and labels separate.
+            let low = min(edges[0].from, edges[0].to)
+            let high = max(edges[0].from, edges[0].to)
+            guard let lf = frames[low], let hf = frames[high] else { continue }
+            let cdx = hf.midX - lf.midX, cdy = hf.midY - lf.midY
+            let cl = max(hypot(cdx, cdy), 0.0001)
+            let perpRef = CGVector(dx: -cdy / cl, dy: cdx / cl)
+
             for (i, edge) in edges.enumerated() {
                 guard let a = frames[edge.from], let b = frames[edge.to] else { continue }
                 let ac = CGPoint(x: a.midX, y: a.midY)
                 let bc = CGPoint(x: b.midX, y: b.midY)
-                let dx = bc.x - ac.x, dy = bc.y - ac.y
-                let len = max(hypot(dx, dy), 0.0001)
-                let perp = CGVector(dx: -dy / len, dy: dx / len)
 
                 // Lane offset, symmetric around the bundle centre.
                 let laneOffset = (CGFloat(i) - CGFloat(n - 1) / 2) * laneGap
                 // Aim each lane at a perpendicularly-shifted target so it exits/enters at a distinct
                 // border port (stays on the node boundary, unlike shifting the port point directly).
-                let startAim = CGPoint(x: bc.x + perp.dx * laneOffset * 2, y: bc.y + perp.dy * laneOffset * 2)
-                let endAim = CGPoint(x: ac.x + perp.dx * laneOffset * 2, y: ac.y + perp.dy * laneOffset * 2)
+                let startAim = CGPoint(x: bc.x + perpRef.dx * laneOffset * 2, y: bc.y + perpRef.dy * laneOffset * 2)
+                let endAim = CGPoint(x: ac.x + perpRef.dx * laneOffset * 2, y: ac.y + perpRef.dy * laneOffset * 2)
                 let start = borderIntersection(rect: a, toward: startAim)
                 let end = borderIntersection(rect: b, toward: endAim)
+                let midP = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
 
-                // A single edge gets a gentle base bow; parallels rely on the lane offset.
-                let bow = n == 1 ? min(len * 0.12, 30) : laneOffset
-                let control = CGPoint(x: (start.x + end.x) / 2 + perp.dx * bow,
-                                      y: (start.y + end.y) / 2 + perp.dy * bow)
+                let control: CGPoint
+                if n == 1 {
+                    // A lone edge gets a gentle bow along its own perpendicular for readability.
+                    let edx = end.x - start.x, edy = end.y - start.y
+                    let el = max(hypot(edx, edy), 0.0001)
+                    let bow = min(el * 0.12, 30)
+                    control = CGPoint(x: midP.x + (-edy / el) * bow, y: midP.y + (edx / el) * bow)
+                } else {
+                    control = CGPoint(x: midP.x + perpRef.dx * laneOffset, y: midP.y + perpRef.dy * laneOffset)
+                }
 
-                // Stagger labels along the bundle so same-pair pills don't stack.
-                let t: CGFloat = n > 1 ? 0.30 + 0.40 * CGFloat(i) / CGFloat(max(n - 1, 1)) : 0.5
+                // Stagger the label position along the curve too, so same-side lanes don't stack.
+                let t: CGFloat = n > 1
+                    ? min(max(0.5 + (CGFloat(i) - CGFloat(n - 1) / 2) * 0.14, 0.2), 0.8)
+                    : 0.5
                 let anchor = quadPoint(start, control, end, t)
                 let tangent = quadTangent(start, control, end, t)
                 var angle = atan2(tangent.dy, tangent.dx)
