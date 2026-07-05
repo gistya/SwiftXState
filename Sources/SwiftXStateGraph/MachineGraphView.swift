@@ -45,6 +45,10 @@ final class GraphRenderModel {
 
     init(model: GraphModel) {
         self.model = model
+        // Restore any hand-arrangement saved for this machine so reopening the inspector doesn't forget it.
+        let saved = GraphArrangementStore.load(model.machineID)
+        manualOffsets = saved.nodes
+        edgeOffsets = saved.edges
     }
 
     // MARK: Model + active state
@@ -56,10 +60,17 @@ final class GraphRenderModel {
             return
         }
         model = newModel
-        manualOffsets.removeAll()
-        edgeOffsets.removeAll()
+        // Load the arrangement saved for the machine we just switched to (rather than dropping it).
+        let saved = GraphArrangementStore.load(newModel.machineID)
+        manualOffsets = saved.nodes
+        edgeOffsets = saved.edges
         selectedID = nil
         viewCenter = .zero
+    }
+
+    /// Persist the current hand-arrangement so it survives the inspector being reopened.
+    func persistArrangement() {
+        GraphArrangementStore.save(model.machineID, nodes: manualOffsets, edges: edgeOffsets)
     }
 
     /// Recomputes the active node set from a live `StateValue` (drives highlighting).
@@ -109,6 +120,7 @@ final class GraphRenderModel {
     func resetView() {
         manualOffsets.removeAll()
         edgeOffsets.removeAll()
+        GraphArrangementStore.clear(model.machineID)   // forget the saved hand-arrangement too
         selectedID = nil
         recomputeLayout()
         recenter()
@@ -274,7 +286,11 @@ struct GraphRenderView: View {
                     )
                 }
             }
-            .onEnded { _ in panStart = nil; dragNodeID = nil; dragBaseline = nil; dragEdgeID = nil; dragEdgeBaseline = nil }
+            .onEnded { _ in
+                // Persist the arrangement once a node/edge drag settles (not on a plain pan).
+                if dragNodeID != nil || dragEdgeID != nil { render.persistArrangement() }
+                panStart = nil; dragNodeID = nil; dragBaseline = nil; dragEdgeID = nil; dragEdgeBaseline = nil
+            }
     }
 
     private var magnifyGesture: some Gesture {

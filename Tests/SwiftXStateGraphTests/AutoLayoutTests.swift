@@ -206,6 +206,34 @@ struct AutoLayoutTests {
         #expect(a.stableHue >= 0 && a.stableHue < 1)
     }
 
+    // MARK: Arrangement persistence
+
+    @Test("Arrangement store round-trips node/edge offsets and clears")
+    func arrangementStoreRoundTrips() {
+        let mid = "arrangement-roundtrip-test"
+        GraphArrangementStore.clear(mid)
+        defer { GraphArrangementStore.clear(mid) }
+        GraphArrangementStore.save(mid, nodes: ["n1": CGSize(width: 10, height: 20)], edges: ["e1": CGSize(width: -5, height: 7)])
+        let loaded = GraphArrangementStore.load(mid)
+        #expect(loaded.nodes["n1"] == CGSize(width: 10, height: 20))
+        #expect(loaded.edges["e1"] == CGSize(width: -5, height: 7))
+        GraphArrangementStore.clear(mid)
+        let cleared = GraphArrangementStore.load(mid)
+        #expect(cleared.nodes.isEmpty && cleared.edges.isEmpty)
+    }
+
+    @MainActor
+    @Test("A fresh render model restores the saved arrangement for its machine")
+    func renderModelRestoresArrangement() {
+        let model = GraphModelBuilder.build(from: makeWebMachine())   // machineID "swiftbuilder"
+        GraphArrangementStore.clear(model.machineID)
+        defer { GraphArrangementStore.clear(model.machineID) }
+        GraphArrangementStore.save(model.machineID, nodes: ["swiftbuilder.ready": CGSize(width: 40, height: 12)], edges: [:])
+        // A brand-new render model (as the inspector builds on reopen) picks the arrangement back up.
+        let render = GraphRenderModel(model: model)
+        #expect(render.manualOffsets["swiftbuilder.ready"] == CGSize(width: 40, height: 12))
+    }
+
     /// Renders the `swiftbuilder` graph to a PNG for eyeballing. Off by default (writes a file); run
     /// with `RENDER_SNAPSHOT=<dir> swift test --filter renderSnapshot`.
     @MainActor
