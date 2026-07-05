@@ -88,6 +88,6 @@ public struct LifeMachine: StateMachine {
 // See Swift Evolution pitch:
 // https://forums.swift.org/t/pitch-implicit-member-expressions-for-function-typed-parameters/87892/6
 
-extension Map where In == Int, Out == LifeEvent {
+extension Map where In == (x: Int, y: Int), Out == LifeEvent {
     static var toggleCell: Map<(x: Int, y: Int), LifeEvent> { .init(transform: LifeEvent.toggleCell) }
 }

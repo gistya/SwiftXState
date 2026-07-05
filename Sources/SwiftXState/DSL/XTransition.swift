@@ -135,7 +135,7 @@ public struct Map<In, Out> {
 }
 
 public extension XTransition {
-    init<Payload>(_ map: Map<Payload, EventID>, to target: StateID) {
+    init<Payload>(on map: Map<Payload, EventID>, to target: StateID) {
         self.init(on: map.transform, to: target)
     }
 }
