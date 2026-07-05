@@ -5,6 +5,10 @@ import Foundation
 import SwiftUI
 import ImageIO
 import UniformTypeIdentifiers
+#if canImport(SceneKit) && !os(watchOS)
+import SceneKit
+import Metal
+#endif
 @testable import SwiftXState
 @testable import SwiftXStateGraph
 
@@ -261,5 +265,28 @@ struct AutoLayoutTests {
         CGImageDestinationAddImage(dest, cg, nil)
         #expect(CGImageDestinationFinalize(dest))
     }
+
+    #if canImport(SceneKit) && canImport(AppKit) && !os(watchOS)
+    /// Renders the decoupled 3D scene to a PNG (needs a GPU — skipped headless). Run with
+    /// `RENDER_SNAPSHOT=<dir> swift test --filter render3DSnapshot`.
+    @MainActor
+    @Test("Render swiftbuilder 3D graph to PNG")
+    func render3DSnapshot() throws {
+        guard let dir = ProcessInfo.processInfo.environment["RENDER_SNAPSHOT"] else { return }
+        guard let device = MTLCreateSystemDefaultDevice() else { return }   // no GPU (headless) → skip
+        let model = GraphModelBuilder.build(from: makeWebMachine())
+        let layout = GraphLayout.compute(model: model, style: .dark)
+        let view = GraphScene3DView(model: model, layout: layout, activeIDs: ["swiftbuilder.ready"],
+                                    selectedID: nil, style: .dark, onSelect: nil)
+        let scene = view.buildScene()
+        let renderer = SCNRenderer(device: device, options: nil)
+        renderer.scene = scene
+        renderer.pointOfView = scene.rootNode.childNode(withName: "camera", recursively: true)
+        let image = renderer.snapshot(atTime: 0, with: CGSize(width: 1500, height: 950), antialiasingMode: .multisampling4X)
+        guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
+              let png = rep.representation(using: .png, properties: [:]) else { return }
+        try png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("swiftbuilder_3d.png"))
+    }
+    #endif
 }
 #endif

@@ -42,145 +42,209 @@ struct GraphScene3DView {
     func buildScene() -> SCNScene {
         let scene = SCNScene()
         applyBackgroundAndEnvironment(to: scene)
-
-        let bounds = layout.bounds
-        let center = CGPoint(x: bounds.midX, y: bounds.midY)
         let showLabels = model.nodes.count <= style.labelDeclutterThreshold
 
-        // Depth comes from nesting level: deeper-nested nodes sit closer to the camera,
-        // so panning/rotating reveals layered separation by hierarchy.
-        func z(for id: String, offset: CGFloat = 0) -> CGFloat {
-            CGFloat(nestingDepth(of: id)) * CGFloat(style.layerZSpacing) * scale + offset
-        }
-        func position(for rect: CGRect, z: CGFloat) -> SCNVector3 {
-            vec((rect.midX - center.x) * scale, -(rect.midY - center.y) * scale, z)
-        }
-        // Lift a 2D logical point (an edge port / label anchor) into world space at depth `z`.
-        func worldPoint(_ p: CGPoint, z: CGFloat) -> SCNVector3 {
-            vec((p.x - center.x) * scale, -(p.y - center.y) * scale, z)
-        }
+        // Its OWN 3D layout — decoupled from the 2D grid. Nodes flow left-to-right along X by rank, and
+        // the states at each rank fan around a Y-Z circle with a helical phase per rank, so every node
+        // owns a distinct depth (Z) and the third dimension is genuinely used to keep arrows apart.
+        let pos3D = compute3DLayout()
+        func p(_ id: String) -> SCNVector3 { pos3D[id] ?? vec(0, 0, 0) }
+        func vecF(_ s: SIMD3<Float>) -> SCNVector3 { vec(CGFloat(s.x), CGFloat(s.y), CGFloat(s.z)) }
 
-        // Containers: translucent "liquid glass" *cubes* that encompass their substates. The box spans
-        // in depth from just behind this container's own layer to just in front of its deepest
-        // descendant's layer, so children sit inside the volume rather than in front of a flat pane.
+        var lo = SIMD3<Float>(repeating: .greatestFiniteMagnitude)
+        var hi = SIMD3<Float>(repeating: -.greatestFiniteMagnitude)
+        for value in pos3D.values { let s = simd3(value); lo = simd_min(lo, s); hi = simd_max(hi, s) }
+        if pos3D.isEmpty { lo = .zero; hi = .zero }
+        let sceneCenter = (lo + hi) / 2
+        let sceneRadius = max(simd_length(hi - lo) / 2, 3)
+        let nodeHalf = Float(style.node3DSize) * Float(scale) / 2
+
+        // Containers: translucent glass cubes bounding their descendants' 3D positions.
         let glassMat = glassMaterial()
         for node in model.nodes where node.type.isContainer {
-            guard let rect = layout.frame(node.id) else { continue }
-            let backZ = CGFloat(nestingDepth(of: node.id)) * CGFloat(style.layerZSpacing) * scale - 0.12
-            let frontZ = CGFloat(maxDescendantDepth(of: node.id)) * CGFloat(style.layerZSpacing) * scale
-                + CGFloat(style.node3DSize) * scale / 2 + 0.12
-            let length = max(frontZ - backZ, 0.22)
-            let pane = SCNBox(width: rect.width * scale, height: rect.height * scale, length: length, chamferRadius: 0.10)
-            pane.firstMaterial = glassMat
-            let snode = SCNNode(geometry: pane)
-            snode.position = position(for: rect, z: (backZ + frontZ) / 2)
-            scene.rootNode.addChildNode(snode)
-
+            let descendants = leafDescendants(of: node.id)
+            guard !descendants.isEmpty else { continue }
+            var clo = SIMD3<Float>(repeating: .greatestFiniteMagnitude)
+            var chi = SIMD3<Float>(repeating: -.greatestFiniteMagnitude)
+            for d in descendants { let s = simd3(p(d)); clo = simd_min(clo, s); chi = simd_max(chi, s) }
+            let pad = nodeHalf + 0.4
+            clo -= pad; chi += pad
+            let sizeV = chi - clo
+            let cube = SCNBox(width: CGFloat(sizeV.x), height: CGFloat(sizeV.y), length: CGFloat(sizeV.z), chamferRadius: 0.12)
+            cube.firstMaterial = glassMat
+            let cnode = SCNNode(geometry: cube)
+            cnode.position = vecF((clo + chi) / 2)
+            scene.rootNode.addChildNode(cnode)
             if showLabels, let title = labelPlaneNode(node.label, worldHeight: 0.5, fontSize: 15, weight: .bold) {
-                // Child of the cube so it rotates with it; on the near (front) face, top-left corner.
-                let titleWidth = (title.geometry as? SCNPlane)?.width ?? 0
-                title.position = vec(
-                    -(rect.width * scale) / 2 + titleWidth / 2 + 0.25,
-                    (rect.height * scale) / 2 - 0.42,
-                    length / 2 + 0.05
-                )
-                snode.addChildNode(title)
+                title.position = vec(0, CGFloat(sizeV.y) / 2 + 0.35, 0)
+                title.constraints = [SCNBillboardConstraint()]   // always readable
+                cnode.addChildNode(title)
             }
         }
 
-        // Edges as thick cylinders + arrowheads, per-event coloured. When the machine opts into
-        // auto-layout the endpoints are the routed ports (distinct per lane), so parallel transitions
-        // no longer coincide; otherwise they fall back to node centres.
+        // Edges: a cylinder + arrowhead grouped under one node named "edge|from|to", with the label
+        // billboarded and ATTACHED to that group so it travels with the arrow.
         let autoLayout = model.useAutoLayoutForInspection
         for edge in model.edges {
-            guard let from = layout.frame(edge.from), let to = layout.frame(edge.to) else { continue }
+            guard pos3D[edge.from] != nil, pos3D[edge.to] != nil else { continue }
             let highlighted = edge.from == selectedID || edge.to == selectedID
             let color = highlighted ? PlatformColor(style.activeEdgeColor)
                                     : (autoLayout ? edgeColor3D(edge) : PlatformColor(style.edgeColor))
 
-            // Self-loops (skipped entirely before) now render as a ring on the node's near face.
             if edge.isSelfLoop {
-                let loop = selfLoopNode(rect: from, center: center, z: z(for: edge.from), color: color,
-                                        label: showLabels ? edge.label : "")
+                let loop = selfLoop3D(at: simd3(p(edge.from)), radius: nodeHalf, color: color,
+                                      label: showLabels ? edge.label : "")
                 loop.name = "edge|\(edge.from)|\(edge.to)"
                 scene.rootNode.addChildNode(loop)
                 continue
             }
 
-            let route = autoLayout ? layout.route(edge.id) : nil
-            let zf = z(for: edge.from), zt = z(for: edge.to)
-            let a = (route?.points.first).map { worldPoint($0, z: zf) } ?? position(for: from, z: zf)
-            let b = (route?.points.last).map { worldPoint($0, z: zt) } ?? position(for: to, z: zt)
+            let pa = simd3(p(edge.from)), pb = simd3(p(edge.to))
+            let len = simd_length(pb - pa)
+            guard len > 1e-4 else { continue }
+            let dir = (pb - pa) / len
+            let start = pa + dir * (nodeHalf + 0.02)
+            let tip = pb - dir * (nodeHalf + 0.02)
+            let arrowSize: CGFloat = 0.16
 
-            let en = edgeNode(from: a, to: b, color: color, radius: 0.024)
-            en.name = "edge|\(edge.from)|\(edge.to)"
-            scene.rootNode.addChildNode(en)
-
-            let pa = simd3(a), pb = simd3(b)
-            let length = simd_length(pb - pa)
-            if length > 1e-4 {
-                let dir = (pb - pa) / length
-                let arrowSize: CGFloat = 0.15
-                // A routed port already sits on the target border; a centre-to-centre fallback pulls
-                // the tip back to just outside the target node.
-                let tip: SIMD3<Float>
-                if route != nil {
-                    tip = pb
-                } else {
-                    let hw = Float(to.width) * Float(scale) / 2, hh = Float(to.height) * Float(scale) / 2
-                    let tx = abs(dir.x) > 1e-4 ? hw / abs(dir.x) : .greatestFiniteMagnitude
-                    let ty = abs(dir.y) > 1e-4 ? hh / abs(dir.y) : .greatestFiniteMagnitude
-                    tip = pb - dir * min(min(tx, ty) + Float(arrowSize) * 0.5, length * 0.48)
-                }
-                let arrow = arrowheadNode(tip: tip, direction: dir, color: color, size: arrowSize)
-                arrow.name = "arrow|\(edge.from)|\(edge.to)"
-                scene.rootNode.addChildNode(arrow)
+            let group = SCNNode()
+            group.name = "edge|\(edge.from)|\(edge.to)"
+            let cyl = edgeNode(from: vecF(start), to: vecF(tip - dir * Float(arrowSize)), color: color, radius: 0.026)
+            group.addChildNode(cyl)
+            let arrow = arrowheadNode(tip: tip, direction: dir, color: color, size: arrowSize)
+            arrow.name = "arrow|\(edge.from)|\(edge.to)"
+            group.addChildNode(arrow)
+            if showLabels, !edge.label.isEmpty, let lbl = labelPlaneNode(edge.label, worldHeight: 0.32, fontSize: 12) {
+                lbl.position = vecF((start + tip) / 2)
+                lbl.constraints = [SCNBillboardConstraint()]   // faces the camera, rides with the arrow
+                group.addChildNode(lbl)
             }
-
-            if showLabels, !edge.label.isEmpty, let lbl = labelPlaneNode(edge.label, worldHeight: 0.3, fontSize: 12) {
-                if let route {
-                    // Reuse the 2D router's along-line anchor + upright tangent angle.
-                    let anchor = worldPoint(route.labelAnchor, z: (zf + zt) / 2)
-                    lbl.eulerAngles = vec(0, 0, route.labelAngle)
-                    lbl.position = vec(CGFloat(anchor.x), CGFloat(anchor.y), CGFloat(anchor.z) + 0.09)
-                } else {
-                    let mid = (pa + pb) / 2
-                    var angle = atan2(Double(pb.y - pa.y), Double(pb.x - pa.x))
-                    if cos(angle) < 0 { angle += .pi }   // keep text upright
-                    lbl.eulerAngles = vec(0, 0, CGFloat(angle))
-                    lbl.position = vec(CGFloat(mid.x), CGFloat(mid.y), CGFloat(mid.z) + 0.09)
-                }
-                scene.rootNode.addChildNode(lbl)
-            }
+            scene.rootNode.addChildNode(group)
         }
 
-        // Leaf nodes as solid plates at their nesting depth (the front-most layer).
+        // Leaf nodes as brushed-metal plates at their 3D position, label billboarded on the front.
         for node in model.nodes where !node.type.isContainer {
-            guard let rect = layout.frame(node.id) else { continue }
-            let box = SCNBox(
-                width: rect.width * scale,
-                height: rect.height * scale,
-                length: CGFloat(style.node3DSize) * scale,
-                chamferRadius: CGFloat(style.nodeCornerRadius) * scale
-            )
+            let s = CGFloat(style.node3DSize) * scale
+            let box = SCNBox(width: s * 1.7, height: s, length: s, chamferRadius: CGFloat(style.nodeCornerRadius) * scale)
             let mat = brushedMetalMaterial()
             box.materials = [mat]
             let snode = SCNNode(geometry: box)
             snode.name = node.id
-            snode.position = position(for: rect, z: z(for: node.id))
+            snode.position = p(node.id)
             applyMaterial(mat, for: node)
             scene.rootNode.addChildNode(snode)
-
-            if showLabels, let label = labelPlaneNode(node.label, worldHeight: 0.4, fontSize: 13) {
-                // Child of the node so it rotates with it; on the front face, not inside it.
-                label.position = vec(0, 0, CGFloat(style.node3DSize) * scale / 2 + 0.03)
+            if showLabels, let label = labelPlaneNode(node.label, worldHeight: 0.42, fontSize: 13) {
+                label.position = vec(0, 0, s / 2 + 0.04)
+                label.constraints = [SCNBillboardConstraint()]
                 snode.addChildNode(label)
             }
         }
 
-        addCamera(to: scene, bounds: bounds)
+        addCamera3D(to: scene, center: sceneCenter, radius: sceneRadius)
         addLighting(to: scene)
         return scene
+    }
+
+    // MARK: - Decoupled 3D layout
+
+    /// Assigns every (leaf) node its own 3D position: rank → X (left-to-right flow); the states at each
+    /// rank fan around a circle in the Y-Z plane, and each rank's circle is rotated by a helical phase
+    /// so nodes spiral through depth. A tiny per-node Z stagger guarantees no two share an exact Z.
+    func compute3DLayout() -> [String: SCNVector3] {
+        let leaves = model.nodes.filter { !$0.type.isContainer }
+        guard !leaves.isEmpty else { return [:] }
+        let leafIDs = Set(leaves.map(\.id))
+
+        // Rank by BFS over leaf→leaf edges from the sources (no incoming), else the first node.
+        var adjacency: [String: [String]] = [:]
+        var indegree: [String: Int] = [:]
+        for id in leafIDs { indegree[id] = 0 }
+        for edge in model.edges where !edge.isSelfLoop && leafIDs.contains(edge.from) && leafIDs.contains(edge.to) {
+            adjacency[edge.from, default: []].append(edge.to)
+            indegree[edge.to, default: 0] += 1
+        }
+        var rank: [String: Int] = [:]
+        var queue = leaves.map(\.id).filter { (indegree[$0] ?? 0) == 0 }.sorted()
+        if queue.isEmpty { queue = [leaves.map(\.id).sorted()[0]] }   // fully cyclic → seed lowest id
+        for id in queue { rank[id] = 0 }
+        var head = 0
+        while head < queue.count {
+            let node = queue[head]; head += 1
+            for next in (adjacency[node] ?? []).sorted() where rank[next] == nil {
+                rank[next] = (rank[node] ?? 0) + 1
+                queue.append(next)
+            }
+        }
+        for leaf in leaves where rank[leaf.id] == nil { rank[leaf.id] = 0 }
+
+        var byRank: [Int: [String]] = [:]
+        for leaf in leaves { byRank[rank[leaf.id] ?? 0, default: []].append(leaf.id) }
+        let maxRank = byRank.keys.max() ?? 0
+
+        let xStep = CGFloat(style.layerZSpacing) * scale * 1.5
+        var positions: [String: SCNVector3] = [:]
+        var globalIndex = 0
+        for r in 0...maxRank {
+            let ids = (byRank[r] ?? []).sorted()
+            let count = ids.count
+            let radius = max(0.9, CGFloat(count) * 0.6)                 // Y-Z circle radius
+            let x = (CGFloat(r) - CGFloat(maxRank) / 2) * xStep
+            for (j, id) in ids.enumerated() {
+                let angle = (count <= 1 ? 0 : CGFloat(j) / CGFloat(count) * 2 * .pi) + CGFloat(r) * 0.7
+                let y = radius * cos(angle)
+                let zc = radius * sin(angle) + CGFloat(globalIndex) * 0.02   // depth + unique-Z stagger
+                positions[id] = vec(x, y, zc)
+                globalIndex += 1
+            }
+        }
+        return positions
+    }
+
+    /// Leaf-node ids anywhere under `id` (for sizing a container's bounding cube in 3D).
+    private func leafDescendants(of id: String) -> [String] {
+        var result: [String] = []
+        for child in model.children(of: id) {
+            if model.node(child)?.type.isContainer == true { result.append(contentsOf: leafDescendants(of: child)) }
+            else { result.append(child) }
+        }
+        return result
+    }
+
+    /// A self-loop as a small torus + arrowhead at a node's position (billboarded label above it).
+    private func selfLoop3D(at center: SIMD3<Float>, radius nodeHalf: Float, color: PlatformColor, label: String) -> SCNNode {
+        let container = SCNNode()
+        container.position = vec(CGFloat(center.x), CGFloat(center.y + nodeHalf + 0.28), CGFloat(center.z))
+        let loopR: CGFloat = 0.26
+        let ring = SCNTorus(ringRadius: loopR, pipeRadius: 0.024)
+        let mat = SCNMaterial(); mat.diffuse.contents = color; mat.lightingModel = .constant
+        ring.firstMaterial = mat
+        let ringNode = SCNNode(geometry: ring)
+        ringNode.eulerAngles = vec(CGFloat.pi / 2, 0, 0)   // face the camera plane
+        container.addChildNode(ringNode)
+        let arrow = arrowheadNode(tip: SIMD3<Float>(Float(loopR) * 0.7, -Float(loopR) * 0.7, 0),
+                                  direction: SIMD3<Float>(0, -1, 0), color: color, size: 0.12)
+        container.addChildNode(arrow)
+        if !label.isEmpty, let lbl = labelPlaneNode(label, worldHeight: 0.3, fontSize: 12) {
+            lbl.position = vec(0, CGFloat(loopR) + 0.2, 0)
+            lbl.constraints = [SCNBillboardConstraint()]
+            container.addChildNode(lbl)
+        }
+        return container
+    }
+
+    /// Places the camera at a three-quarter angle so the depth is obvious immediately (SceneKit's
+    /// built-in controller then lets the user orbit freely).
+    private func addCamera3D(to scene: SCNScene, center: SIMD3<Float>, radius: Float) {
+        let camera = SCNCamera()
+        camera.zFar = 5000
+        camera.fieldOfView = 50
+        let node = SCNNode()
+        node.camera = camera
+        let d = max(radius * 1.9, 6)
+        node.position = vec(CGFloat(center.x - d * 0.45), CGFloat(center.y + d * 0.35), CGFloat(center.z + d * 0.95))
+        node.look(at: SCNVector3(center.x, center.y, center.z))
+        node.name = "camera"
+        scene.rootNode.addChildNode(node)
     }
 
     /// Number of ancestor containers above this node (root = 0). Drives the depth layer.
