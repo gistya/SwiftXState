@@ -342,17 +342,17 @@ struct GraphCanvas: View {
     }
 
     private func drawRoutedEdge(in context: inout GraphicsContext, route: EdgeRoute, color: Color, width: CGFloat, dash: [CGFloat]) {
-        guard route.points.count == 3 else { return }
-        let start = route.points[0], control = route.points[1], end = route.points[2]
-        let tangent = CGPoint(x: end.x - control.x, y: end.y - control.y)
-        let tlen = max(hypot(tangent.x, tangent.y), 1)
-        let unit = CGPoint(x: tangent.x / tlen, y: tangent.y / tlen)
+        let pts = route.points
+        guard pts.count >= 2 else { return }
+        let end = pts[pts.count - 1], prev = pts[pts.count - 2]
+        let dx = end.x - prev.x, dy = end.y - prev.y
+        let len = max(hypot(dx, dy), 1)
+        let unit = CGPoint(x: dx / len, y: dy / len)
         // Pull the stroke back so it meets the arrowhead base, not the tip.
         let lineEnd = CGPoint(x: end.x - unit.x * style.arrowLength, y: end.y - unit.y * style.arrowLength)
         var path = Path()
-        path.move(to: start)
-        path.addQuadCurve(to: lineEnd, control: control)
-        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, dash: dash))
+        path.addLines(Array(pts.dropLast()) + [lineEnd])   // orthogonal polyline; rounded joins soften corners
+        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round, dash: dash))
         drawArrowhead(in: &context, tip: end, direction: unit, color: color)
     }
 
@@ -504,10 +504,12 @@ extension GraphLayoutResult {
     /// Only meaningful under auto-layout (routes are empty otherwise).
     func hitTestEdge(_ logicalPoint: CGPoint, threshold: CGFloat) -> String? {
         func d(_ a: CGPoint, _ b: CGPoint) -> CGFloat { hypot(a.x - b.x, a.y - b.y) }
-        func quad(_ p0: CGPoint, _ p1: CGPoint, _ p2: CGPoint, _ t: CGFloat) -> CGPoint {
-            let u = 1 - t
-            return CGPoint(x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
-                           y: u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y)
+        func distToSegment(_ p: CGPoint, _ a: CGPoint, _ b: CGPoint) -> CGFloat {
+            let dx = b.x - a.x, dy = b.y - a.y
+            let l2 = dx * dx + dy * dy
+            if l2 < 1e-9 { return d(p, a) }
+            let t = max(0, min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2))
+            return d(p, CGPoint(x: a.x + t * dx, y: a.y + t * dy))
         }
         var best: String?
         var bestDist = threshold
@@ -517,9 +519,10 @@ extension GraphLayoutResult {
                 let dl = d(route.labelAnchor, logicalPoint) - 8
                 if dl < bestDist { bestDist = dl; best = id }
             }
-            guard route.points.count == 3 else { continue }
-            for k in 0...10 {
-                let dist = d(quad(route.points[0], route.points[1], route.points[2], CGFloat(k) / 10), logicalPoint)
+            let pts = route.points
+            guard pts.count >= 2 else { continue }
+            for k in 0..<(pts.count - 1) {
+                let dist = distToSegment(logicalPoint, pts[k], pts[k + 1])
                 if dist < bestDist { bestDist = dist; best = id }
             }
         }

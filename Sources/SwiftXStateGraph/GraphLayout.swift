@@ -257,9 +257,7 @@ public enum GraphLayout {
         // so fit-to-view leaves room for everything that lives outside the node frames (otherwise the
         // graph fits tight to the nodes and the labels read as cramped / clipped on first load).
         for route in routes.values {
-            if route.points.count == 3 {
-                bounds = bounds.union(CGRect(origin: route.points[1], size: .zero))
-            }
+            for point in route.points { bounds = bounds.union(CGRect(origin: point, size: .zero)) }
             if route.labelWidth > 0 {
                 let h = style.edgeLabelFontSize * 1.4 + 6
                 bounds = bounds.union(CGRect(

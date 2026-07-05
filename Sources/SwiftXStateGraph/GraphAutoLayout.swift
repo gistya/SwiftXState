@@ -186,108 +186,128 @@ extension GraphLayout {
         return maxWidth
     }
 
-    // MARK: - Edge routing
+    // MARK: - Edge routing (orthogonal / Manhattan)
 
-    /// Routes every (non-self-loop) edge over the final node frames. Edges sharing an unordered node
-    /// pair are fanned into distinct **lanes** and leave/enter their nodes at distinct **ports**, and
-    /// each gets a label anchor staggered along the curve with an upright tangent angle. A final pass
-    /// de-overlaps the label pills, then any manual per-edge drag offset is applied on top.
+    private enum Side { case left, right }
+
+    /// Routes every (non-self-loop) edge as a **right-angle** polyline: it leaves a node side at a
+    /// distinct port, runs vertically through a channel track in the gap between columns, then enters
+    /// the target side. Ports are ordered by the far endpoint's Y (fewer crossings at the node), and
+    /// parallel transitions take distinct tracks. Labels ride **flat** on the vertical channel segment
+    /// (open space); a final pass de-overlaps them. A manual drag slides an edge's channel + label.
     static func routeEdges(
         model: GraphModel, frames: [String: CGRect], style: GraphStyle,
         edgeOffsets: [String: CGSize] = [:]
     ) -> [String: EdgeRoute] {
-        // Group by unordered pair so both directions (A→B and B→A) share a lane budget.
-        var groups: [String: [GraphEdge]] = [:]
-        for edge in model.edges where !edge.isSelfLoop {
-            guard frames[edge.from] != nil, frames[edge.to] != nil else { continue }
-            let key = edge.from < edge.to ? "\(edge.from)\u{1}\(edge.to)" : "\(edge.to)\u{1}\(edge.from)"
-            groups[key, default: []].append(edge)
+        let edges = model.edges
+            .filter { !$0.isSelfLoop && frames[$0.from] != nil && frames[$0.to] != nil }
+            .sorted { ($0.from, $0.to, $0.label) < ($1.from, $1.to, $1.label) }
+        guard !edges.isEmpty else { return [:] }
+
+        // 1. Exit/entry sides. Forward (target to the right) exits right / enters left; a back edge
+        //    mirrors it; a near-same-column pair routes as a "C" out to the right.
+        struct Cls { let exitSide: Side; let entrySide: Side; let sameColumn: Bool }
+        let cls: [Cls] = edges.map { e in
+            let s = frames[e.from]!, t = frames[e.to]!
+            if abs(t.midX - s.midX) < (s.width + t.width) * 0.35 {
+                return Cls(exitSide: .right, entrySide: .right, sameColumn: true)
+            }
+            return t.midX >= s.midX
+                ? Cls(exitSide: .right, entrySide: .left, sameColumn: false)
+                : Cls(exitSide: .left, entrySide: .right, sameColumn: false)
         }
 
-        let laneGap: CGFloat = max(26, style.edgeLabelFontSize * 2.2)
+        // 2. Distribute ports along each node side, ordered by the *other* endpoint's Y (so the fan
+        //    doesn't cross at the port). Exit ports keyed by (from,side); entry ports by (to,side).
+        func sideX(_ rect: CGRect, _ side: Side) -> CGFloat { side == .right ? rect.maxX : rect.minX }
+        var exitPort = [CGPoint](repeating: .zero, count: edges.count)
+        var entryPort = [CGPoint](repeating: .zero, count: edges.count)
+        var exitGroups: [String: [Int]] = [:]
+        var entryGroups: [String: [Int]] = [:]
+        for i in edges.indices {
+            exitGroups["\(edges[i].from)\u{1}\(cls[i].exitSide)", default: []].append(i)
+            entryGroups["\(edges[i].to)\u{1}\(cls[i].entrySide)", default: []].append(i)
+        }
+        for (_, idxs) in exitGroups {
+            let ordered = idxs.sorted {
+                let ya = frames[edges[$0].to]!.midY, yb = frames[edges[$1].to]!.midY
+                return ya != yb ? ya < yb : edges[$0].id < edges[$1].id
+            }
+            let rect = frames[edges[ordered[0]].from]!
+            for (slot, i) in ordered.enumerated() {
+                let frac = CGFloat(slot + 1) / CGFloat(ordered.count + 1)
+                exitPort[i] = CGPoint(x: sideX(rect, cls[i].exitSide), y: rect.minY + rect.height * frac)
+            }
+        }
+        for (_, idxs) in entryGroups {
+            let ordered = idxs.sorted {
+                let ya = frames[edges[$0].from]!.midY, yb = frames[edges[$1].from]!.midY
+                return ya != yb ? ya < yb : edges[$0].id < edges[$1].id
+            }
+            let rect = frames[edges[ordered[0]].to]!
+            for (slot, i) in ordered.enumerated() {
+                let frac = CGFloat(slot + 1) / CGFloat(ordered.count + 1)
+                entryPort[i] = CGPoint(x: sideX(rect, cls[i].entrySide), y: rect.minY + rect.height * frac)
+            }
+        }
+
+        // 3. Lane index within each unordered pair, so parallel transitions take distinct tracks.
+        var laneIndex = [Int](repeating: 0, count: edges.count)
+        var laneCount = [Int](repeating: 1, count: edges.count)
+        var pairMembers: [String: [Int]] = [:]
+        for i in edges.indices {
+            let key = edges[i].from < edges[i].to
+                ? "\(edges[i].from)\u{1}\(edges[i].to)" : "\(edges[i].to)\u{1}\(edges[i].from)"
+            pairMembers[key, default: []].append(i)
+        }
+        for (_, idxs) in pairMembers {
+            let ordered = idxs.sorted { edges[$0].id < edges[$1].id }
+            for (slot, i) in ordered.enumerated() { laneIndex[i] = slot; laneCount[i] = ordered.count }
+        }
+
+        let trackGap: CGFloat = max(16, style.edgeLabelFontSize * 1.5)
         var routes: [String: EdgeRoute] = [:]
 
-        for (_, unsorted) in groups {
-            let edges = unsorted.sorted { ($0.from, $0.to, $0.label) < ($1.from, $1.to, $1.label) }
-            let n = edges.count
+        for i in edges.indices {
+            let edge = edges[i]
+            let to = frames[edge.to]!
+            let exit = exitPort[i], entry = entryPort[i]
+            let laneOff = (CGFloat(laneIndex[i]) - CGFloat(laneCount[i] - 1) / 2) * trackGap
 
-            // A single perpendicular for the whole pair, derived from its *canonical* (low→high id)
-            // orientation. Using each edge's own direction would make an A→B and a B→A lane fan to the
-            // same side and coincide (their reversed direction cancels the reversed lane offset); a
-            // shared reference fans them to opposite sides so both curves and labels separate.
-            let low = min(edges[0].from, edges[0].to)
-            let high = max(edges[0].from, edges[0].to)
-            guard let lf = frames[low], let hf = frames[high] else { continue }
-            let cdx = hf.midX - lf.midX, cdy = hf.midY - lf.midY
-            let cl = max(hypot(cdx, cdy), 0.0001)
-            let perpRef = CGVector(dx: -cdy / cl, dy: cdx / cl)
+            // Channel x for the vertical run: mid-gap for a normal edge (fanned by lane); just outside
+            // the node for a same-column "C".
+            var channelX = cls[i].sameColumn
+                ? max(exit.x, to.maxX) + 34 + CGFloat(laneIndex[i]) * trackGap
+                : (exit.x + entry.x) / 2 + laneOff
 
-            for (i, edge) in edges.enumerated() {
-                guard let a = frames[edge.from], let b = frames[edge.to] else { continue }
-                let ac = CGPoint(x: a.midX, y: a.midY)
-                let bc = CGPoint(x: b.midX, y: b.midY)
+            // Manual drag: slide the vertical channel horizontally, the label along it vertically.
+            let drag = edgeOffsets[edge.id] ?? .zero
+            channelX += drag.width
 
-                // Lane offset, symmetric around the bundle centre.
-                let laneOffset = (CGFloat(i) - CGFloat(n - 1) / 2) * laneGap
-                // Aim each lane at a perpendicularly-shifted target so it exits/enters at a distinct
-                // border port (stays on the node boundary, unlike shifting the port point directly).
-                let startAim = CGPoint(x: bc.x + perpRef.dx * laneOffset * 2, y: bc.y + perpRef.dy * laneOffset * 2)
-                let endAim = CGPoint(x: ac.x + perpRef.dx * laneOffset * 2, y: ac.y + perpRef.dy * laneOffset * 2)
-                let start = borderIntersection(rect: a, toward: startAim)
-                let end = borderIntersection(rect: b, toward: endAim)
-                let midP = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
+            // Two right-angle bends: exit → channel → entry.
+            let points = [
+                exit,
+                CGPoint(x: channelX, y: exit.y),
+                CGPoint(x: channelX, y: entry.y),
+                entry,
+            ]
 
-                let control: CGPoint
-                if n == 1 {
-                    // A lone edge gets a gentle bow along its own perpendicular for readability.
-                    let edx = end.x - start.x, edy = end.y - start.y
-                    let el = max(hypot(edx, edy), 0.0001)
-                    let bow = min(el * 0.12, 30)
-                    control = CGPoint(x: midP.x + (-edy / el) * bow, y: midP.y + (edx / el) * bow)
-                } else {
-                    // Bow well clear of the bundle centre so the label rides in open space beside the
-                    // nodes rather than on top of them (short same-column edges are the tight case).
-                    let bow = laneOffset * 1.9
-                    control = CGPoint(x: midP.x + perpRef.dx * bow, y: midP.y + perpRef.dy * bow)
-                }
+            // Flat label on the vertical channel segment, slid by any vertical drag but kept on the run.
+            let yLo = min(exit.y, entry.y), yHi = max(exit.y, entry.y)
+            let labelY = min(max((exit.y + entry.y) / 2 + drag.height, yLo), yHi)
 
-                // Stagger the label position along the curve too, so same-side lanes don't stack.
-                let t: CGFloat = n > 1
-                    ? min(max(0.5 + (CGFloat(i) - CGFloat(n - 1) / 2) * 0.14, 0.2), 0.8)
-                    : 0.5
-                let anchor = quadPoint(start, control, end, t)
-                let tangent = quadTangent(start, control, end, t)
-                var angle = atan2(tangent.dy, tangent.dx)
-                if cos(angle) < 0 { angle += .pi }        // keep the text upright (never mirrored)
-                // Hint at the line direction without ever going fully vertical — a vertical label of a
-                // long event name would clip into the stacked nodes and be hard to read.
-                angle = max(-0.52, min(0.52, angle))      // ±30°
-
-                routes[edge.id] = EdgeRoute(
-                    edgeID: edge.id,
-                    points: [start, control, end],
-                    labelAnchor: anchor,
-                    labelAngle: angle,
-                    laneIndex: i,
-                    laneCount: n,
-                    labelWidth: edge.label.isEmpty ? 0 : GraphLayout.estimatedTextWidth(edge.label, fontSize: style.edgeLabelFontSize)
-                )
-            }
+            routes[edge.id] = EdgeRoute(
+                edgeID: edge.id,
+                points: points,
+                labelAnchor: CGPoint(x: channelX, y: labelY),
+                labelAngle: 0,               // flat; the declutter separates labels by moving, not tilting
+                laneIndex: laneIndex[i],
+                laneCount: laneCount[i],
+                labelWidth: edge.label.isEmpty ? 0 : GraphLayout.estimatedTextWidth(edge.label, fontSize: style.edgeLabelFontSize)
+            )
         }
 
         declutterLabels(&routes, style: style)
-
-        // Manual per-edge drag offsets win last: bow the curve toward, and move the label to, wherever
-        // the user dragged it (so people can spread crowded arrows out by hand).
-        for (id, offset) in edgeOffsets {
-            guard var route = routes[id] else { continue }
-            let d = CGVector(dx: offset.width, dy: offset.height)
-            route.labelAnchor = CGPoint(x: route.labelAnchor.x + d.dx, y: route.labelAnchor.y + d.dy)
-            if route.points.count == 3 {
-                route.points[1] = CGPoint(x: route.points[1].x + d.dx, y: route.points[1].y + d.dy)
-            }
-            routes[id] = route
-        }
         return routes
     }
 
@@ -325,36 +345,6 @@ extension GraphLayout {
             if !moved { break }
         }
         for pill in pills { routes[pill.id]?.labelAnchor = pill.center }
-    }
-
-    // MARK: - Geometry helpers
-
-    /// Intersection of `rect`'s border with the ray from its centre toward `point`.
-    private static func borderIntersection(rect: CGRect, toward point: CGPoint) -> CGPoint {
-        let c = CGPoint(x: rect.midX, y: rect.midY)
-        let dx = point.x - c.x, dy = point.y - c.y
-        if abs(dx) < 0.0001 && abs(dy) < 0.0001 { return c }
-        let hw = rect.width / 2, hh = rect.height / 2
-        let tx = abs(dx) > 0.0001 ? hw / abs(dx) : .greatestFiniteMagnitude
-        let ty = abs(dy) > 0.0001 ? hh / abs(dy) : .greatestFiniteMagnitude
-        let t = min(tx, ty)
-        return CGPoint(x: c.x + dx * t, y: c.y + dy * t)
-    }
-
-    private static func quadPoint(_ p0: CGPoint, _ p1: CGPoint, _ p2: CGPoint, _ t: CGFloat) -> CGPoint {
-        let u = 1 - t
-        return CGPoint(
-            x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
-            y: u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y
-        )
-    }
-
-    private static func quadTangent(_ p0: CGPoint, _ p1: CGPoint, _ p2: CGPoint, _ t: CGFloat) -> CGVector {
-        let u = 1 - t
-        return CGVector(
-            dx: 2 * u * (p1.x - p0.x) + 2 * t * (p2.x - p1.x),
-            dy: 2 * u * (p1.y - p0.y) + 2 * t * (p2.y - p1.y)
-        )
     }
 }
 #endif

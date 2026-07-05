@@ -109,8 +109,8 @@ struct GraphScene3DView {
 
             let route = autoLayout ? layout.route(edge.id) : nil
             let zf = z(for: edge.from), zt = z(for: edge.to)
-            let a = route.map { worldPoint($0.points[0], z: zf) } ?? position(for: from, z: zf)
-            let b = route.map { worldPoint($0.points[2], z: zt) } ?? position(for: to, z: zt)
+            let a = (route?.points.first).map { worldPoint($0, z: zf) } ?? position(for: from, z: zf)
+            let b = (route?.points.last).map { worldPoint($0, z: zt) } ?? position(for: to, z: zt)
 
             let en = edgeNode(from: a, to: b, color: color, radius: 0.024)
             en.name = "edge|\(edge.from)|\(edge.to)"
