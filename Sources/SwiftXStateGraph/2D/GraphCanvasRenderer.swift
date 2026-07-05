@@ -256,14 +256,12 @@ struct GraphCanvas: View {
         loopIndex: Int = 0, loopCount: Int = 1
     ) {
         let r = style.selfLoopRadius
-        // Fan multiple self-loops on the same node apart (top → spread across X, right → down Y) so a
-        // second/third self-transition isn't hidden beneath the first.
-        let fan = CGFloat(loopIndex) - CGFloat(loopCount - 1) / 2
         var path = Path()
         let arrowTip: CGPoint, arrowDir: CGPoint, labelPoint: CGPoint
 
         if onRight {
             // A loop bulging off the node's right edge, label to its right — clears a stacked sibling above.
+            let fan = CGFloat(loopIndex) - CGFloat(loopCount - 1) / 2
             let anchor = CGPoint(x: rect.maxX, y: rect.midY + fan * r * 2.3)
             let top = CGPoint(x: anchor.x, y: anchor.y - r * 0.5)
             let bottom = CGPoint(x: anchor.x, y: anchor.y + r * 0.5)
@@ -277,19 +275,27 @@ struct GraphCanvas: View {
             arrowDir = CGPoint(x: -0.9, y: 0.3)
             labelPoint = CGPoint(x: anchor.x + r * 1.4 + estimatedLabelWidth(edge.label) / 2, y: anchor.y)
         } else {
-            // A loop bulging off the node's top, label above.
-            let anchor = CGPoint(x: rect.midX + fan * r * 2.4, y: rect.minY)
+            // Split the loops between the top and bottom edges (first ceil(n/2) on top, the rest on the
+            // bottom) so a node with several self-transitions doesn't crowd them — and their labels — onto
+            // one edge. Each edge fans its own group across X.
+            let topCount = (loopCount + 1) / 2
+            let onTop = loopIndex < topCount
+            let localCount = onTop ? topCount : loopCount - topCount
+            let localIndex = onTop ? loopIndex : loopIndex - topCount
+            let fan = CGFloat(localIndex) - CGFloat(localCount - 1) / 2
+            let anchor = CGPoint(x: rect.midX + fan * r * 2.4, y: onTop ? rect.minY : rect.maxY)
+            let side: CGFloat = onTop ? -1 : 1     // bulge up (top) or down (bottom)
             let left = CGPoint(x: anchor.x - r * 0.5, y: anchor.y)
             let right = CGPoint(x: anchor.x + r * 0.5, y: anchor.y)
             path.move(to: left)
             path.addCurve(
                 to: right,
-                control1: CGPoint(x: anchor.x - r, y: anchor.y - r * 1.6),
-                control2: CGPoint(x: anchor.x + r, y: anchor.y - r * 1.6)
+                control1: CGPoint(x: anchor.x - r, y: anchor.y + side * r * 1.6),
+                control2: CGPoint(x: anchor.x + r, y: anchor.y + side * r * 1.6)
             )
             arrowTip = right
-            arrowDir = CGPoint(x: 0.2, y: 1)
-            labelPoint = CGPoint(x: anchor.x, y: anchor.y - r * 1.5)
+            arrowDir = CGPoint(x: 0.2, y: -side)   // point back into the node
+            labelPoint = CGPoint(x: anchor.x, y: anchor.y + side * r * 1.5)
         }
 
         context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, dash: dash))

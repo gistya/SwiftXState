@@ -51,6 +51,28 @@ private struct TogglerMachine: StateMachine {
     }
 }
 
+/// A machine with an invoked child whose `onDone`/`onError` drive transitions. In the exported
+/// definition JSON these live under `invoke[].onDone` / `invoke[].onError` — NOT under `on` — so the
+/// definition-JSON builder (the inspector's type-erased path) must walk `invoke[]` to surface them.
+/// Regression fixture: an earlier version dropped them, making invoking states look like dead ends
+/// (`loading` had only inbound arrows, none back out to `ready` / `failed`).
+private struct LoaderMachine: StateMachine {
+    typealias Context = Int
+    typealias StateID = String
+    typealias EventID = String
+    var context: Int { 0 }
+    var machine: some XStateMachine {
+        State("loading") {
+            Invoke(id: "load", run: { _ in 1 })
+                .onDone(to: "ready")
+                .onError(to: "failed")
+            Transition(on: "RETRY", to: "loading")
+        }.initial()
+        State("ready") { Transition(on: "RELOAD", to: "loading") }
+        State("failed") { Transition(on: "RELOAD", to: "loading") }
+    }
+}
+
 @Suite("GraphModelBuilder walks the real machine")
 struct GraphModelBuilderTests {
     @Test("Builds every node from the live tree, not scaffolding")
@@ -269,6 +291,28 @@ struct GraphModelBuilderTests {
         #expect(endpoints.contains("toggler.off->toggler.on"))
         #expect(endpoints.contains("toggler.on->toggler.off"))
         #expect(model.edges.count == 2)   // both arrows connected; none dropped
+    }
+
+    @Test("Definition-JSON builder surfaces invoke onDone/onError as .invoked edges")
+    func invokeEdgesFromDefinition() throws {
+        // The typed builder walks `node.transitions` (which carry `xstate.done.actor.*` /
+        // `xstate.error.*`); the definition builder walks JSON, where those completions sit under
+        // `invoke[].onDone/onError`. Both must produce the same "loading escapes to ready/failed" arrows.
+        let machine = LoaderMachine().resolvedMachine(id: "loader")
+        let typed = GraphModelBuilder.build(from: machine)
+        let json = try machine.definitionJSON()
+        let fromJSON = GraphModelBuilder.build(fromDefinitionJSON: json, machineID: "loader")
+
+        for model in [typed, fromJSON] {
+            let endpoints = Set(model.edges.map { "\($0.from)->\($0.to)" })
+            #expect(endpoints.contains("loader.loading->loader.ready"))    // invoke onDone
+            #expect(endpoints.contains("loader.loading->loader.failed"))   // invoke onError
+            let invoked = model.edges.filter { $0.kind == .invoked }
+            #expect(invoked.contains { $0.from == "loader.loading" && $0.to == "loader.ready" })
+            #expect(invoked.contains { $0.from == "loader.loading" && $0.to == "loader.failed" })
+        }
+        // Same transition endpoints from both builders (the parity that was broken).
+        #expect(Set(typed.edges.map { "\($0.from)->\($0.to)" }) == Set(fromJSON.edges.map { "\($0.from)->\($0.to)" }))
     }
 }
 #endif

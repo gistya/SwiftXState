@@ -262,37 +262,37 @@ extension GraphLayout {
                 : Cls(exitSide: .left, entrySide: .right, sameColumn: false)
         }
 
-        // 2. Distribute ports along each node side, ordered by the *other* endpoint's Y (so the fan
-        //    doesn't cross at the port). Exit ports keyed by (from,side); entry ports by (to,side).
+        // 2. Distribute ports along each node side. Exits AND entries on the same side share one slot
+        //    sequence, so an anti-parallel pair (A→B forward + B→A back) never lands on the same port
+        //    pixel — each transition gets its own attachment point (else the two lines fuse at the node
+        //    edge and read as one). Ordered by the *other* endpoint's Y so the fan doesn't cross.
         func sideX(_ rect: CGRect, _ side: Side) -> CGFloat { side == .right ? rect.maxX : rect.minX }
         var exitPort = [CGPoint](repeating: .zero, count: edges.count)
         var entryPort = [CGPoint](repeating: .zero, count: edges.count)
-        var exitGroups: [String: [Int]] = [:]
-        var entryGroups: [String: [Int]] = [:]
+        // Members of a node-side: the edge index plus whether it attaches here as an exit or an entry.
+        var sideMembers: [String: [(i: Int, isExit: Bool)]] = [:]
         for i in edges.indices {
-            exitGroups["\(edges[i].from)\u{1}\(cls[i].exitSide)", default: []].append(i)
-            entryGroups["\(edges[i].to)\u{1}\(cls[i].entrySide)", default: []].append(i)
+            sideMembers["\(edges[i].from)\u{1}\(cls[i].exitSide)", default: []].append((i, true))
+            sideMembers["\(edges[i].to)\u{1}\(cls[i].entrySide)", default: []].append((i, false))
         }
-        for (_, idxs) in exitGroups {
-            let ordered = idxs.sorted {
-                let ya = frames[edges[$0].to]!.midY, yb = frames[edges[$1].to]!.midY
-                return ya != yb ? ya < yb : edges[$0].id < edges[$1].id
-            }
-            let rect = frames[edges[ordered[0]].from]!
-            for (slot, i) in ordered.enumerated() {
-                let frac = CGFloat(slot + 1) / CGFloat(ordered.count + 1)
-                exitPort[i] = CGPoint(x: sideX(rect, cls[i].exitSide), y: rect.minY + rect.height * frac)
-            }
+        func otherEndY(_ m: (i: Int, isExit: Bool)) -> CGFloat {
+            m.isExit ? frames[edges[m.i].to]!.midY : frames[edges[m.i].from]!.midY
         }
-        for (_, idxs) in entryGroups {
-            let ordered = idxs.sorted {
-                let ya = frames[edges[$0].from]!.midY, yb = frames[edges[$1].from]!.midY
-                return ya != yb ? ya < yb : edges[$0].id < edges[$1].id
+        for (_, members) in sideMembers {
+            let ordered = members.sorted {
+                let ya = otherEndY($0), yb = otherEndY($1)
+                if ya != yb { return ya < yb }
+                if $0.isExit != $1.isExit { return $0.isExit }   // stable: exits before entries on a tie
+                return edges[$0.i].id < edges[$1.i].id
             }
-            let rect = frames[edges[ordered[0]].to]!
-            for (slot, i) in ordered.enumerated() {
+            // Every member shares this node & side (the group key), so one rect/side serves all.
+            let first = ordered[0]
+            let rect = first.isExit ? frames[edges[first.i].from]! : frames[edges[first.i].to]!
+            let side = first.isExit ? cls[first.i].exitSide : cls[first.i].entrySide
+            for (slot, m) in ordered.enumerated() {
                 let frac = CGFloat(slot + 1) / CGFloat(ordered.count + 1)
-                entryPort[i] = CGPoint(x: sideX(rect, cls[i].entrySide), y: rect.minY + rect.height * frac)
+                let pt = CGPoint(x: sideX(rect, side), y: rect.minY + rect.height * frac)
+                if m.isExit { exitPort[m.i] = pt } else { entryPort[m.i] = pt }
             }
         }
 

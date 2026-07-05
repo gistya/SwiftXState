@@ -225,10 +225,12 @@ struct AutoLayoutTests {
         let hub = layout.frame("ml.hub")!
         let loops = model.edges.filter { $0.isSelfLoop && $0.from == "ml.hub" }.count
         #expect(loops == 3)
-        // The outermost fanned loop centre sits at midX ± (loops-1)/2 · r · 2.4; it (plus the loop's own
-        // half-width) must fall inside the node so no loop floats off the edge.
+        // Loops split between the top and bottom edges, so the busier edge carries ⌈n/2⌉. Its outermost
+        // fanned loop centre sits at midX ± (m-1)/2 · r · 2.4; that (plus the loop's own half-width) must
+        // fall inside the node so no loop floats off the edge.
         let r = GraphStyle.default.selfLoopRadius
-        let extreme = CGFloat(loops - 1) / 2 * r * 2.4 + r * 0.5
+        let perEdge = (loops + 1) / 2
+        let extreme = CGFloat(perEdge - 1) / 2 * r * 2.4 + r * 0.5
         #expect(hub.width / 2 >= extreme)
     }
 

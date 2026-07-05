@@ -220,11 +220,15 @@ public enum GraphLayout {
             }
         }
         if model.useAutoLayoutForInspection {
-            for edge in model.edges where edge.isSelfLoop {
-                guard let f = frames[edge.from] else { continue }
+            // Self-loops fan across the node's width and bulge above (top group) and — for a node with
+            // 2+ loops — below (bottom group). Reserve both so fit-to-view leaves room for the loops+labels.
+            for (nodeID, count) in selfLoops {
+                guard let f = frames[nodeID] else { continue }
                 let extra = style.selfLoopRadius * 2 + style.edgeLabelFontSize * 1.6
-                bounds = bounds.union(CGRect(x: f.midX - style.selfLoopRadius, y: f.minY - extra,
-                                             width: style.selfLoopRadius * 2, height: extra))
+                bounds = bounds.union(CGRect(x: f.minX, y: f.minY - extra, width: f.width, height: extra))
+                if count >= 2 {
+                    bounds = bounds.union(CGRect(x: f.minX, y: f.maxY, width: f.width, height: extra))
+                }
             }
         }
         if bounds.isNull { bounds = .zero }
@@ -237,11 +241,13 @@ public enum GraphLayout {
     private static func leafSize(label: String, style: GraphStyle, selfLoops: Int = 0) -> CGSize {
         let estimated = estimatedTextWidth(label, fontSize: style.nodeLabelFontSize)
         var width = max(style.nodeMinWidth, estimated + style.nodePadding * 2)
-        // Widen so every fanned self-loop still sits on the node's top edge (see drawSelfLoop's fan:
-        // loops are spread ±(n-1)/2 · r·2.4 around the centre, each ~r wide).
+        // Widen so every fanned self-loop still sits on the node's edge. Loops are split between the top
+        // and bottom edges (see drawSelfLoop), so only the busier edge's ⌈n/2⌉ loops set the width — each
+        // spread ±(m-1)/2 · r·2.4 around the centre, each ~r wide.
         if selfLoops > 1 {
             let r = style.selfLoopRadius
-            width = max(width, CGFloat(selfLoops - 1) * r * 2.4 + r * 2 + style.nodePadding)
+            let perEdge = (selfLoops + 1) / 2
+            width = max(width, CGFloat(perEdge - 1) * r * 2.4 + r * 2 + style.nodePadding)
         }
         return CGSize(width: width, height: style.nodeMinHeight)
     }

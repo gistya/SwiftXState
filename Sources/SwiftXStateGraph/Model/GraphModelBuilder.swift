@@ -169,7 +169,7 @@ public enum GraphModelBuilder {
             }
 
             for (event, value) in (object(node["on"]) ?? [:]).sorted(by: { $0.key < $1.key }) {
-                guard classify(eventType: event).kind != nil else { continue }
+                let classification: (label: String, kind: GraphEdgeKind?) = classify(eventType: event)
                 for t in targets(value) {
                     pending.append(.init(source: id, label: event, kind: .event, target: t.target, guarded: t.guarded))
                 }
@@ -189,6 +189,22 @@ public enum GraphModelBuilder {
             }
             for t in targets(node["onDone"]) {
                 pending.append(.init(source: id, label: "done", kind: .onDone, target: t.target, guarded: t.guarded))
+            }
+            // Invoked child actors serialize their completion transitions under `invoke[].onDone` /
+            // `invoke[].onError` — NOT under `on`. Walk them so the graph shows where a state goes when
+            // its invoke finishes (e.g. `loading` → `ready` on done, → `failed` on error). Mirrors the
+            // typed `build(from:)` path, which classifies `xstate.done.actor.*` / `xstate.error.*` as
+            // `.invoked` "done"/"error" edges. Without this, an invoking state looks like a dead end.
+            if case let .array(invokes)? = node["invoke"] {
+                for entry in invokes {
+                    guard let inv = object(entry) else { continue }
+                    for t in targets(inv["onDone"]) {
+                        pending.append(.init(source: id, label: "done", kind: .invoked, target: t.target, guarded: t.guarded))
+                    }
+                    for t in targets(inv["onError"]) {
+                        pending.append(.init(source: id, label: "error", kind: .invoked, target: t.target, guarded: t.guarded))
+                    }
+                }
             }
         }
 
