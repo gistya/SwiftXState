@@ -20,7 +20,7 @@ enum ChessRules {
         )
     }
 
-    static func forfeitsWhiteKingside(_ move: ChessMove) -> Bool {
+    static let forfeitsWhiteKingside: @Sendable (_ move: ChessMove) -> Bool = { move in 
         if move.piece == .king, move.from == Square(row: 0, col: 4) { return true }
         if move.piece == .rook, move.from == Square(row: 0, col: 7) { return true }
         if move.capture == .rook, move.to == Square(row: 0, col: 7) { return true }
@@ -28,7 +28,7 @@ enum ChessRules {
         return false
     }
 
-    static func forfeitsWhiteQueenside(_ move: ChessMove) -> Bool {
+    static let forfeitsWhiteQueenside: @Sendable (_ move: ChessMove) -> Bool = { move in
         if move.piece == .king, move.from == Square(row: 0, col: 4) { return true }
         if move.piece == .rook, move.from == Square(row: 0, col: 0) { return true }
         if move.capture == .rook, move.to == Square(row: 0, col: 0) { return true }
@@ -36,7 +36,7 @@ enum ChessRules {
         return false
     }
 
-    static func forfeitsBlackKingside(_ move: ChessMove) -> Bool {
+    static let forfeitsBlackKingside: @Sendable (_ move: ChessMove) -> Bool = { move in
         if move.piece == .king, move.from == Square(row: 7, col: 4) { return true }
         if move.piece == .rook, move.from == Square(row: 7, col: 7) { return true }
         if move.capture == .rook, move.to == Square(row: 7, col: 7) { return true }
@@ -44,7 +44,7 @@ enum ChessRules {
         return false
     }
 
-    static func forfeitsBlackQueenside(_ move: ChessMove) -> Bool {
+    static let forfeitsBlackQueenside: @Sendable (_ move: ChessMove) -> Bool = { move in
         if move.piece == .king, move.from == Square(row: 7, col: 4) { return true }
         if move.piece == .rook, move.from == Square(row: 7, col: 0) { return true }
         if move.capture == .rook, move.to == Square(row: 7, col: 0) { return true }

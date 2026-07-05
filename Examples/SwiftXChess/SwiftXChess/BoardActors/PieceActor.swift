@@ -38,36 +38,54 @@ struct PieceActorMachine: StateMachine {
     var context: PieceContext { PieceContext(pieceId: "wPa2", kind: .pawn, color: .white, square: nil) }
 
     var machine: some XStateMachine {
-        XState(.boot) {
+        State(.boot) {
             Always(to: .alive).when { $0.isAlive }
             Always(to: .captured)
         }
         .initial()
 
-        XState(.alive) {
-            XTransition(on: PieceEvent.moveTo, to: .alive).action { args, _ in
+        State(.alive) {
+            Transition(on: .moveTo, to: .alive).action { args, _ in
                 var ctx = args.context
                 if case let .moveTo(square)? = args.event { ctx.square = square }
                 return ctx
             }
-            XTransition(on: .captured, to: .captured).action { ctx in
+            
+            Transition(on: .captured, to: .captured).action { ctx in
                 var c = ctx; c.square = nil; return c
             }
-            XTransition(on: PieceEvent.sync, to: .alive).action { args, _ in
+            
+            Transition(on: .sync, to: .alive).action { args, _ in
                 var ctx = args.context
                 if case let .sync(square)? = args.event { ctx.square = square }
                 return ctx
             }
+            
             Always(to: .captured).when { !$0.isAlive }
         }
 
-        XState(.captured) {
-            XTransition(on: PieceEvent.sync, to: .captured).action { args, _ in
+        State(.captured) {
+            Transition(on: .sync, to: .captured).action { args, _ in
                 var ctx = args.context
                 if case let .sync(square)? = args.event { ctx.square = square }
                 return ctx
             }
+            
             Always(to: .alive).when { $0.isAlive }
         }
     }
+}
+
+// MARK: Sugar extensions
+
+// These allow implicit member expressions for PieceEvent cases
+// with associated values. E.g. `.sync` instead of the normally-
+// required `PieceEvent.sync`.
+
+extension Map where In == String?, Out == PieceEvent {
+    static var sync: Map<In, Out> { .init(transform: Out.sync) }
+}
+
+extension Map where In == String, Out == PieceEvent {
+    static var moveTo: Map<In, Out> { .init(transform: Out.moveTo) }
 }

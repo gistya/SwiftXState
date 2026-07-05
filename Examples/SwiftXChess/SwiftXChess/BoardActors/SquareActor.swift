@@ -36,41 +36,59 @@ struct SquareActorMachine: StateMachine {
     var context: SquareContext { SquareContext(coord: "a1", occupantId: nil) }
 
     var machine: some XStateMachine {
-        XState(.boot) {
+        State(.boot) {
             Always(to: .occupied).when { $0.isOccupied }
             Always(to: .empty)
         }
         .initial()
 
-        XState(.empty) {
-            XTransition(on: SquareEvent.occupy, to: .occupied).action { args, _ in
+        State(.empty) {
+            Transition(on: .occupy, to: .occupied).action { args, _ in
                 var ctx = args.context
                 if case let .occupy(pieceId)? = args.event { ctx.occupantId = pieceId }
                 return ctx
             }
-            XTransition(on: SquareEvent.sync, to: .empty).action { args, _ in
+            
+            Transition(on: .sync, to: .empty).action { args, _ in
                 var ctx = args.context
                 if case let .sync(occupantId)? = args.event { ctx.occupantId = occupantId }
                 return ctx
             }
+            
             Always(to: .occupied).when { $0.isOccupied }
         }
 
-        XState(.occupied) {
-            XTransition(on: .clear, to: .empty).action { ctx in
+        State(.occupied) {
+            Transition(on: .clear, to: .empty).action { ctx in
                 var c = ctx; c.occupantId = nil; return c
             }
-            XTransition(on: SquareEvent.occupy, to: .occupied).action { args, _ in
+            
+            Transition(on: .occupy, to: .occupied).action { args, _ in
                 var ctx = args.context
                 if case let .occupy(pieceId)? = args.event { ctx.occupantId = pieceId }
                 return ctx
             }
-            XTransition(on: SquareEvent.sync, to: .occupied).action { args, _ in
+            
+            Transition(on: .sync, to: .occupied).action { args, _ in
                 var ctx = args.context
                 if case let .sync(occupantId)? = args.event { ctx.occupantId = occupantId }
                 return ctx
             }
+            
             Always(to: .empty).when { !$0.isOccupied }
         }
     }
+}
+
+// MARK: Sugar extensions
+
+// These allow implicit member expressions for PieceEvent cases
+// with associated values.
+
+extension Map where In == String?, Out == SquareEvent {
+    static var sync: Map<In, Out> { .init(transform: Out.sync) }
+}
+
+extension Map where In == String, Out == SquareEvent {
+    static var occupy: Map<In, Out> { .init(transform: Out.occupy) }
 }

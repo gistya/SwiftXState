@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/swift-compositional-init",
       "state" : {
-        "revision" : "2633ee5b9837df48031714e41912d8ca77183f18",
-        "version" : "1.0.0"
+        "revision" : "46115c8285305135cb288a1bf05b9f69297bc619",
+        "version" : "1.1.2"
       }
     }
   ],

@@ -11,8 +11,6 @@ public struct OpeningMoveTreeMachine: StateMachine {
     public typealias EventID = String
 
     public static let id = "opening-move-tree"
-    /// Atomic state id used in the lightweight inspector graph (runtime uses dataset node ids).
-    public static let inspectorWireState = "tracking"
 
     public let dataset: OpeningDataset
 
@@ -35,10 +33,10 @@ public struct OpeningMoveTreeMachine: StateMachine {
         transitions: [String: String],
         dataset: OpeningDataset,
         isRoot: Bool
-    ) -> XState<OpeningTreeContext, String, String> {
-        let state = XState(nodeId) {
+    ) -> State {
+        let state = State(nodeId) {
             for (eventType, targetId) in transitions {
-                XTransition(on: eventType, to: targetId).action { (context: OpeningTreeContext) in
+                Transition(on: eventType, to: targetId).action { (context: OpeningTreeContext) in
                     var ctx = context
                     ctx.nodeId = targetId
                     ctx.ply = dataset.ply(for: targetId)
@@ -82,6 +80,11 @@ public struct OpeningMoveTreeMachine: StateMachine {
     }
 }
 
+extension String {
+    /// Atomic state id used in the lightweight inspector graph (runtime uses dataset node ids).
+    static var inspectorWireState: String { "tracking" }
+}
+
 /// The inspector summary: one `tracking` state with a wildcard `SAN.*` self-transition (the string
 /// engine matches the `.*` suffix). The runtime uses the full tree above.
 struct OpeningInspectorSummaryMachine: StateMachine {
@@ -94,8 +97,8 @@ struct OpeningInspectorSummaryMachine: StateMachine {
     var context: OpeningTreeContext { .initial(rootId: dataset.rootId) }
 
     var machine: some XStateMachine {
-        XState(OpeningMoveTreeMachine.inspectorWireState) {
-            XTransition(on: "SAN.*", to: OpeningMoveTreeMachine.inspectorWireState)
+        State(.inspectorWireState) {
+            Transition(on: "SAN.*", to: .inspectorWireState)
         }
         .initial()
     }

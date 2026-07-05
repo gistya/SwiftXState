@@ -163,34 +163,34 @@ struct BoardInspectorMachine: StateMachine {
     }
 
     /// One square: a compound region named by `coord`, seeded to the right initial child.
-    private func squareRegion(coord: String, occupantId: String?, mode: BoardMode) -> XState<BoardInspectorContext, String, String> {
+    private func squareRegion(coord: String, occupantId: String?, mode: BoardMode) -> State {
         if mode == .occupancy {
-            return XState(coord) {
-                initialIf(occupantId == nil, XState("empty") {
-                    XTransition(on: "SQUARE.OCCUPY.\(coord).*", to: "occupied")
+            return State(coord) {
+                initialIf(occupantId == nil, State("empty") {
+                    Transition(on: "SQUARE.OCCUPY.\(coord).*", to: "occupied")
                 })
-                initialIf(occupantId != nil, XState("occupied") {
-                    XTransition(on: "SQUARE.CLEAR.\(coord)", to: "empty")
+                initialIf(occupantId != nil, State("occupied") {
+                    Transition(on: "SQUARE.CLEAR.\(coord)", to: "empty")
                 })
             }
         }
         // pieces: from `empty`, occupy → the matching piece type; from any piece, clear → `empty`.
         let initialType = occupantId.map { String($0.prefix(2)) }.flatMap { Self.pieceTypes.contains($0) ? $0 : nil }
-        return XState(coord) {
-            initialIf(initialType == nil, XState("empty") {
+        return State(coord) {
+            initialIf(initialType == nil, State("empty") {
                 for type in Self.pieceTypes {
-                    XTransition(on: "SQUARE.OCCUPY.\(coord).\(type).*", to: type)
+                    Transition(on: "SQUARE.OCCUPY.\(coord).\(type).*", to: type)
                 }
             })
             for type in Self.pieceTypes {
-                initialIf(initialType == type, XState(type) {
-                    XTransition(on: "SQUARE.CLEAR.\(coord)", to: "empty")
+                initialIf(initialType == type, State(type) {
+                    Transition(on: "SQUARE.CLEAR.\(coord)", to: "empty")
                 })
             }
         }
     }
 
-    private func initialIf(_ flag: Bool, _ state: XState<BoardInspectorContext, String, String>) -> XState<BoardInspectorContext, String, String> {
+    private func initialIf(_ flag: Bool, _ state: State) -> State {
         flag ? state.initial() : state
     }
 

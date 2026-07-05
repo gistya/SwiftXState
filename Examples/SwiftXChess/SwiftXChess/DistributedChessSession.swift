@@ -110,7 +110,7 @@ final class DistributedChessSession {
                     try InspectMachineRegistration(
                         machineId: OpeningMoveTreeMachine.id,
                         definitionJSON: OpeningMoveTreeMachine.inspectorSummaryMachine().definitionJSON(),
-                        wireStateValue: OpeningMoveTreeMachine.inspectorWireState
+                        wireStateValue: .inspectorWireState
                     ),
                     try InspectMachineRegistration(
                         machineId: BoardInspectorMachine.id(.occupancy),
@@ -244,4 +244,9 @@ final class DistributedChessSession {
         reports = await treeSession.reports()
         await refreshOpeningMoves()
     }
+}
+
+extension String {
+    /// Atomic state id used in the lightweight inspector graph (runtime uses dataset node ids).
+    static var inspectorWireState: String { "tracking" }
 }

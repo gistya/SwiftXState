@@ -54,6 +54,12 @@ public struct XTransition<
     // via `Mirror` (`.name`), so the transition routes under `"increment"` instead of `*` — visible in
     // the engine, the exported definition JSON, and the inspector graph. The sample is discarded; its
     // value never matters. One overload per associated-value arity (a tuple can't be one generic param).
+    //
+    // These MUST keep `@escaping @Sendable` even though the closure is only called here and never
+    // stored: the arity-1 overload competes with the single-`Payload` wildcard overload above (which
+    // genuinely stores the closure and so must be `@Sendable`), and overload resolution only prefers the
+    // more-specialized `Blankable` overload when the two share the same function-type shape. Drop the
+    // attributes and a 1-value payload case silently falls back to the wildcard `*`.
 
     /// One associated value: `XTransition(on: SoundtrackEvent.setVolume, to: …)`.
     public init<A: Blankable>(on caseInit: @escaping @Sendable (A) -> EventID, to target: StateID) {
@@ -76,7 +82,7 @@ public struct XTransition<
     }
 
     /// Only take this transition when the predicate holds (context-only).
-    public func when(_ predicate: @escaping Schema.Guard) -> Self {
+    public func when(_ predicate: @escaping @Sendable Schema.Guard) -> Self {
         clone(mutating: \.node.`guard` <- predicate)
     }
 
@@ -88,14 +94,14 @@ public struct XTransition<
     }
 
     /// Apply a pure context transform as the transition is taken (no effects).
-    public func action(_ transform: @escaping Schema.Action) -> Self {
+    public func action(_ transform: @escaping @Sendable Schema.Action) -> Self {
         let handler: Schema.Handler = { args, _ in transform(args.context) }
         return clone(mutating: \.node.action <- handler)
     }
 
     /// Apply an effectful handler as the transition is taken — XState v6's `(args, enq) -> context`.
     /// Return the next context; `raise` / `sendTo` / `emit` through `enq`.
-    public func action(_ handler: @escaping Schema.Handler) -> Self {
+    public func action(_ handler: @escaping @Sendable Schema.Handler) -> Self {
         clone(mutating: \.node.action <- handler)
     }
 }

@@ -296,10 +296,7 @@ struct GameWatcherMachine: StateMachine {
 
     // MARK: - States
 
-    private typealias St = XState<GameWatcherContext, ChessEvent, GameWatcherState>
-    private typealias Tr = XTransition<GameWatcherContext, ChessEvent, GameWatcherState>
-
-    private func bootState() -> St {
+    private func bootState() -> State {
         let boot = State(.boot) { XAlways(to: .game) }.initial()
         guard includeBoardSpawns else { return boot }
         let inspectable = inspectableBoardActors
@@ -309,21 +306,24 @@ struct GameWatcherMachine: StateMachine {
         }
     }
 
-    private func gameState() -> St {
-        XState(.game) {
-            XState(.active) {
-                XState(.turn) {
-                    XState(.idle) {
+    private func gameState() -> State {
+        State(.game) {
+            State(.active) {
+                State(.turn) {
+                    State(.idle) {
                         Always(to: .selecting).when { $0.selected != nil && $0.pendingPromotion == nil }
                         Always(to: .promoting).when { $0.pendingPromotion != nil }
                     }.initial()
-                    XState(.selecting) {
+                    
+                    State(.selecting) {
                         Always(to: .idle).when { $0.selected == nil }
                         Always(to: .promoting).when { $0.pendingPromotion != nil }
                     }
-                    XState(.promoting) {
+                    
+                    State(.promoting) {
                         Always(to: .idle).when { $0.pendingPromotion == nil }
                     }
+                    
                     tapHandler()
                     promoteHandler()
                     newGameTransition()
@@ -331,11 +331,13 @@ struct GameWatcherMachine: StateMachine {
                 }.initial()
                 Always(to: .finished).when { $0.outcome != nil }
             }.initial()
-            XState(.finished) {
+            
+            State(.finished) {
                 newGameTransition()
                 enterReplayTransition()
             }
-            XState(.replaying) {
+            
+            State(.replaying) {
                 exitReplayTransition()
                 newGameTransition()
                 scrubHandler()
@@ -346,8 +348,8 @@ struct GameWatcherMachine: StateMachine {
     // MARK: - Handlers (self-targeting `turn` ≈ internal: the substates are pure functions of context,
     // so the momentary re-entry to `idle` is immediately re-derived by the always-guards).
 
-    private func tapHandler() -> Tr {
-        XTransition(on: ChessEvent.tap, to: .turn).action { args, enq in
+    private func tapHandler() -> Transition {
+        Transition(on: ChessEvent.tap, to: .turn).action { args, enq in
             var context = args.context
             guard case let .tap(square)? = args.event else { return context }
             // No move: `handleTap` already updated `selected` in `context` — return it.
@@ -357,8 +359,8 @@ struct GameWatcherMachine: StateMachine {
         }
     }
 
-    private func promoteHandler() -> Tr {
-        XTransition(on: ChessEvent.promote, to: .turn).action { args, enq in
+    private func promoteHandler() -> Transition {
+        Transition(on: ChessEvent.promote, to: .turn).action { args, enq in
             var context = args.context
             guard case let .promote(kind)? = args.event,
                   let commit = GameWatcherRules.handlePromotion(&context, piece: kind) else {
@@ -369,8 +371,8 @@ struct GameWatcherMachine: StateMachine {
         }
     }
 
-    private func newGameTransition() -> Tr {
-        XTransition(on: .newGame, to: .boot).action { args, enq in
+    private func newGameTransition() -> Transition {
+        Transition(on: .newGame, to: .boot).action { args, enq in
             var context = args.context
             for childId in context.layout.allChildIds { enq.stopChild(childId) }
             let fresh = GameWatcherContext.initial()
@@ -381,28 +383,30 @@ struct GameWatcherMachine: StateMachine {
         }
     }
 
-    private func enterReplayTransition() -> Tr {
-        XTransition(on: .enterReplay, to: .replaying).action { args, _ in
+    private func enterReplayTransition() -> Transition {
+        Transition(on: .enterReplay, to: .replaying).action { args, _ in
             var context = args.context
             GameWatcherReplay.enter(&context)
             return context
         }
     }
 
-    private func exitReplayTransition() -> Tr {
-        XTransition(on: .exitReplay, to: .idle).action { args, _ in
+    private func exitReplayTransition() -> Transition {
+        Transition(on: .exitReplay, to: .idle).action { args, _ in
             var context = args.context
             GameWatcherReplay.exit(&context)
             return context
         }
     }
 
-    private func scrubHandler() -> Tr {
-        XTransition(on: ChessEvent.replayScrub, to: .replaying).action { args, enq in
+    private func scrubHandler() -> Transition {
+        Transition(on: .replayScrub, to: .replaying).action { args, enq in
             var context = args.context
+            
             if case let .replayScrub(step)? = args.event {
                 GameWatcherReplay.syncSnapshot(&context, step: step)
             }
+            
             Self.syncBoardInspector(context: context, into: enq)
             return context
         }
@@ -443,6 +447,7 @@ struct GameWatcherMachine: StateMachine {
             case let .pieceCaptured(pieceId):
                 enq.sendTo(BoardActorIds.piece(id: pieceId), PieceEvent.captured)
             }
+            
             if let inspectorEvent = BoardInspectorSync.inspectorEvent(for: command) {
                 for mode in BoardMode.allCases {
                     enq.sendTo(BoardInspectorMachine.childId(mode), inspectorEvent.type)
@@ -484,6 +489,7 @@ enum GameWatcherReplay {
     static func syncSnapshot(_ context: inout GameWatcherContext, step: Int) {
         guard let session = context.replaySession else { return }
         let clamped = min(max(step, 0), max(session.steps.count - 1, 0))
+        
         GameWatcherReplayRestore.apply(
             stepIndex: clamped,
             recorded: session.steps[clamped],
