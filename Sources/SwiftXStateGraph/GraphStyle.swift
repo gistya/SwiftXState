@@ -41,7 +41,9 @@ public struct GraphStyle: Sendable {
     public var nodeCornerRadius: CGFloat = 10
     public var nodeBorderWidth: CGFloat = 1.5
     public var nodeMinWidth: CGFloat = 104
-    public var nodeMinHeight: CGFloat = 44
+    /// Taller than the label needs, deliberately — gives edge ports (distributed down each side) and
+    /// their labels vertical room so the arrows around a state aren't cramped.
+    public var nodeMinHeight: CGFloat = 64
     public var nodePadding: CGFloat = 16
     public var nodeShadowRadius: CGFloat = 4
     public var nodeShadowOpacity: Double = 0.18

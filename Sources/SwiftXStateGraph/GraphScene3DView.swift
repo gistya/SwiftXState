@@ -76,8 +76,9 @@ struct GraphScene3DView {
             cnode.position = vecF((clo + chi) / 2)
             scene.rootNode.addChildNode(cnode)
             if showLabels, let title = labelPlaneNode(node.label, worldHeight: 0.5, fontSize: 15, weight: .bold) {
-                title.position = vec(0, CGFloat(sizeV.y) / 2 + 0.35, 0)
-                title.constraints = [SCNBillboardConstraint()]   // always readable
+                // Fixed orientation (pinned to the cube — does not swivel to face the camera), lifted
+                // above the box and nudged forward in Z so it never clips the glass.
+                title.position = vec(0, CGFloat(sizeV.y) / 2 + 0.4, CGFloat(sizeV.z) / 2 + 0.06)
                 cnode.addChildNode(title)
             }
         }
@@ -115,9 +116,11 @@ struct GraphScene3DView {
             arrow.name = "arrow|\(edge.from)|\(edge.to)"
             group.addChildNode(arrow)
             if showLabels, !edge.label.isEmpty, let lbl = labelPlaneNode(edge.label, worldHeight: 0.32, fontSize: 12) {
-                lbl.position = vecF((start + tip) / 2)
-                lbl.constraints = [SCNBillboardConstraint()]   // faces the camera, rides with the arrow
-                group.addChildNode(lbl)
+                // Child of the CYLINDER, so the label's rotation is pinned to the arrow (it does not
+                // swivel to face the camera). Offset perpendicular-forward (local +Z) off the tube so it
+                // never clips into the arrow. cylinder local origin = edge midpoint, local +Y = the edge.
+                lbl.position = vec(0, 0, 0.026 + 0.16)
+                cyl.addChildNode(lbl)
             }
             scene.rootNode.addChildNode(group)
         }
@@ -125,7 +128,8 @@ struct GraphScene3DView {
         // Leaf nodes as brushed-metal plates at their 3D position, label billboarded on the front.
         for node in model.nodes where !node.type.isContainer {
             let s = CGFloat(style.node3DSize) * scale
-            let box = SCNBox(width: s * 1.7, height: s, length: s, chamferRadius: CGFloat(style.nodeCornerRadius) * scale)
+            // Taller box: gives the side ports (and their labels) vertical room.
+            let box = SCNBox(width: s * 1.7, height: s * 1.6, length: s, chamferRadius: CGFloat(style.nodeCornerRadius) * scale)
             let mat = brushedMetalMaterial()
             box.materials = [mat]
             let snode = SCNNode(geometry: box)
@@ -134,8 +138,8 @@ struct GraphScene3DView {
             applyMaterial(mat, for: node)
             scene.rootNode.addChildNode(snode)
             if showLabels, let label = labelPlaneNode(node.label, worldHeight: 0.42, fontSize: 13) {
+                // Pinned to the node front face (rotates with the node, not the camera), proud of it in Z.
                 label.position = vec(0, 0, s / 2 + 0.04)
-                label.constraints = [SCNBillboardConstraint()]
                 snode.addChildNode(label)
             }
         }
@@ -225,8 +229,7 @@ struct GraphScene3DView {
                                   direction: SIMD3<Float>(0, -1, 0), color: color, size: 0.12)
         container.addChildNode(arrow)
         if !label.isEmpty, let lbl = labelPlaneNode(label, worldHeight: 0.3, fontSize: 12) {
-            lbl.position = vec(0, CGFloat(loopR) + 0.2, 0)
-            lbl.constraints = [SCNBillboardConstraint()]
+            lbl.position = vec(0, CGFloat(loopR) + 0.2, 0.06)   // pinned above the ring, nudged forward
             container.addChildNode(lbl)
         }
         return container
