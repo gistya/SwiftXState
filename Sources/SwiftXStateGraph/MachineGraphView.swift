@@ -32,6 +32,9 @@ final class GraphRenderModel {
     /// only fires when the cursor is actually over the graph (not, say, an adjacent sidebar).
     var canvasFrame: CGRect = .zero
     var manualOffsets: [String: CGSize] = [:]
+    /// Per-edge manual drag offsets (edge id → logical delta). Lets the user pull a crowded arrow /
+    /// label into open space; applied on top of the automatic routing.
+    var edgeOffsets: [String: CGSize] = [:]
     var selectedID: String?
     var renderMode: GraphRenderMode = .twoD
     /// Logical point anchored to the viewport center. Frozen during interaction so dragging
@@ -54,6 +57,7 @@ final class GraphRenderModel {
         }
         model = newModel
         manualOffsets.removeAll()
+        edgeOffsets.removeAll()
         selectedID = nil
         viewCenter = .zero
     }
@@ -71,7 +75,7 @@ final class GraphRenderModel {
     // MARK: Layout
 
     func recomputeLayout() {
-        layout = GraphLayout.compute(model: model, style: style, manualOffsets: manualOffsets)
+        layout = GraphLayout.compute(model: model, style: style, manualOffsets: manualOffsets, edgeOffsets: edgeOffsets)
         if viewCenter == .zero { viewCenter = CGPoint(x: layout.bounds.midX, y: layout.bounds.midY) }
     }
 
@@ -104,6 +108,7 @@ final class GraphRenderModel {
 
     func resetView() {
         manualOffsets.removeAll()
+        edgeOffsets.removeAll()
         selectedID = nil
         recomputeLayout()
         recenter()
@@ -140,6 +145,8 @@ struct GraphRenderView: View {
     @State private var panStart: CGSize?
     @State private var dragNodeID: String?
     @State private var dragBaseline: CGSize?
+    @State private var dragEdgeID: String?
+    @State private var dragEdgeBaseline: CGSize?
     @State private var zoomStart: CGFloat?
     
     #if canImport(AppKit)
@@ -232,19 +239,30 @@ struct GraphRenderView: View {
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 3)
             .onChanged { value in
-                if panStart == nil && dragNodeID == nil {
+                if panStart == nil && dragNodeID == nil && dragEdgeID == nil {
                     let logical = render.transform.logical(from: value.startLocation)
                     if let id = render.layout.hitTest(logical, model: render.model),
                        render.model.node(id)?.type.isContainer == false {
+                        // A leaf node: drag it (regions grow to follow).
                         dragNodeID = id
                         dragBaseline = render.manualOffsets[id] ?? .zero
                         render.selectedID = id
+                    } else if let eid = render.layout.hitTestEdge(logical, threshold: 22 / render.zoom) {
+                        // An edge / label: drag it into open space.
+                        dragEdgeID = eid
+                        dragEdgeBaseline = render.edgeOffsets[eid] ?? .zero
                     } else {
                         panStart = render.pan
                     }
                 }
                 if let id = dragNodeID, let baseline = dragBaseline {
                     render.manualOffsets[id] = CGSize(
+                        width: baseline.width + value.translation.width / render.zoom,
+                        height: baseline.height + value.translation.height / render.zoom
+                    )
+                    render.recomputeLayout()
+                } else if let eid = dragEdgeID, let baseline = dragEdgeBaseline {
+                    render.edgeOffsets[eid] = CGSize(
                         width: baseline.width + value.translation.width / render.zoom,
                         height: baseline.height + value.translation.height / render.zoom
                     )
@@ -256,7 +274,7 @@ struct GraphRenderView: View {
                     )
                 }
             }
-            .onEnded { _ in panStart = nil; dragNodeID = nil; dragBaseline = nil }
+            .onEnded { _ in panStart = nil; dragNodeID = nil; dragBaseline = nil; dragEdgeID = nil; dragEdgeBaseline = nil }
     }
 
     private var magnifyGesture: some Gesture {

@@ -19,14 +19,18 @@ public struct EdgeRoute: Sendable, Equatable {
     public let laneIndex: Int
     /// How many edges share this edge's unordered node pair (lane count).
     public let laneCount: Int
+    /// Estimated width of the label pill (0 when the edge has no label). Used to keep labels from
+    /// overlapping and to grow the fit-to-view bounds so labels aren't clipped.
+    public var labelWidth: CGFloat
 
-    public init(edgeID: String, points: [CGPoint], labelAnchor: CGPoint, labelAngle: CGFloat, laneIndex: Int, laneCount: Int) {
+    public init(edgeID: String, points: [CGPoint], labelAnchor: CGPoint, labelAngle: CGFloat, laneIndex: Int, laneCount: Int, labelWidth: CGFloat = 0) {
         self.edgeID = edgeID
         self.points = points
         self.labelAnchor = labelAnchor
         self.labelAngle = labelAngle
         self.laneIndex = laneIndex
         self.laneCount = laneCount
+        self.labelWidth = labelWidth
     }
 }
 
@@ -66,7 +70,8 @@ public enum GraphLayout {
     public static func compute(
         model: GraphModel,
         style: GraphStyle,
-        manualOffsets: [String: CGSize] = [:]
+        manualOffsets: [String: CGSize] = [:],
+        edgeOffsets: [String: CGSize] = [:]
     ) -> GraphLayoutResult {
         guard !model.nodes.isEmpty, !model.rootID.isEmpty else { return .empty }
 
@@ -239,15 +244,39 @@ public enum GraphLayout {
 
         // MARK: Bounds
 
+        // Route edges over the final frames (ports + lanes + along-line labels, with label de-overlap
+        // and any manual drag offsets) only when this machine opts into auto-layout; otherwise the
+        // renderer uses its classic centre-to-centre curves.
+        let routes = model.useAutoLayoutForInspection
+            ? routeEdges(model: model, frames: frames, style: style, edgeOffsets: edgeOffsets)
+            : [:]
+
         var bounds = CGRect.null
         for frame in frames.values { bounds = bounds.union(frame) }
+        // Grow the bounds to include routed label pills, edge control points, and self-loop overhang,
+        // so fit-to-view leaves room for everything that lives outside the node frames (otherwise the
+        // graph fits tight to the nodes and the labels read as cramped / clipped on first load).
+        for route in routes.values {
+            if route.points.count == 3 {
+                bounds = bounds.union(CGRect(origin: route.points[1], size: .zero))
+            }
+            if route.labelWidth > 0 {
+                let h = style.edgeLabelFontSize * 1.4 + 6
+                bounds = bounds.union(CGRect(
+                    x: route.labelAnchor.x - route.labelWidth / 2 - 6, y: route.labelAnchor.y - h / 2,
+                    width: route.labelWidth + 12, height: h
+                ))
+            }
+        }
+        if model.useAutoLayoutForInspection {
+            for edge in model.edges where edge.isSelfLoop {
+                guard let f = frames[edge.from] else { continue }
+                let extra = style.selfLoopRadius * 2 + style.edgeLabelFontSize * 1.6
+                bounds = bounds.union(CGRect(x: f.midX - style.selfLoopRadius, y: f.minY - extra,
+                                             width: style.selfLoopRadius * 2, height: extra))
+            }
+        }
         if bounds.isNull { bounds = .zero }
-
-        // Route edges over the final frames (ports + lanes + along-line labels) only when this machine
-        // opts into auto-layout; otherwise the renderer uses its classic centre-to-centre curves.
-        let routes = model.useAutoLayoutForInspection
-            ? routeEdges(model: model, frames: frames, style: style)
-            : [:]
 
         return GraphLayoutResult(frames: frames, bounds: bounds, routes: routes)
     }

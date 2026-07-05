@@ -498,5 +498,32 @@ extension GraphLayoutResult {
         }
         return best
     }
+
+    /// Returns the id of the routed edge nearest `logicalPoint` (by label pill or curve), or `nil` if
+    /// none is within `threshold`. Label anchors are given a slight bias so grabbing a pill is easy.
+    /// Only meaningful under auto-layout (routes are empty otherwise).
+    func hitTestEdge(_ logicalPoint: CGPoint, threshold: CGFloat) -> String? {
+        func d(_ a: CGPoint, _ b: CGPoint) -> CGFloat { hypot(a.x - b.x, a.y - b.y) }
+        func quad(_ p0: CGPoint, _ p1: CGPoint, _ p2: CGPoint, _ t: CGFloat) -> CGPoint {
+            let u = 1 - t
+            return CGPoint(x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
+                           y: u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y)
+        }
+        var best: String?
+        var bestDist = threshold
+        for (id, route) in routes {
+            // Prefer the label pill (bias by 8) so dragging the label is forgiving.
+            if route.labelWidth > 0 {
+                let dl = d(route.labelAnchor, logicalPoint) - 8
+                if dl < bestDist { bestDist = dl; best = id }
+            }
+            guard route.points.count == 3 else { continue }
+            for k in 0...10 {
+                let dist = d(quad(route.points[0], route.points[1], route.points[2], CGFloat(k) / 10), logicalPoint)
+                if dist < bestDist { bestDist = dist; best = id }
+            }
+        }
+        return best
+    }
 }
 #endif

@@ -31,6 +31,14 @@ extension GraphLayout {
     ) -> (local: [String: CGPoint], content: CGSize) {
         func size(_ id: String) -> CGSize { sizes[id] ?? .zero }
 
+        // Give the flow room for the edge labels that ride between columns: widen each rank gap by the
+        // widest label crossing this region, and open up the vertical rhythm so stacked labels don't
+        // collide. Without this the auto-layout packs nodes tight and reads as cramped on first load.
+        let labelSpan = maxEdgeLabelWidth(parentID: parentID, kids: kids, model: model, style: style)
+        let rankGap = style.rankSpacing + labelSpan + 28
+        // Vertical rhythm has to clear the labels on short same-column edges too, so it's generous.
+        let nodeGap = max(style.nodeSpacing, style.edgeLabelFontSize * 3.4)
+
         // 1. Rank into columns; seed order by (rank, definition order).
         let ranks = rankChildren(parentID: parentID, kids: kids, model: model)
         let maxRank = ranks.values.max() ?? 0
@@ -81,7 +89,7 @@ extension GraphLayout {
         var x: CGFloat = 0
         for ci in columns.indices {
             colX.append(x)
-            x += colWidth[ci] + (ci < columns.count - 1 ? style.rankSpacing : 0)
+            x += colWidth[ci] + (ci < columns.count - 1 ? rankGap : 0)
         }
         let contentWidth = x
 
@@ -89,7 +97,7 @@ extension GraphLayout {
         var top: [String: CGFloat] = [:]
         for col in columns {
             var y: CGFloat = 0
-            for id in col { top[id] = y; y += size(id).height + style.nodeSpacing }
+            for id in col { top[id] = y; y += size(id).height + nodeGap }
         }
         func center(_ id: String) -> CGFloat { (top[id] ?? 0) + size(id).height / 2 }
         if columns.count > 1 {
@@ -107,8 +115,8 @@ extension GraphLayout {
                             : neighbours.reduce(0, +) / CGFloat(neighbours.count)
                         let h = size(id).height
                         var c = desired
-                        if c - h / 2 < prevBottom + style.nodeSpacing {
-                            c = prevBottom + style.nodeSpacing + h / 2
+                        if c - h / 2 < prevBottom + nodeGap {
+                            c = prevBottom + nodeGap + h / 2
                         }
                         top[id] = c - h / 2
                         prevBottom = c + h / 2
@@ -157,12 +165,37 @@ extension GraphLayout {
         }
     }
 
+    /// The widest estimated edge-label among transitions internal to this container — the extra room
+    /// each rank gap needs so labels riding between columns stay legible.
+    static func maxEdgeLabelWidth(parentID: String, kids: [String], model: GraphModel, style: GraphStyle) -> CGFloat {
+        let childSet = Set(kids)
+        func directChild(of nodeID: String) -> String? {
+            var current: String? = nodeID
+            while let c = current {
+                if model.node(c)?.parentID == parentID { return c }
+                current = model.node(c)?.parentID
+            }
+            return nil
+        }
+        var maxWidth: CGFloat = 0
+        for edge in model.edges where !edge.label.isEmpty {
+            guard let a = directChild(of: edge.from), let b = directChild(of: edge.to),
+                  a != b, childSet.contains(a), childSet.contains(b) else { continue }
+            maxWidth = max(maxWidth, GraphLayout.estimatedTextWidth(edge.label, fontSize: style.edgeLabelFontSize))
+        }
+        return maxWidth
+    }
+
     // MARK: - Edge routing
 
     /// Routes every (non-self-loop) edge over the final node frames. Edges sharing an unordered node
     /// pair are fanned into distinct **lanes** and leave/enter their nodes at distinct **ports**, and
-    /// each gets a label anchor staggered along the curve with an upright tangent angle.
-    static func routeEdges(model: GraphModel, frames: [String: CGRect], style: GraphStyle) -> [String: EdgeRoute] {
+    /// each gets a label anchor staggered along the curve with an upright tangent angle. A final pass
+    /// de-overlaps the label pills, then any manual per-edge drag offset is applied on top.
+    static func routeEdges(
+        model: GraphModel, frames: [String: CGRect], style: GraphStyle,
+        edgeOffsets: [String: CGSize] = [:]
+    ) -> [String: EdgeRoute] {
         // Group by unordered pair so both directions (A→B and B→A) share a lane budget.
         var groups: [String: [GraphEdge]] = [:]
         for edge in model.edges where !edge.isSelfLoop {
@@ -171,7 +204,7 @@ extension GraphLayout {
             groups[key, default: []].append(edge)
         }
 
-        let laneGap: CGFloat = max(15, style.nodeSpacing * 0.75)
+        let laneGap: CGFloat = max(26, style.edgeLabelFontSize * 2.2)
         var routes: [String: EdgeRoute] = [:]
 
         for (_, unsorted) in groups {
@@ -212,7 +245,10 @@ extension GraphLayout {
                     let bow = min(el * 0.12, 30)
                     control = CGPoint(x: midP.x + (-edy / el) * bow, y: midP.y + (edx / el) * bow)
                 } else {
-                    control = CGPoint(x: midP.x + perpRef.dx * laneOffset, y: midP.y + perpRef.dy * laneOffset)
+                    // Bow well clear of the bundle centre so the label rides in open space beside the
+                    // nodes rather than on top of them (short same-column edges are the tight case).
+                    let bow = laneOffset * 1.9
+                    control = CGPoint(x: midP.x + perpRef.dx * bow, y: midP.y + perpRef.dy * bow)
                 }
 
                 // Stagger the label position along the curve too, so same-side lanes don't stack.
@@ -222,7 +258,10 @@ extension GraphLayout {
                 let anchor = quadPoint(start, control, end, t)
                 let tangent = quadTangent(start, control, end, t)
                 var angle = atan2(tangent.dy, tangent.dx)
-                if cos(angle) < 0 { angle += .pi } // keep the text upright (never mirrored)
+                if cos(angle) < 0 { angle += .pi }        // keep the text upright (never mirrored)
+                // Hint at the line direction without ever going fully vertical — a vertical label of a
+                // long event name would clip into the stacked nodes and be hard to read.
+                angle = max(-0.52, min(0.52, angle))      // ±30°
 
                 routes[edge.id] = EdgeRoute(
                     edgeID: edge.id,
@@ -230,11 +269,62 @@ extension GraphLayout {
                     labelAnchor: anchor,
                     labelAngle: angle,
                     laneIndex: i,
-                    laneCount: n
+                    laneCount: n,
+                    labelWidth: edge.label.isEmpty ? 0 : GraphLayout.estimatedTextWidth(edge.label, fontSize: style.edgeLabelFontSize)
                 )
             }
         }
+
+        declutterLabels(&routes, style: style)
+
+        // Manual per-edge drag offsets win last: bow the curve toward, and move the label to, wherever
+        // the user dragged it (so people can spread crowded arrows out by hand).
+        for (id, offset) in edgeOffsets {
+            guard var route = routes[id] else { continue }
+            let d = CGVector(dx: offset.width, dy: offset.height)
+            route.labelAnchor = CGPoint(x: route.labelAnchor.x + d.dx, y: route.labelAnchor.y + d.dy)
+            if route.points.count == 3 {
+                route.points[1] = CGPoint(x: route.points[1].x + d.dx, y: route.points[1].y + d.dy)
+            }
+            routes[id] = route
+        }
         return routes
+    }
+
+    /// Nudges overlapping label pills apart (axis of least penetration, a few iterations) so labels
+    /// never sit on top of one another — edges may still cross, but their labels stay readable.
+    private static func declutterLabels(_ routes: inout [String: EdgeRoute], style: GraphStyle) {
+        struct Pill { let id: String; var center: CGPoint; let halfW: CGFloat; let halfH: CGFloat }
+        let halfH = style.edgeLabelFontSize * 0.7 + 3
+        var pills: [Pill] = routes.keys.sorted().compactMap { id in
+            let route = routes[id]!
+            guard route.labelWidth > 0 else { return nil }
+            return Pill(id: id, center: route.labelAnchor, halfW: route.labelWidth / 2 + 4, halfH: halfH)
+        }
+        guard pills.count > 1 else { return }
+
+        for _ in 0..<16 {
+            var moved = false
+            for i in 0..<pills.count {
+                for j in (i + 1)..<pills.count {
+                    let dx = pills[j].center.x - pills[i].center.x
+                    let dy = pills[j].center.y - pills[i].center.y
+                    let overlapX = pills[i].halfW + pills[j].halfW - abs(dx)
+                    let overlapY = pills[i].halfH + pills[j].halfH - abs(dy)
+                    guard overlapX > 0, overlapY > 0 else { continue }
+                    moved = true
+                    if overlapX < overlapY {          // separate horizontally (least penetration)
+                        let push = overlapX / 2 * (dx < 0 ? -1 : 1)
+                        pills[i].center.x -= push; pills[j].center.x += push
+                    } else {                          // separate vertically
+                        let push = overlapY / 2 * (dy < 0 ? -1 : 1)
+                        pills[i].center.y -= push; pills[j].center.y += push
+                    }
+                }
+            }
+            if !moved { break }
+        }
+        for pill in pills { routes[pill.id]?.labelAnchor = pill.center }
     }
 
     // MARK: - Geometry helpers
