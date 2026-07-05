@@ -24,6 +24,10 @@ public enum GraphLayout {
         // A parent's content-area origin relative to the parent's own frame origin.
         var contentInset: [String: CGPoint] = [:]
 
+        // How many self-loops each node has — a node widens to keep all its fanned self-loops on its edge.
+        var selfLoops: [String: Int] = [:]
+        for edge in model.edges where edge.isSelfLoop { selfLoops[edge.from, default: 0] += 1 }
+
         // MARK: Measure pass (bottom-up)
 
         func measure(_ id: String) {
@@ -31,7 +35,7 @@ public enum GraphLayout {
             let kids = model.children(of: id)
 
             guard !kids.isEmpty else {
-                sizes[id] = leafSize(label: node.label, style: style)
+                sizes[id] = leafSize(label: node.label, style: style, selfLoops: selfLoops[id] ?? 0)
                 return
             }
             for kid in kids { measure(kid) }
@@ -228,9 +232,15 @@ public enum GraphLayout {
 
     // MARK: - Helpers
 
-    private static func leafSize(label: String, style: GraphStyle) -> CGSize {
+    private static func leafSize(label: String, style: GraphStyle, selfLoops: Int = 0) -> CGSize {
         let estimated = estimatedTextWidth(label, fontSize: style.nodeLabelFontSize)
-        let width = max(style.nodeMinWidth, estimated + style.nodePadding * 2)
+        var width = max(style.nodeMinWidth, estimated + style.nodePadding * 2)
+        // Widen so every fanned self-loop still sits on the node's top edge (see drawSelfLoop's fan:
+        // loops are spread ±(n-1)/2 · r·2.4 around the centre, each ~r wide).
+        if selfLoops > 1 {
+            let r = style.selfLoopRadius
+            width = max(width, CGFloat(selfLoops - 1) * r * 2.4 + r * 2 + style.nodePadding)
+        }
         return CGSize(width: width, height: style.nodeMinHeight)
     }
 

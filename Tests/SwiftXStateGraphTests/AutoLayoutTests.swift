@@ -210,6 +210,28 @@ struct AutoLayoutTests {
         #expect(a.stableHue >= 0 && a.stableHue < 1)
     }
 
+    @Test("A node with multiple self-loops widens so the fanned loops stay on its edge")
+    func multiSelfLoopWidensNode() {
+        // "hub" has three self-loops (a/b/c) plus one exit.
+        let machine = createMachine(MachineConfig<Int>(
+            id: "ml", initial: "hub", context: 0,
+            states: [
+                "hub": StateNodeConfig(on: ["a": .to("hub"), "b": .to("hub"), "c": .to("hub"), "go": .to("done")]),
+                "done": StateNodeConfig(),
+            ]
+        ))
+        let model = GraphModelBuilder.build(from: machine)
+        let layout = GraphLayout.compute(model: model, style: .default)
+        let hub = layout.frame("ml.hub")!
+        let loops = model.edges.filter { $0.isSelfLoop && $0.from == "ml.hub" }.count
+        #expect(loops == 3)
+        // The outermost fanned loop centre sits at midX ± (loops-1)/2 · r · 2.4; it (plus the loop's own
+        // half-width) must fall inside the node so no loop floats off the edge.
+        let r = GraphStyle.default.selfLoopRadius
+        let extreme = CGFloat(loops - 1) / 2 * r * 2.4 + r * 0.5
+        #expect(hub.width / 2 >= extreme)
+    }
+
     // MARK: Arrangement persistence
 
     @Test("Arrangement store round-trips node/edge offsets and clears")

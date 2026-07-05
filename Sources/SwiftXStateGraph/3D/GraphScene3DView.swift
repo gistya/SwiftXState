@@ -141,7 +141,10 @@ struct GraphScene3DView {
         // Leaf nodes as brushed-metal plates at their 3D position, label billboarded on the front.
         for node in model.nodes where !node.type.isContainer {
             let s = CGFloat(style.node3DSize) * scale
-            let box = SCNBox(width: s * 1.7, height: s, length: s, chamferRadius: CGFloat(style.nodeCornerRadius) * scale)
+            // Widen so all fanned self-loops (spaced 0.62 apart) still sit over the node.
+            let loops = selfLoopCount[node.id] ?? 0
+            let width = loops > 1 ? max(s * 1.7, CGFloat(loops - 1) * 0.62 + 0.72) : s * 1.7
+            let box = SCNBox(width: width, height: s, length: s, chamferRadius: CGFloat(style.nodeCornerRadius) * scale)
             let mat = brushedMetalMaterial()
             box.materials = [mat]
             let snode = SCNNode(geometry: box)
