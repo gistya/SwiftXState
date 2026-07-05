@@ -194,8 +194,11 @@ struct GraphCanvas: View {
 
             if edge.isSelfLoop {
                 let dash = edge.isGuarded ? style.guardedEdgeDash : []
+                // Put the loop on the node's right when the space directly above is occupied by a
+                // stacked sibling (so its label doesn't tuck behind that node).
+                let onRight = spaceAboveBlocked(fromRect, excluding: edge.from)
                 drawSelfLoop(in: &context, rect: fromRect, edge: edge, color: color, width: width, dash: dash,
-                             showLabel: showLabels, tint: autoLayout ? color : nil)
+                             showLabel: showLabels, tint: autoLayout ? color : nil, onRight: onRight)
                 continue
             }
 
@@ -268,24 +271,66 @@ struct GraphCanvas: View {
 
     private func drawSelfLoop(
         in context: inout GraphicsContext, rect: CGRect, edge: GraphEdge,
-        color: Color, width: CGFloat, dash: [CGFloat], showLabel: Bool, tint: Color? = nil
+        color: Color, width: CGFloat, dash: [CGFloat], showLabel: Bool, tint: Color? = nil, onRight: Bool = false
     ) {
         let r = style.selfLoopRadius
-        let anchor = CGPoint(x: rect.midX, y: rect.minY)
-        let left = CGPoint(x: anchor.x - r * 0.5, y: anchor.y)
-        let right = CGPoint(x: anchor.x + r * 0.5, y: anchor.y)
         var path = Path()
-        path.move(to: left)
-        path.addCurve(
-            to: right,
-            control1: CGPoint(x: anchor.x - r, y: anchor.y - r * 1.6),
-            control2: CGPoint(x: anchor.x + r, y: anchor.y - r * 1.6)
-        )
-        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, dash: dash))
-        drawArrowhead(in: &context, tip: right, direction: CGPoint(x: 0.2, y: 1), color: color)
-        if showLabel, !edge.label.isEmpty {
-            drawEdgeLabel(in: &context, text: edge.label, at: CGPoint(x: anchor.x, y: anchor.y - r * 1.5), tint: tint)
+        let arrowTip: CGPoint, arrowDir: CGPoint, labelPoint: CGPoint
+
+        if onRight {
+            // A loop bulging off the node's right edge, label to its right — clears a stacked sibling above.
+            let anchor = CGPoint(x: rect.maxX, y: rect.midY)
+            let top = CGPoint(x: anchor.x, y: anchor.y - r * 0.5)
+            let bottom = CGPoint(x: anchor.x, y: anchor.y + r * 0.5)
+            path.move(to: top)
+            path.addCurve(
+                to: bottom,
+                control1: CGPoint(x: anchor.x + r * 1.6, y: anchor.y - r),
+                control2: CGPoint(x: anchor.x + r * 1.6, y: anchor.y + r)
+            )
+            arrowTip = bottom
+            arrowDir = CGPoint(x: -0.9, y: 0.3)
+            labelPoint = CGPoint(x: anchor.x + r * 1.4 + estimatedLabelWidth(edge.label) / 2, y: anchor.y)
+        } else {
+            // A loop bulging off the node's top, label above.
+            let anchor = CGPoint(x: rect.midX, y: rect.minY)
+            let left = CGPoint(x: anchor.x - r * 0.5, y: anchor.y)
+            let right = CGPoint(x: anchor.x + r * 0.5, y: anchor.y)
+            path.move(to: left)
+            path.addCurve(
+                to: right,
+                control1: CGPoint(x: anchor.x - r, y: anchor.y - r * 1.6),
+                control2: CGPoint(x: anchor.x + r, y: anchor.y - r * 1.6)
+            )
+            arrowTip = right
+            arrowDir = CGPoint(x: 0.2, y: 1)
+            labelPoint = CGPoint(x: anchor.x, y: anchor.y - r * 1.5)
         }
+
+        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, dash: dash))
+        drawArrowhead(in: &context, tip: arrowTip, direction: arrowDir, color: color)
+        if showLabel, !edge.label.isEmpty {
+            drawEdgeLabel(in: &context, text: edge.label, at: labelPoint, tint: tint)
+        }
+    }
+
+    /// Cheap label-width estimate matching the layout engine's, for placing a side self-loop's label.
+    private func estimatedLabelWidth(_ text: String) -> CGFloat {
+        CGFloat(text.count) * style.edgeLabelFontSize * 0.62
+    }
+
+    /// Whether another (non-container) node sits directly above `rect` within self-loop reach — so a
+    /// top self-loop would collide with it.
+    private func spaceAboveBlocked(_ rect: CGRect, excluding id: String) -> Bool {
+        let reach = style.selfLoopRadius * 2.6
+        for (nodeID, frame) in layout.frames where nodeID != id {
+            guard model.node(nodeID)?.type.isContainer == false else { continue }
+            if frame.maxX > rect.minX, frame.minX < rect.maxX,
+               frame.maxY <= rect.minY + 2, rect.minY - frame.maxY < reach {
+                return true
+            }
+        }
+        return false
     }
 
     private func drawArrowhead(in context: inout GraphicsContext, tip: CGPoint, direction: CGPoint, color: Color) {
