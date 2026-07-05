@@ -59,18 +59,34 @@ struct GraphScene3DView {
         let sceneRadius = max(simd_length(hi - lo) / 2, 3)
         let nodeHalf = Float(style.node3DSize) * Float(scale) / 2
 
-        // Containers: translucent glass cubes bounding their descendants' 3D positions.
+        // Self-loop counts drive both the self-loop fan and how wide a node box (and the region cube
+        // around it) must be. Computed up front so the container cubes below can size to the wider boxes.
+        var selfLoopCount: [String: Int] = [:]
+        for edge in model.edges where edge.isSelfLoop { selfLoopCount[edge.from, default: 0] += 1 }
+        let boxDepth = CGFloat(style.node3DSize) * scale
+        func nodeBoxWidth(_ id: String) -> CGFloat {
+            let loops = selfLoopCount[id] ?? 0
+            return loops > 1 ? max(boxDepth * 1.7, CGFloat(loops - 1) * 0.62 + 0.72) : boxDepth * 1.7
+        }
+
+        // Containers: translucent glass cubes bounding their descendants' 3D node *boxes* (not just
+        // their centres) so the wider self-loop nodes still sit inside the region.
         let glassMat = glassMaterial()
         for node in model.nodes where node.type.isContainer {
             let descendants = leafDescendants(of: node.id)
             guard !descendants.isEmpty else { continue }
             var clo = SIMD3<Float>(repeating: .greatestFiniteMagnitude)
             var chi = SIMD3<Float>(repeating: -.greatestFiniteMagnitude)
-            for d in descendants { let s = simd3(p(d)); clo = simd_min(clo, s); chi = simd_max(chi, s) }
+            for d in descendants {
+                let s = simd3(p(d))
+                let hw = Float(nodeBoxWidth(d) / 2)     // account for the node's actual (possibly wide) box
+                clo = simd_min(clo, SIMD3<Float>(s.x - hw, s.y - nodeHalf, s.z - nodeHalf))
+                chi = simd_max(chi, SIMD3<Float>(s.x + hw, s.y + nodeHalf, s.z + nodeHalf))
+            }
             // Extra vertical padding: the region box is deliberately taller than it needs to be so the
             // arrows and their labels around its states have room (top self-loops especially).
-            let padXZ = nodeHalf + 0.4
-            let padY = nodeHalf + 1.2
+            let padXZ: Float = 0.4
+            let padY: Float = 1.2
             clo -= SIMD3<Float>(padXZ, padY, padXZ)
             chi += SIMD3<Float>(padXZ, padY, padXZ)
             let sizeV = chi - clo
@@ -90,8 +106,6 @@ struct GraphScene3DView {
         // Edges: a cylinder + arrowhead grouped under one node named "edge|from|to", with the label
         // billboarded and ATTACHED to that group so it travels with the arrow.
         let autoLayout = model.useAutoLayoutForInspection
-        var selfLoopCount: [String: Int] = [:]
-        for edge in model.edges where edge.isSelfLoop { selfLoopCount[edge.from, default: 0] += 1 }
         var selfLoopSeen: [String: Int] = [:]
         for edge in model.edges {
             guard pos3D[edge.from] != nil, pos3D[edge.to] != nil else { continue }
@@ -141,10 +155,7 @@ struct GraphScene3DView {
         // Leaf nodes as brushed-metal plates at their 3D position, label billboarded on the front.
         for node in model.nodes where !node.type.isContainer {
             let s = CGFloat(style.node3DSize) * scale
-            // Widen so all fanned self-loops (spaced 0.62 apart) still sit over the node.
-            let loops = selfLoopCount[node.id] ?? 0
-            let width = loops > 1 ? max(s * 1.7, CGFloat(loops - 1) * 0.62 + 0.72) : s * 1.7
-            let box = SCNBox(width: width, height: s, length: s, chamferRadius: CGFloat(style.nodeCornerRadius) * scale)
+            let box = SCNBox(width: nodeBoxWidth(node.id), height: s, length: s, chamferRadius: CGFloat(style.nodeCornerRadius) * scale)
             let mat = brushedMetalMaterial()
             box.materials = [mat]
             let snode = SCNNode(geometry: box)

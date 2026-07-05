@@ -139,12 +139,13 @@ public enum GraphLayout {
         func finalizeContainer(id: String, contentSize: CGSize, style: GraphStyle) {
             let pad = style.regionPadding
             let header = style.regionHeaderHeight
-            let vpad = style.regionVerticalPadding      // extra breathing room top + bottom
-            sizes[id] = CGSize(
-                width: contentSize.width + pad * 2,
-                height: contentSize.height + header + pad + vpad * 2
-            )
-            contentInset[id] = CGPoint(x: pad, y: header + vpad)
+            let vpad = style.regionVerticalPadding
+            let bottomInset = pad + vpad
+            // Top inset carries header + padding AND enough extra that the content's centre sits
+            // regionContentDrop below the region centre (shift = (top − bottom) / 2 → 2·drop asymmetry).
+            let topInset = max(header + vpad, bottomInset + 2 * style.regionContentDrop)
+            sizes[id] = CGSize(width: contentSize.width + pad * 2, height: topInset + contentSize.height + bottomInset)
+            contentInset[id] = CGPoint(x: pad, y: topInset)
         }
 
         // MARK: Assign pass (top-down, applying manual drag offsets cumulatively)
@@ -181,11 +182,12 @@ public enum GraphLayout {
             let pad = style.regionPadding
             let header = style.regionHeaderHeight
             let vpad = style.regionVerticalPadding
-            // Mirror finalizeContainer's insets (header + vpad on top, pad + vpad on the bottom) so the
-            // refit keeps the region's extra vertical breathing room instead of shrinking it back.
+            let bottomInset = pad + vpad
+            let topInset = max(header + vpad, bottomInset + 2 * style.regionContentDrop)
+            // Mirror finalizeContainer's asymmetric insets so the refit keeps the drop + breathing room.
             frames[id] = CGRect(
-                x: union.minX - pad, y: union.minY - header - vpad,
-                width: union.width + pad * 2, height: union.height + header + pad + vpad * 2
+                x: union.minX - pad, y: union.minY - topInset,
+                width: union.width + pad * 2, height: union.height + topInset + bottomInset
             )
         }
 

@@ -71,6 +71,9 @@ public struct GraphStyle: Sendable {
     /// box taller than its states strictly need, giving the arrows and labels around them (top
     /// self-loops especially) room to breathe.
     public var regionVerticalPadding: CGFloat = 34
+    /// How far the states' collective centre sits *below* the region box's centre (extra headroom above
+    /// the top row for self-loops/labels). ~1 font size.
+    public var regionContentDrop: CGFloat = 24
     /// Vertical gap between stacked regions inside a parallel state.
     public var regionSpacing: CGFloat = 28
 
