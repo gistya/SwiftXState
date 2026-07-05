@@ -82,7 +82,7 @@ public struct XTransition<
     }
 
     /// Only take this transition when the predicate holds (context-only).
-    public func when(_ predicate: @escaping @Sendable Schema.Guard) -> Self {
+    public func when(_ predicate: @escaping Schema.Guard) -> Self {
         clone(mutating: \.node.`guard` <- predicate)
     }
 
@@ -94,14 +94,14 @@ public struct XTransition<
     }
 
     /// Apply a pure context transform as the transition is taken (no effects).
-    public func action(_ transform: @escaping @Sendable Schema.Action) -> Self {
+    public func action(_ transform: @escaping Schema.Action) -> Self {
         let handler: Schema.Handler = { args, _ in transform(args.context) }
         return clone(mutating: \.node.action <- handler)
     }
 
     /// Apply an effectful handler as the transition is taken — XState v6's `(args, enq) -> context`.
     /// Return the next context; `raise` / `sendTo` / `emit` through `enq`.
-    public func action(_ handler: @escaping @Sendable Schema.Handler) -> Self {
+    public func action(_ handler: @escaping Schema.Handler) -> Self {
         clone(mutating: \.node.action <- handler)
     }
 }

@@ -56,6 +56,9 @@ public protocol Contextual {
 /// common surface every machine component (`SchemaReducible`, `ResolvedMachine`, `MachineSchema`) shares.
 public protocol MachineSchemable: Contextual, EventIdentifiable, StateIdentifiable {}
 
+extension String: @retroactive PropertyInitializable {}
+extension String: @retroactive Cloneable {}
+
 extension String: StateIdentifying, EventIdentifying {
     public var name: String { self }
 }
