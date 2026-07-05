@@ -2,63 +2,6 @@
 import CoreGraphics
 import Foundation
 
-/// A routed transition, produced by the auto-layout engine so the renderer can draw a ported,
-/// lane-separated, along-the-line-labelled edge instead of a naive centre-to-centre curve. All
-/// points are absolute logical coordinates. Only present when the machine opts into auto-layout;
-/// self-loops are not routed here (the renderer draws those directly).
-public struct EdgeRoute: Sendable, Equatable {
-    public let edgeID: String
-    /// Control polyline: `[startPort, control, endPort]` — a quadratic Bézier the renderer strokes.
-    public var points: [CGPoint]
-    /// Point on the curve where the label pill is anchored (staggered per lane so pills don't stack).
-    public var labelAnchor: CGPoint
-    /// Tangent angle at `labelAnchor` (radians), already flipped to keep the text upright.
-    public var labelAngle: CGFloat
-    /// This edge's index among the edges sharing its unordered node pair — feeds the renderer's
-    /// dash/outline tie-break when two same-pair lanes hash to similar colours.
-    public let laneIndex: Int
-    /// How many edges share this edge's unordered node pair (lane count).
-    public let laneCount: Int
-    /// Estimated width of the label pill (0 when the edge has no label). Used to keep labels from
-    /// overlapping and to grow the fit-to-view bounds so labels aren't clipped.
-    public var labelWidth: CGFloat
-
-    public init(edgeID: String, points: [CGPoint], labelAnchor: CGPoint, labelAngle: CGFloat, laneIndex: Int, laneCount: Int, labelWidth: CGFloat = 0) {
-        self.edgeID = edgeID
-        self.points = points
-        self.labelAnchor = labelAnchor
-        self.labelAngle = labelAngle
-        self.laneIndex = laneIndex
-        self.laneCount = laneCount
-        self.labelWidth = labelWidth
-    }
-}
-
-/// The result of laying out a `GraphModel`: an absolute frame (in logical
-/// coordinates) for every node, plus the overall content bounds. Containers
-/// (compound / parallel) get frames that fully enclose their descendants, which
-/// is what produces the nested "statechart" look.
-public struct GraphLayoutResult: Sendable, Equatable {
-    public var frames: [String: CGRect]
-    /// The bounding rectangle of every frame, used to center/fit the graph.
-    public var bounds: CGRect
-    /// Routed edges keyed by edge id. Empty when the machine opts out of auto-layout
-    /// (`useAutoLayoutForInspection == false`), in which case the renderer falls back to its
-    /// classic centre-to-centre curves.
-    public var routes: [String: EdgeRoute]
-
-    public init(frames: [String: CGRect], bounds: CGRect, routes: [String: EdgeRoute] = [:]) {
-        self.frames = frames
-        self.bounds = bounds
-        self.routes = routes
-    }
-
-    public static let empty = GraphLayoutResult(frames: [:], bounds: .zero)
-
-    public func frame(_ id: String) -> CGRect? { frames[id] }
-    public func route(_ edgeID: String) -> EdgeRoute? { routes[edgeID] }
-}
-
 /// A deterministic, dependency-free layout engine for statecharts.
 ///
 /// Each compound region is laid out as a left-to-right layered flow (ranks derived

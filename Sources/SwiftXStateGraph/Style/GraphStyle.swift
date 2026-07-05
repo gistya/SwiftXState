@@ -1,11 +1,5 @@
+#if SWIFTXSTATE_GRAPH_UI
 import SwiftUI
-
-/// Background grid styles for the graph canvas / 3D backdrop.
-public enum GraphGridStyle: String, Sendable, CaseIterable {
-    case none
-    case square
-    case hexagonal
-}
 
 /// A customizable style descriptor for the state-machine graph visualizer.
 ///
@@ -43,7 +37,7 @@ public struct GraphStyle: Sendable {
     public var nodeMinWidth: CGFloat = 104
     /// Taller than the label needs, deliberately — gives edge ports (distributed down each side) and
     /// their labels vertical room so the arrows around a state aren't cramped.
-    public var nodeMinHeight: CGFloat = 64
+    public var nodeMinHeight: CGFloat = 44
     public var nodePadding: CGFloat = 16
     public var nodeShadowRadius: CGFloat = 4
     public var nodeShadowOpacity: Double = 0.18
@@ -295,3 +289,4 @@ public extension View {
         environment(\.graphStyle, style)
     }
 }
+#endif
