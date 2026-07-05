@@ -35,9 +35,25 @@ extension GraphLayout {
         // widest label crossing this region, and open up the vertical rhythm so stacked labels don't
         // collide. Without this the auto-layout packs nodes tight and reads as cramped on first load.
         let labelSpan = maxEdgeLabelWidth(parentID: parentID, kids: kids, model: model, style: style)
-        let rankGap = style.rankSpacing + labelSpan + 28
-        // Vertical rhythm has to clear the labels on short same-column edges too, so it's generous.
-        let nodeGap = max(style.nodeSpacing, style.edgeLabelFontSize * 3.4)
+        // Spread the whole region out more the busier it is: a region with many transitions per state
+        // needs 2×+ the breathing room of a sparse one. Scales the base gaps by average out-degree.
+        let childSet0 = Set(kids)
+        func directKid(_ id: String) -> String? {
+            var c: String? = id
+            while let x = c { if childSet0.contains(x) { return x }; c = model.node(x)?.parentID }
+            return nil
+        }
+        let internalEdges = model.edges.filter {
+            !$0.isSelfLoop
+                && directKid($0.from) != nil && directKid($0.to) != nil
+                && directKid($0.from) != directKid($0.to)
+        }.count
+        let density = kids.isEmpty ? 0 : CGFloat(internalEdges) / CGFloat(kids.count)
+        let spread = max(1.0, min(2.2, density))          // ≥1×, up to ~2.2× when densely connected
+        // Scale the base spacing by density, but keep the (fixed-size) label allowance additive so one
+        // very wide label doesn't multiply into every gap and balloon the whole graph.
+        let rankGap = style.rankSpacing * spread + labelSpan + 28
+        let nodeGap = max(style.nodeSpacing, style.edgeLabelFontSize * 2.4) * spread
 
         // 1. Rank into columns; seed order by (rank, definition order).
         let ranks = rankChildren(parentID: parentID, kids: kids, model: model)
@@ -83,32 +99,33 @@ extension GraphLayout {
             }
         }
 
-        // 3a. Column x-origins. Each inter-column gap is widened by how many edges route through it, so
-        // busy gaps get room for all their channel tracks (the main "spread it out automatically" knob)
-        // and quiet gaps stay tight.
-        let colWidth: [CGFloat] = columns.map { col in col.map { size($0).width }.max() ?? 0 }
+        // 3a. Give every node its OWN column (a staggered grid, not stacked ranks). Column order stays
+        // rank-major so the flow reads left-to-right, but no two nodes share an X. Combined with unique
+        // rows below, a horizontal edge segment lives in a node's own row where nothing else sits and
+        // vertical segments live in the single-node gaps — which keeps the orthogonal routing clean even
+        // as the graph spreads out. Each gap still widens by how many edges cross it.
         let trackGap: CGFloat = max(16, style.edgeLabelFontSize * 1.5)
-        var colOf: [String: Int] = [:]
-        for (ci, col) in columns.enumerated() { for id in col { colOf[id] = ci } }
-        func columnOf(_ nodeID: String) -> Int? {   // map any descendant up to its direct-child column
+        let colOrder = columns.flatMap { $0 }                 // rank-major, barycenter within rank
+        var colIndexOf: [String: Int] = [:]
+        for (i, id) in colOrder.enumerated() { colIndexOf[id] = i }
+        func colIndex(_ nodeID: String) -> Int? {             // map any descendant up to its column node
             var current: String? = nodeID
-            while let c = current { if let ci = colOf[c] { return ci }; current = model.node(c)?.parentID }
+            while let c = current { if let i = colIndexOf[c] { return i }; current = model.node(c)?.parentID }
             return nil
         }
-        var crossings = [Int](repeating: 0, count: max(columns.count - 1, 0))
+        var crossings = [Int](repeating: 0, count: max(colOrder.count - 1, 0))
         for edge in model.edges where !edge.isSelfLoop {
-            guard let ca = columnOf(edge.from), let cb = columnOf(edge.to) else { continue }
-            if ca == cb { if ca < crossings.count { crossings[ca] += 1 } }   // same-column C uses the gap to the right
-            else { for gap in min(ca, cb)..<max(ca, cb) { crossings[gap] += 1 } }
+            guard let a = colIndex(edge.from), let b = colIndex(edge.to) else { continue }
+            if a == b { if a < crossings.count { crossings[a] += 1 } }
+            else { for gap in min(a, b)..<max(a, b) { crossings[gap] += 1 } }
         }
-        var colX: [CGFloat] = []
-        var x: CGFloat = 0
-        for ci in columns.indices {
-            colX.append(x)
-            x += colWidth[ci]
-            if ci < columns.count - 1 { x += rankGap + CGFloat(crossings[ci]) * trackGap }
+        var colX = [CGFloat](repeating: 0, count: colOrder.count)
+        var xCursor: CGFloat = 0
+        for i in colOrder.indices {
+            colX[i] = xCursor
+            xCursor += size(colOrder[i]).width
+            if i < colOrder.count - 1 { xCursor += rankGap + CGFloat(crossings[i]) * trackGap }
         }
-        let contentWidth = x
 
         // 3b. Initial vertical stack, then neighbour-aligned coordinate assignment.
         var top: [String: CGFloat] = [:]
@@ -142,19 +159,30 @@ extension GraphLayout {
             }
         }
 
-        // 4. Normalize to a (0,0) content origin; center each node within its column band.
-        let allTops = columns.flatMap { $0 }.map { top[$0] ?? 0 }
-        let minTop = allTops.min() ?? 0
-        var local: [String: CGPoint] = [:]
-        var maxBottom: CGFloat = 0
-        for ci in columns.indices {
-            for id in columns[ci] {
-                let t = (top[id] ?? 0) - minTop
-                local[id] = CGPoint(x: colX[ci] + (colWidth[ci] - size(id).width) / 2, y: t)
-                maxBottom = max(maxBottom, t + size(id).height)
-            }
+        // 4. Give every node its OWN row too, ordered by the neighbour-aligned Y from 3b (so connected
+        // nodes stay vertically near each other) — one node per row, so no two share a Y. Place each
+        // node at its (column, row) cell.
+        let rowOrder = kids.sorted {
+            let ca = center($0), cb = center($1)
+            if ca != cb { return ca < cb }
+            return (colIndexOf[$0] ?? 0) < (colIndexOf[$1] ?? 0)
         }
-        return (local, CGSize(width: contentWidth, height: maxBottom))
+        var rowY: [String: CGFloat] = [:]
+        var yCursor: CGFloat = 0
+        for id in rowOrder {
+            rowY[id] = yCursor
+            yCursor += size(id).height + nodeGap
+        }
+        var local: [String: CGPoint] = [:]
+        var maxRight: CGFloat = 0, maxBottom: CGFloat = 0
+        for id in kids {
+            let cx = colX[colIndexOf[id] ?? 0]
+            let cy = rowY[id] ?? 0
+            local[id] = CGPoint(x: cx, y: cy)
+            maxRight = max(maxRight, cx + size(id).width)
+            maxBottom = max(maxBottom, cy + size(id).height)
+        }
+        return (local, CGSize(width: maxRight, height: maxBottom))
     }
 
     /// Undirected adjacency among a container's *direct* children (any deeper endpoint maps up to the
