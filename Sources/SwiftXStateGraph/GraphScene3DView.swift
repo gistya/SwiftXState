@@ -55,67 +55,101 @@ struct GraphScene3DView {
         func position(for rect: CGRect, z: CGFloat) -> SCNVector3 {
             vec((rect.midX - center.x) * scale, -(rect.midY - center.y) * scale, z)
         }
+        // Lift a 2D logical point (an edge port / label anchor) into world space at depth `z`.
+        func worldPoint(_ p: CGPoint, z: CGFloat) -> SCNVector3 {
+            vec((p.x - center.x) * scale, -(p.y - center.y) * scale, z)
+        }
 
-        // Containers: frosted "liquid glass" panes — one per nesting level, sitting just
-        // behind their contents, with the region label floating in front.
+        // Containers: translucent "liquid glass" *cubes* that encompass their substates. The box spans
+        // in depth from just behind this container's own layer to just in front of its deepest
+        // descendant's layer, so children sit inside the volume rather than in front of a flat pane.
         let glassMat = glassMaterial()
         for node in model.nodes where node.type.isContainer {
             guard let rect = layout.frame(node.id) else { continue }
-            // Thick, rounded glass slab.
-            let pane = SCNBox(width: rect.width * scale, height: rect.height * scale, length: 0.22, chamferRadius: 0.10)
+            let backZ = CGFloat(nestingDepth(of: node.id)) * CGFloat(style.layerZSpacing) * scale - 0.12
+            let frontZ = CGFloat(maxDescendantDepth(of: node.id)) * CGFloat(style.layerZSpacing) * scale
+                + CGFloat(style.node3DSize) * scale / 2 + 0.12
+            let length = max(frontZ - backZ, 0.22)
+            let pane = SCNBox(width: rect.width * scale, height: rect.height * scale, length: length, chamferRadius: 0.10)
             pane.firstMaterial = glassMat
             let snode = SCNNode(geometry: pane)
-            snode.position = position(for: rect, z: z(for: node.id, offset: -0.16))
+            snode.position = position(for: rect, z: (backZ + frontZ) / 2)
             scene.rootNode.addChildNode(snode)
 
             if showLabels, let title = labelPlaneNode(node.label, worldHeight: 0.5, fontSize: 15, weight: .bold) {
-                // Child of the pane so it rotates with it; sits on the front face, near the top.
+                // Child of the cube so it rotates with it; on the near (front) face, top-left corner.
                 let titleWidth = (title.geometry as? SCNPlane)?.width ?? 0
                 title.position = vec(
                     -(rect.width * scale) / 2 + titleWidth / 2 + 0.25,
                     (rect.height * scale) / 2 - 0.42,
-                    0.13
+                    length / 2 + 0.05
                 )
                 snode.addChildNode(title)
             }
         }
 
-        // Edges as thick cylinders + arrowheads between node centers, with upright labels.
-        for edge in model.edges where !edge.isSelfLoop {
+        // Edges as thick cylinders + arrowheads, per-event coloured. When the machine opts into
+        // auto-layout the endpoints are the routed ports (distinct per lane), so parallel transitions
+        // no longer coincide; otherwise they fall back to node centres.
+        let autoLayout = model.useAutoLayoutForInspection
+        for edge in model.edges {
             guard let from = layout.frame(edge.from), let to = layout.frame(edge.to) else { continue }
-            let a = position(for: from, z: z(for: edge.from))
-            let b = position(for: to, z: z(for: edge.to))
             let highlighted = edge.from == selectedID || edge.to == selectedID
-            let color = PlatformColor(highlighted ? style.activeEdgeColor : style.edgeColor)
+            let color = highlighted ? PlatformColor(style.activeEdgeColor)
+                                    : (autoLayout ? edgeColor3D(edge) : PlatformColor(style.edgeColor))
+
+            // Self-loops (skipped entirely before) now render as a ring on the node's near face.
+            if edge.isSelfLoop {
+                let loop = selfLoopNode(rect: from, center: center, z: z(for: edge.from), color: color,
+                                        label: showLabels ? edge.label : "")
+                loop.name = "edge|\(edge.from)|\(edge.to)"
+                scene.rootNode.addChildNode(loop)
+                continue
+            }
+
+            let route = autoLayout ? layout.route(edge.id) : nil
+            let zf = z(for: edge.from), zt = z(for: edge.to)
+            let a = route.map { worldPoint($0.points[0], z: zf) } ?? position(for: from, z: zf)
+            let b = route.map { worldPoint($0.points[2], z: zt) } ?? position(for: to, z: zt)
 
             let en = edgeNode(from: a, to: b, color: color, radius: 0.024)
             en.name = "edge|\(edge.from)|\(edge.to)"
             scene.rootNode.addChildNode(en)
 
-            // Arrowhead just outside the target node's boundary, pointing in.
             let pa = simd3(a), pb = simd3(b)
             let length = simd_length(pb - pa)
             if length > 1e-4 {
                 let dir = (pb - pa) / length
-                let hw = Float(to.width) * Float(scale) / 2, hh = Float(to.height) * Float(scale) / 2
-                let tx = abs(dir.x) > 1e-4 ? hw / abs(dir.x) : .greatestFiniteMagnitude
-                let ty = abs(dir.y) > 1e-4 ? hh / abs(dir.y) : .greatestFiniteMagnitude
                 let arrowSize: CGFloat = 0.15
-                let pullback = min(min(tx, ty) + Float(arrowSize) * 0.5, length * 0.48)
-                let tip = pb - dir * pullback
+                // A routed port already sits on the target border; a centre-to-centre fallback pulls
+                // the tip back to just outside the target node.
+                let tip: SIMD3<Float>
+                if route != nil {
+                    tip = pb
+                } else {
+                    let hw = Float(to.width) * Float(scale) / 2, hh = Float(to.height) * Float(scale) / 2
+                    let tx = abs(dir.x) > 1e-4 ? hw / abs(dir.x) : .greatestFiniteMagnitude
+                    let ty = abs(dir.y) > 1e-4 ? hh / abs(dir.y) : .greatestFiniteMagnitude
+                    tip = pb - dir * min(min(tx, ty) + Float(arrowSize) * 0.5, length * 0.48)
+                }
                 let arrow = arrowheadNode(tip: tip, direction: dir, color: color, size: arrowSize)
                 arrow.name = "arrow|\(edge.from)|\(edge.to)"
                 scene.rootNode.addChildNode(arrow)
             }
 
             if showLabels, !edge.label.isEmpty, let lbl = labelPlaneNode(edge.label, worldHeight: 0.3, fontSize: 12) {
-                // Sit at the midpoint, rotated to run along the edge but flipped if it would be
-                // upside-down (right-to-left), and offset toward the camera so it doesn't clip.
-                let mid = (pa + pb) / 2
-                var angle = atan2(Double(pb.y - pa.y), Double(pb.x - pa.x))
-                if cos(angle) < 0 { angle += .pi }   // keep text upright
-                lbl.eulerAngles = vec(0, 0, CGFloat(angle))
-                lbl.position = vec(CGFloat(mid.x), CGFloat(mid.y), CGFloat(mid.z) + 0.09)
+                if let route {
+                    // Reuse the 2D router's along-line anchor + upright tangent angle.
+                    let anchor = worldPoint(route.labelAnchor, z: (zf + zt) / 2)
+                    lbl.eulerAngles = vec(0, 0, route.labelAngle)
+                    lbl.position = vec(CGFloat(anchor.x), CGFloat(anchor.y), CGFloat(anchor.z) + 0.09)
+                } else {
+                    let mid = (pa + pb) / 2
+                    var angle = atan2(Double(pb.y - pa.y), Double(pb.x - pa.x))
+                    if cos(angle) < 0 { angle += .pi }   // keep text upright
+                    lbl.eulerAngles = vec(0, 0, CGFloat(angle))
+                    lbl.position = vec(CGFloat(mid.x), CGFloat(mid.y), CGFloat(mid.z) + 0.09)
+                }
                 scene.rootNode.addChildNode(lbl)
             }
         }
@@ -158,6 +192,56 @@ struct GraphScene3DView {
             current = model.node(parent)?.parentID
         }
         return depth
+    }
+
+    /// The deepest nesting depth among this node and all its descendants — the far end of a container
+    /// cube's depth span, so the cube reaches in front of its deepest substate.
+    private func maxDescendantDepth(of id: String) -> Int {
+        var maxDepth = nestingDepth(of: id)
+        for kid in model.children(of: id) { maxDepth = max(maxDepth, maxDescendantDepth(of: kid)) }
+        return maxDepth
+    }
+
+    /// The per-event edge colour (see `GraphEdge.stableHue`), so a 3D transition matches its 2D line.
+    private func edgeColor3D(_ edge: GraphEdge) -> PlatformColor {
+        PlatformColor(hue: CGFloat(edge.stableHue), saturation: 0.60, brightness: 0.82, alpha: 1)
+    }
+
+    /// A self-loop drawn as a small ring on the node's near face, with an arrowhead and an optional
+    /// label above it. (Self-loops were previously skipped entirely in the 3D scene.)
+    private func selfLoopNode(rect: CGRect, center: CGPoint, z: CGFloat, color: PlatformColor, label: String) -> SCNNode {
+        let container = SCNNode()
+        let loopR = max(min(rect.width, rect.height) * scale * 0.42, 0.18)
+
+        let ring = SCNTorus(ringRadius: loopR, pipeRadius: 0.022)
+        let mat = SCNMaterial()
+        mat.diffuse.contents = color
+        mat.lightingModel = .constant
+        ring.firstMaterial = mat
+        let ringNode = SCNNode(geometry: ring)
+        ringNode.eulerAngles = vec(CGFloat.pi / 2, 0, 0)  // torus rings around Y; tilt it to face the camera (XY plane)
+        container.addChildNode(ringNode)
+
+        // Arrowhead at the ring's lower-right, pointing down into the node.
+        let arrow = arrowheadNode(
+            tip: SIMD3<Float>(Float(loopR) * 0.7, -Float(loopR) * 0.7, 0.02),
+            direction: SIMD3<Float>(0, -1, 0), color: color, size: 0.12
+        )
+        container.addChildNode(arrow)
+
+        if !label.isEmpty, let lbl = labelPlaneNode(label, worldHeight: 0.3, fontSize: 12) {
+            lbl.position = vec(0, loopR + 0.22, 0.02)
+            container.addChildNode(lbl)
+        }
+
+        // Sit above the node's top-centre, just proud of the node's front face.
+        let top = CGPoint(x: rect.midX, y: rect.minY)
+        container.position = vec(
+            (top.x - center.x) * scale,
+            -(top.y - center.y) * scale + loopR,
+            z + CGFloat(style.node3DSize) * scale / 2 + 0.05
+        )
+        return container
     }
 
     /// A clear glass material: see-through, sharp reflections (from the environment), a
@@ -279,16 +363,24 @@ struct GraphScene3DView {
                   let mat = snode.geometry?.firstMaterial else { continue }
             applyMaterial(mat, for: node)
         }
-        // Highlight edges connected to the selected node (and their arrowheads).
-        let edgeC = PlatformColor(style.edgeColor)
+        // Recolor edges: highlight those touching the selection, otherwise per-event colour. Recurse
+        // so multi-part edges (e.g. self-loop rings) recolour too, but skip label planes (whose
+        // "diffuse" is the text image, not a tint).
         let activeC = PlatformColor(style.activeEdgeColor)
-        for edge in model.edges where !edge.isSelfLoop {
-            let highlighted = edge.from == selectedID || edge.to == selectedID
-            let color = highlighted ? activeC : edgeC
-            for prefix in ["edge", "arrow"] {
-                root.childNode(withName: "\(prefix)|\(edge.from)|\(edge.to)", recursively: false)?
-                    .geometry?.firstMaterial?.diffuse.contents = color
+        let neutralC = PlatformColor(style.edgeColor)
+        let autoLayout = model.useAutoLayoutForInspection
+        func tint(_ node: SCNNode?, _ color: PlatformColor) {
+            guard let node else { return }
+            if let geometry = node.geometry, !(geometry is SCNPlane) {
+                geometry.firstMaterial?.diffuse.contents = color
             }
+            for child in node.childNodes { tint(child, color) }
+        }
+        for edge in model.edges {
+            let highlighted = edge.from == selectedID || edge.to == selectedID
+            let color = highlighted ? activeC : (autoLayout ? edgeColor3D(edge) : neutralC)
+            tint(root.childNode(withName: "edge|\(edge.from)|\(edge.to)", recursively: false), color)
+            tint(root.childNode(withName: "arrow|\(edge.from)|\(edge.to)", recursively: false), color)
         }
     }
 
