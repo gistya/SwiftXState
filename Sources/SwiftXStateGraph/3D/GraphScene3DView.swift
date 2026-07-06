@@ -95,6 +95,17 @@ struct GraphScene3DView {
         var selfLoopCount: [String: Int] = [:]
         for edge in model.edges where edge.isSelfLoop { selfLoopCount[edge.from, default: 0] += 1 }
         var selfLoopSeen: [String: Int] = [:]
+
+        // Route every interconnecting (non-self-loop) edge through the 3D router so bundled and
+        // anti-parallel arrows fan onto distinct, non-overlapping curves and no two flightpaths cross.
+        // `foot` is tuned so `routeEdges3D`'s endpoint radius equals `nodeHalf`, keeping each curve's
+        // tail on its source node and its tip on its destination node (arrows still touch both ends).
+        var routePos: [String: SIMD3<Float>] = [:]
+        for (id, v) in pos3D { routePos[id] = simd3(v) }
+        let routeFoot = Dictionary(uniqueKeysWithValues: routePos.keys.map { ($0, nodeHalf / 0.55) })
+        let routes = Self.routeEdges3D(edges: model.edges, pos: routePos,
+                                       foot: routeFoot, obstacleIDs: Set(routePos.keys))
+
         for edge in model.edges {
             guard pos3D[edge.from] != nil, pos3D[edge.to] != nil else { continue }
             let highlighted = edge.from == selectedID || edge.to == selectedID
@@ -111,30 +122,44 @@ struct GraphScene3DView {
                 continue
             }
 
-            let pa = simd3(p(edge.from)), pb = simd3(p(edge.to))
-            let len = simd_length(pb - pa)
-            guard len > 1e-4 else { continue }
-            let dir = (pb - pa) / len
-            let start = pa + dir * (nodeHalf + 0.02)
-            let tip = pb - dir * (nodeHalf + 0.02)
+            // The routed curve already starts on the source surface and ends on the destination
+            // surface. Fall back to a straight segment on the node surfaces only if (unexpectedly)
+            // unrouted, so an edge is never silently dropped.
             let arrowSize: CGFloat = 0.16
+            let curve: CubicBezier
+            if let route = routes[edge.id] {
+                curve = route.curve
+            } else {
+                let pa = simd3(p(edge.from)), pb = simd3(p(edge.to))
+                let len = simd_length(pb - pa)
+                guard len > 1e-4 else { continue }
+                let dir = (pb - pa) / len
+                let s = pa + dir * nodeHalf, t = pb - dir * nodeHalf
+                curve = CubicBezier(s, s, t, t)
+            }
 
             let group = SCNNode()
             group.name = "edge|\(edge.from)|\(edge.to)"
-            let cyl = edgeNode(from: vecF(start), to: vecF(tip - dir * Float(arrowSize)), color: color, radius: 0.026)
-            group.addChildNode(cyl)
-            let arrow = arrowheadNode(tip: tip, direction: dir, color: color, size: arrowSize)
+            // Tube follows the routed Bézier, pulled back from the tip so the arrowhead cone sits there.
+            let tubeMat = SCNMaterial()
+            tubeMat.diffuse.contents = color
+            tubeMat.lightingModel = .constant
+            let tubeGeom = EdgeGeometry.tube(along: curve, radius: 0.026, shortenEnd: Float(arrowSize))
+            tubeGeom.firstMaterial = tubeMat
+            group.addChildNode(SCNNode(geometry: tubeGeom))
+            // Arrowhead tip at t=1 (the destination surface), aligned with the curve's end tangent.
+            let arrow = arrowheadNode(tip: curve.point(1), direction: curve.tangent(1), color: color, size: arrowSize)
             arrow.name = "arrow|\(edge.from)|\(edge.to)"
             group.addChildNode(arrow)
             if showLabels, !edge.label.isEmpty, let lbl = labelPlaneNode(edge.label, worldHeight: 0.32, fontSize: 12) {
                 // Pinned to the edge group (rotates with the scene, not the camera) but kept UPRIGHT:
-                // it faces +Z and is tilted only by the arrow's screen-projected angle, so the top edge
-                // stays roughly horizontal (a slight lean on diagonal arrows). Offset forward in Z so it
-                // never clips the tube.
-                var angle = atan2(Double(pb.y - pa.y), Double(pb.x - pa.x))
+                // placed at the curve midpoint and tilted only by the mid-tangent's screen-projected
+                // angle, so the top edge stays roughly horizontal. Offset forward in Z so it never clips.
+                let mid = curve.point(0.5), mt = curve.tangent(0.5)
+                var angle = atan2(Double(mt.y), Double(mt.x))
                 if cos(angle) < 0 { angle += .pi }
                 lbl.eulerAngles = vec(0, 0, CGFloat(angle))
-                lbl.position = vecF((start + tip) / 2 + SIMD3<Float>(0, 0, 0.18))
+                lbl.position = vecF(mid + SIMD3<Float>(0, 0, 0.18))
                 group.addChildNode(lbl)
             }
             scene.rootNode.addChildNode(group)
