@@ -87,8 +87,6 @@ struct GraphScene3DView {
             }
         }
         
-        
-
         // Edges: a cylinder + arrowhead grouped under one node named "edge|from|to", with the label
         // billboarded and ATTACHED to that group so it travels with the arrow.
         let autoLayout = model.useAutoLayoutForInspection
@@ -103,20 +101,35 @@ struct GraphScene3DView {
         var routePos: [String: SIMD3<Float>] = [:]
         for (id, v) in pos3D { routePos[id] = simd3(v) }
         let routeFoot = Dictionary(uniqueKeysWithValues: routePos.keys.map { ($0, nodeHalf / 0.55) })
-        let routes = Self.routeEdges3D(edges: model.edges, pos: routePos,
-                                       foot: routeFoot, obstacleIDs: Set(routePos.keys))
+        let routes = Self.routeEdges3D(edges: model.edges, pos: routePos, foot: routeFoot, obstacleIDs: Set(routePos.keys))
 
         for edge in model.edges {
             guard pos3D[edge.from] != nil, pos3D[edge.to] != nil else { continue }
             let highlighted = edge.from == selectedID || edge.to == selectedID
-            let color = highlighted ? PlatformColor(style.activeEdgeColor)
-                                    : (autoLayout ? edgeColor3D(edge) : PlatformColor(style.edgeColor))
+            let color = highlighted
+                ? PlatformColor(style.activeEdgeColor)
+                : (autoLayout
+                   ? edgeColor3D(edge)
+                   : PlatformColor(style.edgeColor)
+                )
 
             if edge.isSelfLoop {
                 let idx = selfLoopSeen[edge.from, default: 0]; selfLoopSeen[edge.from] = idx + 1
-                let loop = selfLoop3D(at: simd3(p(edge.from)), radius: nodeHalf, color: color,
-                                      label: showLabels ? edge.label : "",
-                                      loopIndex: idx, loopCount: selfLoopCount[edge.from, default: 1])
+                
+                let loop = selfLoop3D(
+                    at: simd3(p(edge.from)),
+                    radius: nodeHalf,
+                    color: color,
+                    label: showLabels
+                        ? edge.label
+                        : "",
+                    loopIndex: idx,
+                    loopCount: selfLoopCount[
+                        edge.from,
+                        default: 1
+                    ]
+                )
+                
                 loop.name = "edge|\(edge.from)|\(edge.to)"
                 scene.rootNode.addChildNode(loop)
                 continue
@@ -140,6 +153,7 @@ struct GraphScene3DView {
 
             let group = SCNNode()
             group.name = "edge|\(edge.from)|\(edge.to)"
+            
             // Tube follows the routed Bézier, pulled back from the tip so the arrowhead cone sits there.
             let tubeMat = SCNMaterial()
             tubeMat.diffuse.contents = color
@@ -147,11 +161,14 @@ struct GraphScene3DView {
             let tubeGeom = EdgeGeometry.tube(along: curve, radius: 0.026, shortenEnd: Float(arrowSize))
             tubeGeom.firstMaterial = tubeMat
             group.addChildNode(SCNNode(geometry: tubeGeom))
+            
             // Arrowhead tip at t=1 (the destination surface), aligned with the curve's end tangent.
             let arrow = arrowheadNode(tip: curve.point(1), direction: curve.tangent(1), color: color, size: arrowSize)
             arrow.name = "arrow|\(edge.from)|\(edge.to)"
             group.addChildNode(arrow)
+            
             if showLabels, !edge.label.isEmpty, let lbl = labelPlaneNode(edge.label, worldHeight: 0.32, fontSize: 12) {
+                
                 // Pinned to the edge group (rotates with the scene, not the camera) but kept UPRIGHT:
                 // placed at the curve midpoint and tilted only by the mid-tangent's screen-projected
                 // angle, so the top edge stays roughly horizontal. Offset forward in Z so it never clips.
@@ -162,6 +179,7 @@ struct GraphScene3DView {
                 lbl.position = vecF(mid + SIMD3<Float>(0, 0, 0.18))
                 group.addChildNode(lbl)
             }
+            
             scene.rootNode.addChildNode(group)
         }
 
