@@ -91,7 +91,8 @@ struct GraphRenderView: View {
             activeIDs: render.activeIDs,
             selectedID: render.selectedID,
             style: style,
-            onSelect: { render.selectedID = $0 }
+            onSelect: { render.selectedID = $0 },
+            spacing: render.spacing3D
         )
         #else
         Text("3D rendering is not available on this platform.")
@@ -214,6 +215,21 @@ struct GraphRenderView: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 44, alignment: .leading)
                 }
+
+                #if canImport(SceneKit) && !os(watchOS)
+                if render.renderMode == .threeD {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .foregroundStyle(.secondary)
+                        .help("Node spacing")
+                    Slider(value: Binding(get: { render.spacing3D }, set: { render.spacing3D = $0 }), in: 1...4)
+                        .frame(width: 130)
+                        .help("Spread the nodes apart; regions grow to keep them enclosed")
+                    Text(String(format: "×%.1f", render.spacing3D))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 34, alignment: .leading)
+                }
+                #endif
 
                 Spacer()
 

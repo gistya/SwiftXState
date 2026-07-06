@@ -29,6 +29,9 @@ final class GraphRenderModel {
     var edgeOffsets: [String: CGSize] = [:]
     var selectedID: String?
     var renderMode: GraphRenderMode = .twoD
+    /// 3D-only: multiplies the spacing between node positions (1 = compact default). Regions,
+    /// edges and labels all re-derive from the scaled positions, so they follow automatically.
+    var spacing3D: CGFloat = 1
     /// Logical point anchored to the viewport center. Frozen during interaction so dragging
     /// a node doesn't drift the graph; refreshed on fit/reset.
     var viewCenter: CGPoint = .zero

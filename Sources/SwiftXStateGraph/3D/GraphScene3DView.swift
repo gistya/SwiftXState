@@ -29,6 +29,9 @@ struct GraphScene3DView {
     let style: GraphStyle
     /// Called when the user taps a node (or empty space, with `nil`).
     var onSelect: (@MainActor (String?) -> Void)?
+    /// Multiplies the spacing between node positions (1 = compact default). Node/label sizes are
+    /// unchanged — only the gaps grow — so regions, edges and arrow-attached labels all follow.
+    var spacing: CGFloat = 1
 
     /// World units per logical point.
     private var scale: CGFloat { 0.02 }
@@ -257,7 +260,9 @@ struct GraphScene3DView {
                 let angle = (count <= 1 ? 0 : CGFloat(j) / CGFloat(count) * 2 * .pi) + CGFloat(r) * 0.7
                 let y = radius * cos(angle)
                 let zc = radius * sin(angle) + CGFloat(globalIndex) * 0.02   // depth + unique-Z stagger
-                positions[id] = vec(x, y, zc)
+                // Spacing multiplier: scale positions about the (origin-centered) layout so nodes
+                // spread apart while keeping their own size. Regions/edges/labels re-derive from these.
+                positions[id] = vec(x * spacing, y * spacing, zc * spacing)
                 globalIndex += 1
             }
         }
@@ -576,6 +581,7 @@ struct GraphScene3DView {
     @MainActor
     final class Coordinator: NSObject {
         var structureHash: Int?
+        var spacing: CGFloat = 1
         var onSelect: (@MainActor (String?) -> Void)?
         var nodeIDs: Set<String> = []
         var currentSelected: String?
@@ -640,6 +646,7 @@ extension GraphScene3DView {
         scnView.backgroundColor = PlatformColor(style.backgroundColor)
         scnView.scene = buildScene()
         coordinator.structureHash = model.structureHash
+        coordinator.spacing = spacing
         coordinator.scnView = scnView
         coordinator.onSelect = onSelect
         coordinator.nodeIDs = Set(model.nodes.map(\.id))
@@ -653,9 +660,11 @@ extension GraphScene3DView {
     fileprivate func updateView(_ scnView: SCNView, _ coordinator: Coordinator) {
         coordinator.onSelect = onSelect
         coordinator.currentSelected = selectedID
-        if coordinator.structureHash != model.structureHash {
-            // Structure changed: rebuild. Restore the camera on the new scene *before*
-            // presenting it, so there's no one-frame flash of the default viewpoint.
+        // Rebuild when the structure changes OR the spacing slider moves (which rescales every
+        // node position; regions/edges/labels re-derive from the new positions during rebuild).
+        if coordinator.structureHash != model.structureHash || coordinator.spacing != spacing {
+            // Restore the camera on the new scene *before* presenting it, so there's no one-frame
+            // flash of the default viewpoint and the user's current orbit is preserved.
             let pov = scnView.pointOfView?.transform
             let newScene = buildScene()
             if let pov, let camera = newScene.rootNode.childNode(withName: "camera", recursively: false) {
@@ -663,6 +672,7 @@ extension GraphScene3DView {
             }
             scnView.scene = newScene
             coordinator.structureHash = model.structureHash
+            coordinator.spacing = spacing
             coordinator.nodeIDs = Set(model.nodes.map(\.id))
         } else {
             refreshMaterials(in: scnView)
