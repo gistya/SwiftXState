@@ -1,1979 +1,1982 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "Fit": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fit"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "%lld states · %lld transitions" : {
+      "comment" : "Status line: number of states and transitions.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld حالة · %2$lld انتقال"
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ملاءمة"
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld স্টেট · %2$lld ট্রানজিশন"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ফিট"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Zustände · %2$lld Übergänge"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einpassen"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld states · %2$lld transitions"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajustar"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld estados · %2$lld transiciones"
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "برازش"
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld حالت · %2$lld گذار"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajuster"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld états · %2$lld transitions"
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "התאמה"
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld מצבים · %2$lld מעברים"
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "फ़िट"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld स्टेट · %2$lld ट्रांज़िशन"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paskan"
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld state · %2$lld transisi"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adatta"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld stati · %2$lld transizioni"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "フィット"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 個の状態 · %2$lld 個の遷移"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "맞춤"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상태 %1$lld개 · 전이 %2$lld개"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passend"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld states · %2$lld transitions"
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dopasuj"
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld stanów · %2$lld przejść"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajustar"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld estados · %2$lld transições"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вписать"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld состояний · %2$lld переходов"
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sığdır"
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld durum · %2$lld geçiş"
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вмістити"
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld станів · %2$lld переходів"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vừa khít"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld trạng thái · %2$lld chuyển tiếp"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "适应"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 个状态 · %2$lld 个转换"
           }
         }
       }
     },
-    "Reset": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reset"
+    "3D rendering is not available on this platform." : {
+      "comment" : "Shown on platforms without SceneKit (e.g. watchOS) where the 3D view can't render.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التصيير ثلاثي الأبعاد غير متاح على هذه المنصة."
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "إعادة تعيين"
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "এই প্ল্যাটফর্মে থ্রিডি রেন্ডারিং উপলব্ধ নেই।"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "রিসেট"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3D-Rendering ist auf dieser Plattform nicht verfügbar."
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zurücksetzen"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3D rendering is not available on this platform."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restablecer"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El renderizado 3D no está disponible en esta plataforma."
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "بازنشانی"
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رندر سه‌بعدی در این پلتفرم در دسترس نیست."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Réinitialiser"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le rendu 3D n'est pas disponible sur cette plateforme."
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "איפוס"
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עיבוד תלת-ממד אינו זמין בפלטפורמה זו."
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "रीसेट"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस प्लेटफ़ॉर्म पर 3D रेंडरिंग उपलब्ध नहीं है।"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Setel Ulang"
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rendering 3D tidak tersedia di platform ini."
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reimposta"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il rendering 3D non è disponibile su questa piattaforma."
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リセット"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このプラットフォームでは3Dレンダリングを利用できません。"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "재설정"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 플랫폼에서는 3D 렌더링을 사용할 수 없습니다."
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Herstellen"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3D-weergave is niet beschikbaar op dit platform."
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resetuj"
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Renderowanie 3D nie jest dostępne na tej platformie."
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Redefinir"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A renderização 3D não está disponível nesta plataforma."
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сбросить"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3D-рендеринг недоступен на этой платформе."
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sıfırla"
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3D işleme bu platformda kullanılamıyor."
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скинути"
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3D-рендеринг недоступний на цій платформі."
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đặt lại"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết xuất 3D không khả dụng trên nền tảng này."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重置"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此平台不支持 3D 渲染。"
           }
         }
       }
     },
-    "Spacing:": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spacing:"
+    "Active" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نشِطة"
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "التباعد:"
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "সক্রিয়"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ব্যবধান:"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiv"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abstand:"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espaciado:"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activo"
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "فاصله‌گذاری:"
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فعال"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espacement :"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actif"
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "מרווח:"
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פעיל"
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "स्पेसिंग:"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सक्रिय"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jarak:"
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktif"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spaziatura:"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attivo"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "間隔:"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクティブ"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "간격:"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "활성"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Afstand:"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actief"
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odstęp:"
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktywny"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espaçamento:"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ativo"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Интервал:"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Активно"
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aralık:"
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etkin"
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Відстань:"
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Активний"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Khoảng cách:"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang hoạt động"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "间距："
-          }
-        }
-      },
-      "comment": "Label preceding the 3D graph node-spacing slider."
-    },
-    "%lld states · %lld transitions": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld states · %2$lld transitions"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld حالة · %2$lld انتقال"
-          }
-        },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld স্টেট · %2$lld ট্রানজিশন"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld Zustände · %2$lld Übergänge"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld estados · %2$lld transiciones"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld حالت · %2$lld گذار"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld états · %2$lld transitions"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld מצבים · %2$lld מעברים"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld स्टेट · %2$lld ट्रांज़िशन"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld state · %2$lld transisi"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld stati · %2$lld transizioni"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld 個の状態 · %2$lld 個の遷移"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "상태 %1$lld개 · 전이 %2$lld개"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld states · %2$lld transitions"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld stanów · %2$lld przejść"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld estados · %2$lld transições"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld состояний · %2$lld переходов"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld durum · %2$lld geçiş"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld станів · %2$lld переходів"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld trạng thái · %2$lld chuyển tiếp"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld 个状态 · %2$lld 个转换"
-          }
-        }
-      },
-      "comment": "Status line: number of states and transitions."
-    },
-    "Spread the nodes apart; regions grow to keep them enclosed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spread the nodes apart; regions grow to keep them enclosed"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "باعِد بين العُقد؛ تتوسّع المناطق لتظل مُحيطةً بها"
-          }
-        },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "নোডগুলো ছড়িয়ে দিন; সেগুলো ঘিরে রাখতে অঞ্চল বড় হয়"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Knoten auseinanderziehen; Regionen wachsen mit, um sie zu umschließen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Separa los nodos; las regiones crecen para mantenerlos contenidos"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "گره‌ها را از هم دور می‌کند؛ نواحی بزرگ می‌شوند تا آن‌ها را در بر بگیرند"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Écarter les nœuds ; les régions s'agrandissent pour les contenir"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "פיזור הצמתים; האזורים גדלים כדי להכיל אותם"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "नोड्स को अलग फैलाएँ; उन्हें घेरे रखने के लिए क्षेत्र बढ़ते हैं"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Renggangkan node; region membesar agar tetap melingkupinya"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allontana i nodi; le regioni si espandono per contenerli"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ノードを広げます。リージョンは内包を保つために拡大します"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노드를 넓게 벌립니다. 영역은 노드를 감싸도록 함께 커집니다"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spreid de nodes uit; regio's groeien mee om ze te omsluiten"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozsuwa węzły; regiony rosną, aby je obejmować"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Afasta os nós; as regiões crescem para mantê-los contidos"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Раздвигает узлы; регионы расширяются, чтобы вместить их"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Düğümleri birbirinden ayırır; bölgeler onları kapsamak için büyür"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Розсуньте вузли; регіони збільшуються, щоб їх охоплювати"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Giãn các nút ra xa nhau; các vùng mở rộng để bao trọn chúng"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拉开节点间距；区域会随之扩大以容纳节点"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动"
           }
         }
       }
     },
-    "This machine has no nested states to graph.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This machine has no nested states to graph."
+    "Final" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نهائية"
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "لا تحتوي هذه الآلة على حالات متداخلة لعرضها كمخطط."
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "চূড়ান্ত"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "গ্রাফ করার মতো কোনো নেস্টেড স্টেট এই মেশিনে নেই।"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Final"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diese Maschine hat keine verschachtelten Zustände zum Darstellen."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Final"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta máquina no tiene estados anidados para graficar."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Final"
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "این ماشین هیچ حالت تودرتویی برای رسم گراف ندارد."
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نهایی"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cette machine n'a aucun état imbriqué à représenter."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Final"
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "למכונה זו אין מצבים מקוננים לשרטוט."
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סופי"
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "इस मशीन में ग्राफ़ बनाने के लिए कोई नेस्टेड स्टेट नहीं है।"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अंतिम"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Machine ini tidak punya state bersarang untuk digambarkan."
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Final"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Questa macchina non ha stati annidati da rappresentare."
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finale"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このマシンにはグラフ化できるネストされた状態がありません。"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最終"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 머신에는 그래프로 표시할 중첩 상태가 없습니다."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최종"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deze machine heeft geen geneste states om te tekenen."
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Definitief"
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ta maszyna nie ma zagnieżdżonych stanów do zobrazowania."
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Końcowy"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta máquina não tem estados aninhados para representar no grafo."
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Final"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "У этой машины нет вложенных состояний для отображения."
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Финальное"
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bu makinenin grafiği çizilecek iç içe durumu yok."
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nihai"
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ця машина не має вкладених станів для побудови графа."
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Кінцевий"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Máy trạng thái này không có trạng thái lồng nhau để vẽ đồ thị."
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết thúc"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此状态机没有可绘制的嵌套状态。"
-          }
-        }
-      }
-    },
-    "Active": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Active"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "نشِطة"
-          }
-        },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "সক্রিয়"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktiv"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activo"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "فعال"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Actif"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "פעיל"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "सक्रिय"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktif"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Attivo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アクティブ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "활성"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Actief"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktywny"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ativo"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Активно"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Etkin"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Активний"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đang hoạt động"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "活动"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最终"
           }
         }
       }
     },
-    "Idle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Idle"
+    "Fit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ملاءمة"
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "خاملة"
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ফিট"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "নিষ্ক্রিয়"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einpassen"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inaktiv"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fit"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inactivo"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustar"
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "بی‌کار"
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برازش"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inactif"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajuster"
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "לא פעיל"
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התאמה"
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "निष्क्रिय"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "फ़िट"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diam"
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paskan"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inattivo"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adatta"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アイドル"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フィット"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "유휴"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "맞춤"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inactief"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passend"
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bezczynny"
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dopasuj"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocioso"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustar"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ожидание"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вписать"
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Boşta"
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sığdır"
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Неактивний"
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вмістити"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nhàn rỗi"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vừa khít"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "空闲"
-          }
-        }
-      }
-    },
-    "Final": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Final"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "نهائية"
-          }
-        },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "চূড়ান্ত"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Final"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Final"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "نهایی"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Final"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "סופי"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "अंतिम"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Final"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finale"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最終"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최종"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Definitief"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Końcowy"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Final"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Финальное"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nihai"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кінцевий"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kết thúc"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最终"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适应"
           }
         }
       }
     },
-    "Zoom in": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom in"
+    "Idle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خاملة"
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تكبير"
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নিষ্ক্রিয়"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "জুম ইন"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inaktiv"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vergrößern"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idle"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Acercar"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inactivo"
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "بزرگ‌نمایی"
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بی‌کار"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom avant"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inactif"
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "הגדלה"
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "לא פעיל"
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ज़ूम इन"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "निष्क्रिय"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Perbesar"
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diam"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ingrandisci"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inattivo"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拡大"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アイドル"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "확대"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유휴"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inzoomen"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inactief"
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Powiększ"
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bezczynny"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aumentar zoom"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ocioso"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приблизить"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ожидание"
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Yakınlaştır"
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boşta"
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Збільшити"
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Неактивний"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Phóng to"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhàn rỗi"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "放大"
-          }
-        }
-      },
-      "comment": "Accessibility label."
-    },
-    "Zoom out": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom out"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تصغير"
-          }
-        },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "জুম আউট"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verkleinern"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alejar"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "کوچک‌نمایی"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom arrière"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "הקטנה"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ज़ूम आउट"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Perkecil"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Riduci"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "縮小"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "축소"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uitzoomen"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pomniejsz"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diminuir zoom"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отдалить"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uzaklaştır"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Зменшити"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thu nhỏ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "缩小"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空闲"
           }
         }
-      },
-      "comment": "Accessibility label."
+      }
     },
-    "Render mode": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Render mode"
+    "Node spacing" : {
+      "comment" : "Accessibility label for the spacing slider.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تباعد العُقد"
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "وضع العرض"
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নোড ব্যবধান"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "রেন্ডার মোড"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Knotenabstand"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rendermodus"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Node spacing"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modo de renderizado"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espaciado de nodos"
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "حالت رندر"
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فاصله‌گذاری گره‌ها"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mode de rendu"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espacement des nœuds"
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "מצב תצוגה"
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מרווח בין צמתים"
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "रेंडर मोड"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नोड स्पेसिंग"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mode render"
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jarak node"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modalità di rendering"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spaziatura dei nodi"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "レンダリングモード"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノード間隔"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "렌더 모드"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "노드 간격"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weergavemodus"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Node-afstand"
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tryb renderowania"
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odstęp węzłów"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modo de renderização"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espaçamento dos nós"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Режим отрисовки"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Интервал между узлами"
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Görüntüleme modu"
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Düğüm aralığı"
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Режим рендерингу"
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відстань між вузлами"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chế độ hiển thị"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khoảng cách nút"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "渲染模式"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "节点间距"
           }
         }
-      },
-      "comment": "Accessibility label for the 2D/3D picker."
+      }
     },
-    "Node spacing": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Node spacing"
+    "Render mode" : {
+      "comment" : "Accessibility label for the 2D/3D picker.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وضع العرض"
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تباعد العُقد"
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "রেন্ডার মোড"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "নোড ব্যবধান"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rendermodus"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Knotenabstand"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Render mode"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espaciado de nodos"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modo de renderizado"
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "فاصله‌گذاری گره‌ها"
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حالت رندر"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espacement des nœuds"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode de rendu"
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "מרווח בין צמתים"
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מצב תצוגה"
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "नोड स्पेसिंग"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "रेंडर मोड"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jarak node"
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode render"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spaziatura dei nodi"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modalità di rendering"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ノード間隔"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レンダリングモード"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노드 간격"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "렌더 모드"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Node-afstand"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weergavemodus"
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odstęp węzłów"
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tryb renderowania"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espaçamento dos nós"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modo de renderização"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Интервал между узлами"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Режим отрисовки"
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Düğüm aralığı"
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görüntüleme modu"
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Відстань між вузлами"
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Режим рендерингу"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Khoảng cách nút"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chế độ hiển thị"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "节点间距"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "渲染模式"
           }
         }
-      },
-      "comment": "Accessibility label for the spacing slider."
+      }
     },
-    "State graph": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "State graph"
+    "Reset" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إعادة تعيين"
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "مخطط الحالات"
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "রিসেট"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "স্টেট গ্রাফ"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurücksetzen"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zustandsgraph"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gráfico de estados"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restablecer"
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "گراف حالت"
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بازنشانی"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Graphe d'états"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réinitialiser"
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "גרף מצבים"
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "איפוס"
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "स्टेट ग्राफ़"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "रीसेट"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grafik state"
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setel Ulang"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grafo degli stati"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reimposta"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "状態グラフ"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リセット"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "상태 그래프"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "재설정"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "State-grafiek"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herstellen"
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Graf stanów"
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resetuj"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grafo de estados"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redefinir"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Граф состояний"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить"
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Durum grafiği"
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sıfırla"
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Граф станів"
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скинути"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đồ thị trạng thái"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đặt lại"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "状态图"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置"
           }
         }
-      },
-      "comment": "Accessibility label for the graph canvas."
+      }
     },
-    "3D rendering is not available on this platform.": {
-      "comment": "Shown on platforms without SceneKit (e.g. watchOS) where the 3D view can't render.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3D rendering is not available on this platform."
+    "Spacing:" : {
+      "comment" : "Label preceding the 3D graph node-spacing slider.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التباعد:"
           }
         },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "التصيير ثلاثي الأبعاد غير متاح على هذه المنصة."
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ব্যবধান:"
           }
         },
-        "bn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "এই প্ল্যাটফর্মে থ্রিডি রেন্ডারিং উপলব্ধ নেই।"
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abstand:"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3D-Rendering ist auf dieser Plattform nicht verfügbar."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spacing:"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El renderizado 3D no está disponible en esta plataforma."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espaciado:"
           }
         },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "رندر سه‌بعدی در این پلتفرم در دسترس نیست."
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فاصله‌گذاری:"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le rendu 3D n'est pas disponible sur cette plateforme."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espacement :"
           }
         },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "עיבוד תלת-ממד אינו זמין בפלטפורמה זו."
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מרווח:"
           }
         },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "इस प्लेटफ़ॉर्म पर 3D रेंडरिंग उपलब्ध नहीं है।"
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्पेसिंग:"
           }
         },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rendering 3D tidak tersedia di platform ini."
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jarak:"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il rendering 3D non è disponibile su questa piattaforma."
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spaziatura:"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このプラットフォームでは3Dレンダリングを利用できません。"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "間隔:"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 플랫폼에서는 3D 렌더링을 사용할 수 없습니다."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "간격:"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3D-weergave is niet beschikbaar op dit platform."
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afstand:"
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Renderowanie 3D nie jest dostępne na tej platformie."
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odstęp:"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A renderização 3D não está disponível nesta plataforma."
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espaçamento:"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3D-рендеринг недоступен на этой платформе."
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Интервал:"
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3D işleme bu platformda kullanılamıyor."
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aralık:"
           }
         },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "3D-рендеринг недоступний на цій платформі."
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відстань:"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kết xuất 3D không khả dụng trên nền tảng này."
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khoảng cách:"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此平台不支持 3D 渲染。"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "间距："
+          }
+        }
+      }
+    },
+    "Spread the nodes apart; regions grow to keep them enclosed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "باعِد بين العُقد؛ تتوسّع المناطق لتظل مُحيطةً بها"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নোডগুলো ছড়িয়ে দিন; সেগুলো ঘিরে রাখতে অঞ্চল বড় হয়"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Knoten auseinanderziehen; Regionen wachsen mit, um sie zu umschließen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spread the nodes apart; regions grow to keep them enclosed"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Separa los nodos; las regiones crecen para mantenerlos contenidos"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گره‌ها را از هم دور می‌کند؛ نواحی بزرگ می‌شوند تا آن‌ها را در بر بگیرند"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écarter les nœuds ; les régions s'agrandissent pour les contenir"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פיזור הצמתים; האזורים גדלים כדי להכיל אותם"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नोड्स को अलग फैलाएँ; उन्हें घेरे रखने के लिए क्षेत्र बढ़ते हैं"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Renggangkan node; region membesar agar tetap melingkupinya"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allontana i nodi; le regioni si espandono per contenerli"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノードを広げます。リージョンは内包を保つために拡大します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "노드를 넓게 벌립니다. 영역은 노드를 감싸도록 함께 커집니다"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spreid de nodes uit; regio's groeien mee om ze te omsluiten"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozsuwa węzły; regiony rosną, aby je obejmować"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afasta os nós; as regiões crescem para mantê-los contidos"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Раздвигает узлы; регионы расширяются, чтобы вместить их"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Düğümleri birbirinden ayırır; bölgeler onları kapsamak için büyür"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Розсуньте вузли; регіони збільшуються, щоб їх охоплювати"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giãn các nút ra xa nhau; các vùng mở rộng để bao trọn chúng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拉开节点间距；区域会随之扩大以容纳节点"
+          }
+        }
+      }
+    },
+    "State graph" : {
+      "comment" : "Accessibility label for the graph canvas.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مخطط الحالات"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "স্টেট গ্রাফ"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zustandsgraph"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "State graph"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gráfico de estados"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "گراف حالت"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Graphe d'états"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "גרף מצבים"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्टेट ग्राफ़"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grafik state"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grafo degli stati"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状態グラフ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상태 그래프"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "State-grafiek"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Graf stanów"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grafo de estados"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Граф состояний"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Durum grafiği"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Граф станів"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đồ thị trạng thái"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态图"
+          }
+        }
+      }
+    },
+    "This machine has no nested states to graph." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا تحتوي هذه الآلة على حالات متداخلة لعرضها كمخطط."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "গ্রাফ করার মতো কোনো নেস্টেড স্টেট এই মেশিনে নেই।"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Maschine hat keine verschachtelten Zustände zum Darstellen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This machine has no nested states to graph."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta máquina no tiene estados anidados para graficar."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "این ماشین هیچ حالت تودرتویی برای رسم گراف ندارد."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette machine n'a aucun état imbriqué à représenter."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "למכונה זו אין מצבים מקוננים לשרטוט."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस मशीन में ग्राफ़ बनाने के लिए कोई नेस्टेड स्टेट नहीं है।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Machine ini tidak punya state bersarang untuk digambarkan."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa macchina non ha stati annidati da rappresentare."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このマシンにはグラフ化できるネストされた状態がありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 머신에는 그래프로 표시할 중첩 상태가 없습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deze machine heeft geen geneste states om te tekenen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta maszyna nie ma zagnieżdżonych stanów do zobrazowania."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta máquina não tem estados aninhados para representar no grafo."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "У этой машины нет вложенных состояний для отображения."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu makinenin grafiği çizilecek iç içe durumu yok."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ця машина не має вкладених станів для побудови графа."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máy trạng thái này không có trạng thái lồng nhau để vẽ đồ thị."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此状态机没有可绘制的嵌套状态。"
+          }
+        }
+      }
+    },
+    "Zoom in" : {
+      "comment" : "Accessibility label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تكبير"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "জুম ইন"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vergrößern"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom in"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acercar"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بزرگ‌نمایی"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom avant"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הגדלה"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ज़ूम इन"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perbesar"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingrandisci"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拡大"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "확대"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inzoomen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Powiększ"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aumentar zoom"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Приблизить"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yakınlaştır"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Збільшити"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phóng to"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放大"
+          }
+        }
+      }
+    },
+    "Zoom out" : {
+      "comment" : "Accessibility label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تصغير"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "জুম আউট"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verkleinern"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom out"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alejar"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کوچک‌نمایی"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom arrière"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הקטנה"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ज़ूम आउट"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perkecil"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riduci"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縮小"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "축소"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uitzoomen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pomniejsz"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diminuir zoom"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отдалить"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uzaklaştır"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Зменшити"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thu nhỏ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缩小"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

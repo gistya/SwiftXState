@@ -19,7 +19,7 @@ struct InspectorActorBar: View {
                 Image(systemName: expanded ? "chevron.down" : "chevron.up")
                     .font(.system(size: 9, weight: .bold))
                     .accessibilityLabel(Text(expanded ? "Collapse" : "Expand", bundle: .module))
-                Text("ACTORS", bundle: .module)
+                Text("Actors Header", bundle: .module)
                     .font(.system(size: 10, weight: .bold))
                     .tracking(0.6)
                 Text(verbatim: "\(store.actors.count)")

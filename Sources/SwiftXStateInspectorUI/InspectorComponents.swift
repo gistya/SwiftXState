@@ -105,7 +105,10 @@ extension SnapshotStatus {
         switch self {
         case .active: return "ACTIVE"
         case .done: return "DONE"
-        case .error: return "ERROR"
+        // Key disambiguated from the title-case "Error" JSON-section title so String Catalog symbol
+        // generation doesn't collide (both would map to the same generated symbol). Display is
+        // unchanged — the "Error Status" entry's value is still "ERROR" (localized per language).
+        case .error: return "Error Status"
         case .stopped: return "STOPPED"
         }
     }

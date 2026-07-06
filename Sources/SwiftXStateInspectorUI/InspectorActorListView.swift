@@ -10,7 +10,7 @@ struct InspectorActorListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("ACTORS", bundle: .module)
+            Text("Actors Header", bundle: .module)
                 .font(.system(size: 10, weight: .bold))
                 .tracking(0.6)
                 .foregroundStyle(style.secondaryText)
