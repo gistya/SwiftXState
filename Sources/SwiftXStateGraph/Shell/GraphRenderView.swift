@@ -218,11 +218,10 @@ struct GraphRenderView: View {
 
                 #if canImport(SceneKit) && !os(watchOS)
                 if render.renderMode == .threeD {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    Text("Spacing:", bundle: .module, comment: "Label preceding the 3D graph node-spacing slider")
                         .foregroundStyle(.secondary)
-                        .help("Node spacing")
-                    Slider(value: Binding(get: { render.spacing3D }, set: { render.spacing3D = $0 }), in: 1...4)
-                        .frame(width: 130)
+                    Slider(value: Binding(get: { render.spacing3D }, set: { render.spacing3D = $0 }), in: 1...6)
+                        .frame(width: 120)
                         .help("Spread the nodes apart; regions grow to keep them enclosed")
                     Text(String(format: "×%.1f", render.spacing3D))
                         .font(.caption.monospacedDigit())

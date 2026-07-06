@@ -141,7 +141,19 @@ public struct Map<In, Out> {
 }
 
 public extension XTransition {
-    init<Payload>(on map: Map<Payload, EventID>, to target: StateID) {
+    init<Payload: Blankable>(on map: Map<Payload, EventID>, to target: StateID) {
         self.init(on: map.transform, to: target)
+    }
+
+    // Multi-value payload events: the case's associated values collapse into one tuple `In`,
+    // and a tuple can't be Blankable, so the scalar overload above can't name it. Build a blank
+    // tuple from the per-element Blankable pack, feed it through transform, read the case's .name
+    // → "audioFailed" instead of "*". Same `Map` type, so `.audioFailed` dot-syntax matches it.
+    init<each Payload: Blankable>(on map: Map<(repeat each Payload), EventID>, to target: StateID) {
+        node = Schema.TransitionNode(
+            event: nil,
+            eventName: map.transform((repeat (each Payload)._blank)).name,
+            target: target
+        )
     }
 }

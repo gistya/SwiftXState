@@ -1,4 +1,5 @@
 #if SWIFTXSTATE_GRAPH_UI
+import Foundation
 import SwiftUI
 import SwiftXState
 
@@ -44,6 +45,23 @@ final class GraphRenderModel {
         let saved = GraphArrangementStore.load(model.machineID)
         manualOffsets = saved.nodes
         edgeOffsets = saved.edges
+        spacing3D = Self.defaultNodeSpacing(nodeCount: model.nodes.count, edgeCount: model.edges.count)
+    }
+
+    /// The 3D spacing multiplier a view starts at, derived from graph size so busy machines spread
+    /// out on their own while trivial ones stay compact. Grows **logarithmically** with the total
+    /// number of nodes + connections: below `comfortable` elements it stays at 1×, then each doubling
+    /// of complexity beyond that adds `perDoubling`, capped at `ceiling` (the slider can still go
+    /// further by hand). Tweak the three constants to taste.
+    nonisolated static func defaultNodeSpacing(nodeCount: Int, edgeCount: Int) -> CGFloat {
+        let comfortable = 6.0      // graphs at/under this many elements need no extra spread
+        let perDoubling = 0.6      // spacing added each time complexity doubles past `comfortable`
+        let ceiling: CGFloat = 5   // largest auto default; the slider's own max may exceed this
+
+        let complexity = Double(max(0, nodeCount) + max(0, edgeCount))
+        guard complexity > comfortable else { return 1 }
+        let spacing = 1 + perDoubling * log2(complexity / comfortable)
+        return min(ceiling, max(1, CGFloat(spacing)))
     }
 
     // MARK: Model + active state
@@ -61,6 +79,9 @@ final class GraphRenderModel {
         edgeOffsets = saved.edges
         selectedID = nil
         viewCenter = .zero
+        // A different machine gets its own size-derived default spacing. (Same-machine updates take
+        // the early return above, so a hand-set slider value is preserved.)
+        spacing3D = Self.defaultNodeSpacing(nodeCount: newModel.nodes.count, edgeCount: newModel.edges.count)
     }
 
     /// Persist the current hand-arrangement so it survives the inspector being reopened.

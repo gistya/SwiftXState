@@ -16,6 +16,7 @@ let appleWebSocketPlatforms: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .visio
 // `platforms` only carries Apple deployment targets.
 let package = Package(
     name: "SwiftXState",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v14),
         .iOS(.v17),
@@ -93,6 +94,9 @@ let package = Package(
             name: "SwiftXStateGraph",
             dependencies: ["SwiftXState"],
             path: "Sources/SwiftXStateGraph",
+            resources: [
+                .process("Resources/Localizable.xcstrings"),
+            ],
             swiftSettings: [
                 .define("SWIFTXSTATE_GRAPH_UI", .when(platforms: appleUIPlatforms)),
             ]
