@@ -31,6 +31,8 @@ struct GraphRenderView: View {
                         graph2D
                     }
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("State graph", bundle: .module))
 
                 toolbar
                 emptyStateOverlay
@@ -95,7 +97,7 @@ struct GraphRenderView: View {
             spacing: render.spacing3D
         )
         #else
-        Text("3D rendering is not available on this platform.")
+        Text("3D rendering is not available on this platform.", bundle: .module)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         #endif
@@ -198,19 +200,22 @@ struct GraphRenderView: View {
             HStack(spacing: 10) {
                 #if canImport(SceneKit) && !os(watchOS)
                 Picker("", selection: Binding(get: { render.renderMode }, set: { render.renderMode = $0 })) {
-                    ForEach(GraphRenderMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    ForEach(GraphRenderMode.allCases, id: \.self) { Text(verbatim: $0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 110)
                 .labelsHidden()
+                .accessibilityLabel(Text("Render mode", bundle: .module))
                 #endif
 
                 if render.renderMode == .twoD {
                     Button { render.zoomBy(factor: style.zoomStep) } label: { Image(systemName: "plus.magnifyingglass") }
+                        .accessibilityLabel(Text("Zoom in", bundle: .module))
                     Button { render.zoomBy(factor: 1 / style.zoomStep) } label: { Image(systemName: "minus.magnifyingglass") }
-                    Button("Fit") { render.fit() }
-                    Button("Reset") { render.resetView() }
-                    Text(String(format: "%.0f%%", render.zoom * 100))
+                        .accessibilityLabel(Text("Zoom out", bundle: .module))
+                    Button { render.fit() } label: { Text("Fit", bundle: .module) }
+                    Button { render.resetView() } label: { Text("Reset", bundle: .module) }
+                    Text(verbatim: String(format: "%.0f%%", render.zoom * 100))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .frame(width: 44, alignment: .leading)
@@ -222,8 +227,10 @@ struct GraphRenderView: View {
                         .foregroundStyle(.secondary)
                     Slider(value: Binding(get: { render.spacing3D }, set: { render.spacing3D = $0 }), in: 1...6)
                         .frame(width: 120)
-                        .help("Spread the nodes apart; regions grow to keep them enclosed")
-                    Text(String(format: "×%.1f", render.spacing3D))
+                        .help(Text("Spread the nodes apart; regions grow to keep them enclosed", bundle: .module))
+                        .accessibilityLabel(Text("Node spacing", bundle: .module))
+                        .accessibilityValue(Text(verbatim: String(format: "×%.1f", render.spacing3D)))
+                    Text(verbatim: String(format: "×%.1f", render.spacing3D))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .frame(width: 34, alignment: .leading)
@@ -232,7 +239,7 @@ struct GraphRenderView: View {
 
                 Spacer()
 
-                Text("\(render.model.nodes.count) states · \(render.model.edges.count) transitions")
+                Text("\(render.model.nodes.count) states · \(render.model.edges.count) transitions", bundle: .module)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -267,14 +274,15 @@ struct GraphRenderView: View {
         .background(.regularMaterial, in: Capsule())
     }
 
-    private func legendItem(color: Color, label: String, border: Color? = nil) -> some View {
+    private func legendItem(color: Color, label: LocalizedStringKey, border: Color? = nil) -> some View {
         HStack(spacing: 5) {
             RoundedRectangle(cornerRadius: 3)
                 .fill(color)
                 .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(border ?? .clear, lineWidth: 1))
                 .frame(width: 14, height: 11)
-            Text(label).font(.caption2)
+            Text(label, bundle: .module).font(.caption2)
         }
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
@@ -282,7 +290,7 @@ struct GraphRenderView: View {
         if render.model.nodes.count <= 1 {
             VStack(spacing: 6) {
                 Image(systemName: "point.3.connected.trianglepath.dotted").font(.largeTitle)
-                Text("This machine has no nested states to graph.")
+                Text("This machine has no nested states to graph.", bundle: .module)
             }
             .foregroundStyle(.secondary)
         }

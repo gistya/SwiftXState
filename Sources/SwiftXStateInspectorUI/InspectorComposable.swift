@@ -59,7 +59,7 @@ public struct InspectorPanel: View {
                 .labelsHidden()
 
                 if tab == .events {
-                    Toggle("This actor only", isOn: $eventsScopeToActor)
+                    Toggle(isOn: $eventsScopeToActor) { Text("This actor only", bundle: .module) }
                         .toggleStyle(.switch)
                         .controlSize(.mini)
                         .font(.caption)

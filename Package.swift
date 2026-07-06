@@ -110,6 +110,9 @@ let package = Package(
             name: "SwiftXStateInspectorUI",
             dependencies: ["SwiftXState", "SwiftXStateGraph", "SwiftXStateInspectorCore"],
             path: "Sources/SwiftXStateInspectorUI",
+            resources: [
+                .process("Resources/Localizable.xcstrings"),
+            ],
             swiftSettings: [
                 .define("SWIFTXSTATE_INSPECTOR_UI", .when(platforms: appleUIPlatforms)),
             ]

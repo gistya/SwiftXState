@@ -41,9 +41,9 @@ struct InspectorStateTab: View {
             .background(style.background)
         } else {
             ContentUnavailableView_Compat(
-                title: "No snapshot yet",
+                title: Text("No snapshot yet", bundle: .module),
                 systemImage: "doc.text.magnifyingglass",
-                message: "Select an actor and drive the machine to see its state."
+                message: Text("Select an actor and drive the machine to see its state.", bundle: .module)
             )
             .background(style.background)
         }
@@ -55,7 +55,7 @@ struct InspectorStateTab: View {
             Text(actor.displayName)
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(style.primaryText)
-            Text(snapshot.status.displayName)
+            Text(LocalizedStringKey(snapshot.status.displayName), bundle: .module)
                 .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(style.background)
                 .padding(.horizontal, 6).padding(.vertical, 2)
@@ -75,12 +75,12 @@ struct InspectorStateTab: View {
     private func sendEventsSection(store: InspectorStore, sessionID: String) -> some View {
         let events = store.availableEvents(for: sessionID)
         VStack(alignment: .leading, spacing: 6) {
-            Text("SEND EVENTS")
+            Text("SEND EVENTS", bundle: .module)
                 .font(.system(size: 10, weight: .bold))
                 .tracking(0.6)
                 .foregroundStyle(style.secondaryText)
             if events.isEmpty {
-                Text("No events available from this state — it's a dead end (or final).")
+                Text("No events available from this state — it's a dead end (or final).", bundle: .module)
                     .font(.caption)
                     .foregroundStyle(style.secondaryText)
             } else {
@@ -92,7 +92,7 @@ struct InspectorStateTab: View {
                         Button {
                             store.send(event, to: sessionID)
                         } label: {
-                            Text(event)
+                            Text(verbatim: event)
                                 .font(.system(size: 12, weight: .semibold, design: .monospaced))
                                 .frame(maxWidth: .infinity)
                                 .lineLimit(1)
@@ -109,9 +109,10 @@ struct InspectorStateTab: View {
     }
 
     @ViewBuilder
-    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+    private func section<Content: View>(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
+            Text(title, bundle: .module)
+                .textCase(.uppercase)
                 .font(.system(size: 10, weight: .bold))
                 .tracking(0.6)
                 .foregroundStyle(style.secondaryText)
@@ -134,16 +135,16 @@ struct InspectorStateTab: View {
 
 /// Minimal cross-version stand-in for `ContentUnavailableView`.
 struct ContentUnavailableView_Compat: View {
-    let title: String
+    let title: Text
     let systemImage: String
-    let message: String
+    let message: Text
     @Environment(\.inspectorStyle) private var style
 
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: systemImage).font(.largeTitle).foregroundStyle(style.secondaryText)
-            Text(title).font(.headline).foregroundStyle(style.primaryText)
-            Text(message).font(.caption).foregroundStyle(style.secondaryText).multilineTextAlignment(.center)
+            title.font(.headline).foregroundStyle(style.primaryText)
+            message.font(.caption).foregroundStyle(style.secondaryText).multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(40)

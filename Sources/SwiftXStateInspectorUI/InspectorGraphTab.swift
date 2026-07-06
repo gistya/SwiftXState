@@ -20,11 +20,11 @@ struct InspectorGraphTab: View {
             .id(actor.sessionID) // rebuild the render core when switching actors
         } else {
             ContentUnavailableView_Compat(
-                title: "No graph available",
+                title: Text("No graph available", bundle: .module),
                 systemImage: "point.3.connected.trianglepath.dotted",
                 message: actor == nil
-                    ? "Select an actor to view its statechart."
-                    : "This actor did not report a machine definition."
+                    ? Text("Select an actor to view its statechart.", bundle: .module)
+                    : Text("This actor did not report a machine definition.", bundle: .module)
             )
         }
     }

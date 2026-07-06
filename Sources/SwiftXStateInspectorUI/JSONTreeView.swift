@@ -73,6 +73,7 @@ public struct JSONTreeView: View {
                     .font(.system(size: style.disclosureSize, weight: .semibold))
                     .foregroundStyle(style.secondaryText)
                     .frame(width: style.disclosureSize + 4)
+                    .accessibilityLabel(Text(row.isExpanded ? "Collapse" : "Expand", bundle: .module))
             } else {
                 Spacer().frame(width: style.disclosureSize + 4)
             }

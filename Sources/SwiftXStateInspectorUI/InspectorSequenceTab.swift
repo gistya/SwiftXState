@@ -23,9 +23,9 @@ struct InspectorSequenceTab: View {
 
         if columns.count <= 1 {
             ContentUnavailableView_Compat(
-                title: "Sequence diagram",
+                title: Text("Sequence diagram", bundle: .module),
                 systemImage: "arrow.left.arrow.right",
-                message: "Send events between actors to populate the diagram."
+                message: Text("Send events between actors to populate the diagram.", bundle: .module)
             )
             .background(style.background)
         } else {
@@ -45,7 +45,7 @@ struct InspectorSequenceTab: View {
     // MARK: Columns
 
     private func columnLabel(_ key: String) -> String {
-        key == externalKey ? "external" : (store.actor(key)?.displayName ?? key)
+        key == externalKey ? String(localized: "external", bundle: .module) : (store.actor(key)?.displayName ?? key)
     }
 
     /// Lifelines actually referenced by the recent events, capped for legibility.

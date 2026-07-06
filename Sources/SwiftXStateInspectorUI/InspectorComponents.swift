@@ -69,7 +69,7 @@ struct EventKindBadge: View {
     }
 
     var body: some View {
-        Text(label)
+        Text(LocalizedStringKey(label), bundle: .module)
             .font(.system(size: 9, weight: .bold))
             .tracking(0.5)
             .foregroundStyle(color)

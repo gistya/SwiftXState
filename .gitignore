@@ -25,3 +25,4 @@ plan.md
 !.claude/
 .claude/*
 !.claude/skills/
+/.swift-version

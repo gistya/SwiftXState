@@ -10,7 +10,7 @@ struct InspectorActorListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("ACTORS")
+            Text("ACTORS", bundle: .module)
                 .font(.system(size: 10, weight: .bold))
                 .tracking(0.6)
                 .foregroundStyle(style.secondaryText)
@@ -19,7 +19,7 @@ struct InspectorActorListView: View {
                 .padding(.bottom, 6)
 
             if store.actors.isEmpty {
-                Text("Waiting for actors…")
+                Text("Waiting for actors…", bundle: .module)
                     .font(.system(size: 12))
                     .foregroundStyle(style.secondaryText)
                     .padding(.horizontal, 12)
@@ -46,6 +46,7 @@ struct InspectorActorListView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 StatusDot(status: actor.status)
+                    .accessibilityLabel(Text(LocalizedStringKey(actor.status.displayName), bundle: .module))
                 Text(actor.displayName)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(style.primaryText)
@@ -71,6 +72,7 @@ struct InspectorActorListView: View {
         )
         .contentShape(Rectangle())
         .onTapGesture { store.selectedSessionID = actor.sessionID }
+        .accessibilityAddTraits(.isButton)
     }
 }
 #endif
