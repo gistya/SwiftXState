@@ -86,6 +86,8 @@ struct GraphScene3DView {
                 cnode.addChildNode(title)
             }
         }
+        
+        
 
         // Edges: a cylinder + arrowhead grouped under one node named "edge|from|to", with the label
         // billboarded and ATTACHED to that group so it travels with the arrow.
@@ -603,7 +605,7 @@ extension GraphScene3DView {
         scnView.addGestureRecognizer(tap)
         return scnView
     }
-
+    
     @MainActor
     fileprivate func updateView(_ scnView: SCNView, _ coordinator: Coordinator) {
         coordinator.onSelect = onSelect
@@ -622,6 +624,109 @@ extension GraphScene3DView {
         } else {
             refreshMaterials(in: scnView)
         }
+    }
+    
+    struct Route3D { let curve: CubicBezier; let laneRank: Float }
+
+    /// Bundles cross-transitions by unordered node pair, assigns lanes, and builds a cubic Bézier per
+    /// edge that bows out along a **canonical** lateral axis (low-id → high-id) so a forward edge and
+    /// its back-edge fan to opposite sides instead of coinciding. Nodes already sit at distinct 3D
+    /// positions, so a modest bow is enough; a short lift clears any node the arc would otherwise graze.
+    static func routeEdges3D(edges: [GraphEdge], pos: [String: SIMD3<Float>], foot: [String: Float],
+                             obstacleIDs: Set<String>) -> [String: Route3D] {
+        let up = SIMD3<Float>(0, 1, 0)
+        let laneWidth: Float = 0.55
+        var routes: [String: Route3D] = [:]
+
+        func radius(_ id: String) -> Float { (foot[id] ?? 1) * 0.55 }
+
+        func clears(_ curve: CubicBezier, _ from: String, _ to: String) -> Bool {
+            for pt in curve.samples(18) {
+                for id in obstacleIDs where id != from && id != to {
+                    guard let p = pos[id] else { continue }
+                    let rr = radius(id) + 0.1
+                    let dx = pt.x - p.x, dy = pt.y - p.y, dz = pt.z - p.z
+                    if dx * dx + dy * dy + dz * dz < rr * rr { return false }
+                }
+            }
+            return true
+        }
+
+        var bundles: [String: [GraphEdge]] = [:]
+        for e in edges where !e.isSelfLoop && pos[e.from] != nil && pos[e.to] != nil {
+            let key = e.from < e.to ? "\(e.from)\u{1}\(e.to)" : "\(e.to)\u{1}\(e.from)"
+            bundles[key, default: []].append(e)
+        }
+        for (_, members) in bundles {
+            let sorted = members.sorted { $0.id < $1.id }
+            let n = sorted.count
+            let loID = min(sorted[0].from, sorted[0].to), hiID = max(sorted[0].from, sorted[0].to)
+            guard let pl = pos[loID], let ph = pos[hiID] else { continue }
+            var canon = ph - pl
+            canon = vlength(canon) < 1e-5 ? SIMD3(1, 0, 0) : vnormalize(canon)
+            var lateral = vcross(canon, up)
+            lateral = vlength(lateral) < 1e-5 ? SIMD3(1, 0, 0) : vnormalize(lateral)
+
+            for (i, e) in sorted.enumerated() {
+                guard let a = pos[e.from], let b = pos[e.to] else { continue }
+                let k = Float(i) - Float(n - 1) / 2
+                let along = vnormalize(b - a)
+                let p0 = a + along * radius(e.from)
+                let p3 = b - along * radius(e.to)
+                let dist = vlength(p3 - p0)
+                let side: SIMD3<Float> = lateral * (k * laneWidth)
+                let bow: SIMD3<Float> = up * (dist * 0.12 + 0.3)
+                let ctrl: SIMD3<Float> = side + bow
+                let step: SIMD3<Float> = along * (0.3 * dist)
+                let p1 = p0 + step + ctrl
+                let p2 = p3 - step + ctrl
+                var curve = CubicBezier(p0, p1, p2, p3)
+                var lift: Float = 0
+                for _ in 0..<6 {
+                    let liftV: SIMD3<Float> = up * lift
+                    curve = CubicBezier(p0, p1 + liftV, p2 + liftV, p3)
+                    if clears(curve, e.from, e.to) { break }
+                    lift += 0.4
+                }
+                routes[e.id] = Route3D(curve: curve, laneRank: k)
+            }
+        }
+
+        // "Drones must not hit each other": lift any two flightpaths that come too close onto separate
+        // altitude bands. Edges sharing an asteroid legitimately meet there, so they're exempt. Runs a
+        // few relaxation passes, always lifting the higher-id edge so it's deterministic and converges.
+        let edgeByID = Dictionary(edges.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let clearance: Float = 0.5
+        let ids = routes.keys.sorted()
+        var samples: [String: [SIMD3<Float>]] = [:]
+        for id in ids { samples[id] = routes[id]?.curve.samples(14) }
+        for _ in 0..<6 {
+            var moved = false
+            for ia in 0..<ids.count {
+                for ib in (ia + 1)..<ids.count {
+                    guard let ea = edgeByID[ids[ia]], let eb = edgeByID[ids[ib]] else { continue }
+                    if ea.from == eb.from || ea.from == eb.to || ea.to == eb.from || ea.to == eb.to { continue }
+                    guard let sa = samples[ids[ia]], let sb = samples[ids[ib]] else { continue }
+                    var minD: Float = .greatestFiniteMagnitude
+                    for pa in sa { for pb in sb {
+                        let d = vlength(pa - pb)
+                        if d < minD { minD = d }
+                    } }
+                    if minD < clearance {
+                        guard let rb = routes[ids[ib]] else { continue }
+                        let push: Float = (clearance - minD) * 0.75 + 0.05
+                        let liftV: SIMD3<Float> = SIMD3(0, push, 0)
+                        let c = rb.curve
+                        let nc = CubicBezier(c.p0, c.p1 + liftV, c.p2 + liftV, c.p3)
+                        routes[ids[ib]] = Route3D(curve: nc, laneRank: rb.laneRank)
+                        samples[ids[ib]] = nc.samples(14)
+                        moved = true
+                    }
+                }
+            }
+            if !moved { break }
+        }
+        return routes
     }
 }
 #endif

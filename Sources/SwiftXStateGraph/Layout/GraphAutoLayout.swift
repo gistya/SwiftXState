@@ -91,10 +91,12 @@ extension GraphLayout {
                         guard !ns.isEmpty else { return Double(currentPos[id] ?? 0) }
                         return Double(ns.reduce(0, +)) / Double(ns.count)
                     }
-                    columns[ci] = columns[ci]
-                        .map { Dat(id: $0, key: barycenter($0), tie: currentPos[$0] ?? 0) }
-                        .sorted { $0.key != $1.key ? $0.key < $1.key : $0.tie < $1.tie }
-                        .map(\.id)
+                    // Split the map→sort→map chain into typed statements — the fused form with inline
+                    // closures took the type-checker ~4s (it infers each stage's element type through
+                    // the whole chain at once).
+                    var dats = columns[ci].map { Dat(id: $0, key: barycenter($0), tie: currentPos[$0] ?? 0) }
+                    dats.sort { a, b in a.key != b.key ? a.key < b.key : a.tie < b.tie }
+                    columns[ci] = dats.map(\.id)
                 }
             }
         }
