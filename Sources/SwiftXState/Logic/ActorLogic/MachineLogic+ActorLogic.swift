@@ -17,6 +17,8 @@ extension MachineLogic: ActorLogic {
 
     public func output(of snapshot: MachineSnapshot<Context>) -> SendableValue? { snapshot.output }
 
+    public var internalEventTypes: Set<String> { Set(machine.config.internalEvents ?? []) }
+
     public func childSnapshotValue(of snapshot: MachineSnapshot<Context>) -> String? { snapshot.value.description }
 
     public func stoppedSnapshot(_ snapshot: MachineSnapshot<Context>) -> MachineSnapshot<Context> {

@@ -7,7 +7,7 @@ public extension MachineSchema {
     /// that turns typed ids into string node keys/targets (via `name`) and typed handlers into the
     /// engine's `assign`/`guard` refs. The result runs on the existing `Actor` / `MachineLogic` /
     /// macrostep unchanged — the typed DSL is, in the end, an alternate constructor for a machine.
-    func resolve(id: String? = nil, context: Context? = nil) -> ResolvedMachine<Context> {
+    func resolve(id: String? = nil, context: Context? = nil, internalEvents: [String] = []) -> ResolvedMachine<Context> {
         // `id ?? "(machine)"` is exactly the machine id the engine stamps onto node ids
         // (ResolvedMachine.id), so absolute targets come out as canonical `#machineId.path`.
         let paths = pathsByName(machineId: id ?? "(machine)")
@@ -22,7 +22,8 @@ public extension MachineSchema {
             context: context,
             states: stateConfigs,
             type: isParallel ? .parallel : nil,
-            useAutoLayoutForInspection: useAutoLayoutForInspection
+            useAutoLayoutForInspection: useAutoLayoutForInspection,
+            internalEvents: internalEvents.isEmpty ? nil : internalEvents
         ))
     }
 
@@ -245,7 +246,7 @@ public extension StateMachine {
     /// Fold + resolve in one step — the running machine for the engine, with the declared `context`
     /// baked into the `MachineConfig` so `start()` needs no argument.
     func resolvedMachine(id: String? = nil) -> ResolvedMachine<Context> {
-        buildSchema().resolve(id: id, context: context)
+        buildSchema().resolve(id: id, context: context, internalEvents: internalEvents.map(\.name))
     }
 }
 

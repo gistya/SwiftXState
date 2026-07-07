@@ -23,6 +23,10 @@ public protocol ActorLogic: Sendable {
     /// Lifecycle status of a snapshot. The runtime stops feeding events once this is not `.active`.
     func status(of snapshot: Snapshot) -> SnapshotStatus
 
+    /// Event types that may be raised internally but are rejected when sent from outside
+    /// (XState v6 `internalEvents`). Default: none.
+    var internalEventTypes: Set<String> { get }
+
     /// Optional background driver. A *runnable* logic (the shape behind callback / task / observable
     /// children) drives itself through `scope` — registering `receive` handlers, pushing snapshots,
     /// and producing `sendToParent`/`emit` effects — rather than folding events. Returns an optional
@@ -95,6 +99,8 @@ public extension ActorLogic {
     // MARK: Inspection hooks (default: not inspected; `MachineLogic` builds the machine events)
 
     /// Whether this logic emits inspection events at all. Pure reducers / runnables don't.
+    var internalEventTypes: Set<String> { [] }
+
     var providesInspection: Bool { false }
 
     /// The machine id for this logic's inspection actor ref, if any.

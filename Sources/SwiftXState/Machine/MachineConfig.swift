@@ -27,6 +27,11 @@ public struct MachineConfig<Context: Sendable>: Sendable {
     /// `StateMachine.useAutoLayoutForInspection`.
     public var useAutoLayoutForInspection: Bool
 
+    /// Event types that may be **raised from within** the machine (e.g. via `enq.raise(...)`) but are
+    /// **rejected when sent to the actor from the outside** (XState v6 `internalEvents`). External
+    /// `actor.send(...)` of one of these is ignored; internal raises are unaffected.
+    public var internalEvents: [String]?
+
     public init(
         id: String? = nil,
         initial: String? = nil,
@@ -39,8 +44,10 @@ public struct MachineConfig<Context: Sendable>: Sendable {
         type: StateNodeType? = nil,
         output: OutputResolver<Context>? = nil,
         description: String? = nil,
-        useAutoLayoutForInspection: Bool = true
+        useAutoLayoutForInspection: Bool = true,
+        internalEvents: [String]? = nil
     ) {
+        self.internalEvents = internalEvents
         self.id = id
         self.initial = initial
         self.context = context

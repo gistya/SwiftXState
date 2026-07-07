@@ -19,10 +19,15 @@ func resolveAfterDelay<Context: Sendable>(
     if let milliseconds = Int(delayKey) {
         return milliseconds
     }
+    // A registered named delay wins over duration parsing, preserving existing behavior.
     if let resolver = delays[delayKey] {
         return resolver(args)
     }
-    fatalError("Unknown delay \"\(delayKey)\". Register it via MachineImplementations.delays or use a numeric delay.")
+    // XState v6 duration strings: "10ms", "5s", ISO-8601 day-time like "PT2M".
+    if let milliseconds = parseDurationToMilliseconds(delayKey) {
+        return milliseconds
+    }
+    fatalError("Unknown delay \"\(delayKey)\". Use a numeric delay, a duration string (\"10ms\", \"5s\", \"PT2M\"), or register it via MachineImplementations.delays.")
 }
 
 func processAfterConfig<Context: Sendable>(

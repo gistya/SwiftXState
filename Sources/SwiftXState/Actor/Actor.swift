@@ -303,6 +303,8 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     }
 
     public func send(_ event: any Eventable) async {
+        // `internalEvents` may be raised from within the machine but are rejected from the outside.
+        if logic.internalEventTypes.contains(event.type) { return }
         emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: nil, event: event))
         mailbox.append(event)
         await drain()

@@ -47,6 +47,12 @@ public protocol StateMachine<Context, EventID, StateID>: MachineSchemable, Senda
     /// fixed arrangement (via `GraphStyle.nodeLayoutOverride`) instead of reflowing it.
     var useAutoLayoutForInspection: Bool { get }
 
+    /// Event cases that may be **raised from within** the machine (`enq.raise(...)`) but are
+    /// **rejected when sent from outside** (XState v6 `internalEvents`). Typed — declared with the
+    /// machine's own `EventID` cases and lowered to their `name`s. Defaults to none; override with
+    /// e.g. `var internalEvents: [Event] { [.tick, .settle] }`.
+    var internalEvents: [EventID] { get }
+
     @MachineBuilder<Context, EventID, StateID>
     var machine: Body { get }
 }
@@ -54,6 +60,9 @@ public protocol StateMachine<Context, EventID, StateID>: MachineSchemable, Senda
 public extension StateMachine {
     /// Sequential root by default.
     var isParallel: Bool { false }
+
+    /// No internal-only events by default.
+    var internalEvents: [EventID] { [] }
 
     /// Auto-layout the inspector graph by default.
     var useAutoLayoutForInspection: Bool { true }
