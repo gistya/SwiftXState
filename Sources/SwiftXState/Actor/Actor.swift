@@ -18,6 +18,8 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     var logic: L
     private var _snapshot: L.Snapshot?
     private var mailbox: [any Eventable] = []
+    /// Live `enq.listen` subscriptions to child actors; cancelled when this actor stops.
+    private var listenerSubscriptions: [Subscription] = []
     private var isProcessing = false
     private var observers: [(id: Int, handler: @Sendable (L.Snapshot) -> Void)] = []
     private var nextObserverID = 0
@@ -276,6 +278,8 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         runCleanup?()
         runCleanup = nil
         receivers.removeAll()
+        for sub in listenerSubscriptions { sub.cancel() }
+        listenerSubscriptions.removeAll()
         childRegistry.markAllStopped()
         for child in childRegistry.all.values {
             system.unregister(child)
@@ -310,10 +314,52 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         await drain()
     }
 
+    /// `enq.listen`: subscribe to a child's emitted events and relay a mapped event back into this
+    /// actor. The `Subscription` is retained here and cancelled on `stop()`.
+    public func listen(childId: String, eventType: String,
+                       map: @escaping @Sendable (EmittedEvent) -> (any Eventable)?) async {
+        guard let child = childRegistry.get(childId) else { return }
+        let sub = await child.on(eventType) { [weak self] emitted in
+            guard let mapped = map(emitted) else { return }
+            Task { await self?.receiveRelay(mapped) }
+        }
+        listenerSubscriptions.append(sub)
+    }
+
+    /// `enq.subscribeTo`: subscribe to a child's snapshot changes and relay a mapped event back.
+    public func subscribeToChild(childId: String,
+                                 map: @escaping @Sendable (ChildActorSnapshot) -> (any Eventable)?) async {
+        guard let child = childRegistry.get(childId) else { return }
+        let sub = await child.subscribe { [weak self] snapshot in
+            guard let mapped = map(snapshot) else { return }
+            Task { await self?.receiveRelay(mapped) }
+        }
+        listenerSubscriptions.append(sub)
+    }
+
+    /// Deliver a relayed event from a listened child. It is the machine reacting to its own child, so
+    /// it bypasses the external `internalEvents` gate (an internal reaction, not an outside send).
+    private func receiveRelay(_ event: any Eventable) async {
+        emitInspection(.event(rootId: inspectionRootId, actor: inspectionActorRef, source: nil, event: event))
+        mailbox.append(event)
+        await drain()
+    }
+
     /// Listens for `emit(…)` events (the `MachineHosting.emit` sink). `"*"` matches all.
     @discardableResult
     public func on(_ eventType: String, handler: @escaping @Sendable (EmittedEvent) -> Void) -> Subscription {
         emitListeners.on(eventType, handler: handler)
+    }
+
+    /// Snapshot subscription erased to a `ChildActorSnapshot` (for a parent's `enq.subscribeTo`). Runs
+    /// inside the actor so `logic` is accessible for the value/status mapping.
+    func subscribeChildSnapshot(id: String, _ handler: @escaping @Sendable (ChildActorSnapshot) -> Void) -> Subscription {
+        let capturedLogic = logic
+        return subscribe { snap in
+            handler(ChildActorSnapshot(id: id,
+                                       status: capturedLogic.status(of: snap),
+                                       value: capturedLogic.childSnapshotValue(of: snap)))
+        }
     }
 
     @discardableResult

@@ -19,6 +19,15 @@ public protocol MachineHosting: _Concurrency.Actor, ParentActorRepresentable, Ac
     func cancelTimer(_ timerId: String)
     func registerChild(_ child: any ChildActorRepresentable)
     func unregisterChild(_ child: any ChildActorRepresentable)
+    /// Subscribe to child `childId`'s emitted `eventType` (`"*"` = all) and relay `map(emitted)` back
+    /// into this actor (XState v6 `enq.listen`). Torn down when this actor stops. Default: no-op —
+    /// only the top-level machine actor tracks listener subscriptions.
+    func listen(childId: String, eventType: String,
+                map: @escaping @Sendable (EmittedEvent) -> (any Eventable)?) async
+    /// Subscribe to child `childId`'s snapshot changes and relay `map(snapshot)` back into this actor
+    /// (XState v6 `enq.subscribeTo`). Torn down when this actor stops. Default: no-op.
+    func subscribeToChild(childId: String,
+                          map: @escaping @Sendable (ChildActorSnapshot) -> (any Eventable)?) async
     /// The persisted snapshot to seed a child with during restore (nil in normal operation).
     func pendingChildSnapshot(_ id: String) -> PersistedChildSnapshot?
 
@@ -28,4 +37,11 @@ public protocol MachineHosting: _Concurrency.Actor, ParentActorRepresentable, Ac
     var inspectionRootId: String { get }
     var recordsMicrosteps: Bool { get }
     func emitInspection(_ event: @autoclosure () -> InspectionEvent?)
+}
+
+public extension MachineHosting {
+    func listen(childId: String, eventType: String,
+                map: @escaping @Sendable (EmittedEvent) -> (any Eventable)?) async {}
+    func subscribeToChild(childId: String,
+                          map: @escaping @Sendable (ChildActorSnapshot) -> (any Eventable)?) async {}
 }

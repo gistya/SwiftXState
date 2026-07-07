@@ -100,6 +100,10 @@ final class ChildActorBox<L: ActorLogic>: ChildActorRepresentable, @unchecked Se
     ) async -> Subscription {
         await actor.on(eventType, handler: handler)
     }
+
+    func subscribe(_ handler: @escaping @Sendable (ChildActorSnapshot) -> Void) async -> Subscription {
+        await actor.subscribeChildSnapshot(id: id, handler)
+    }
 }
 
 extension ChildActorBox: PersistedChildSnapshotProviding {

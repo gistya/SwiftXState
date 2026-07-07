@@ -65,4 +65,28 @@ public final class Enqueue<Context: Sendable, EventID: EventIdentifying>: @unche
     public func emit(_ event: EmittedEvent) {
         collected.append(SwiftXState.emit(event))
     }
+
+    /// Subscribe to a **child** actor's emitted events and relay a mapped event back into this
+    /// machine — XState v6's `enq.listen`. `eventType` `"*"` matches all emissions; `map` returning
+    /// `nil` drops the emission. The subscription is torn down automatically when this actor stops.
+    ///
+    /// `enq.listen("worker", on: "progress") { .workerProgress(percent: $0.intValue ?? 0) }`
+    public func listen(_ childId: String, on eventType: String = "*",
+                       _ map: @escaping @Sendable (EmittedEvent) -> EventID?) {
+        collected.append(SwiftXState.listen(childId: childId, eventType: eventType) { emitted in
+            map(emitted).map { TypedEvent($0) }
+        })
+    }
+
+    /// Subscribe to a **child** actor's snapshot changes (status / value) and relay a mapped event
+    /// back into this machine — XState v6's `enq.subscribeTo`. `map` returning `nil` drops the
+    /// snapshot. The subscription is torn down automatically when this actor stops.
+    ///
+    /// `enq.subscribeTo("worker") { $0.status == .done ? .workerFinished : nil }`
+    public func subscribeTo(_ childId: String,
+                            _ map: @escaping @Sendable (ChildActorSnapshot) -> EventID?) {
+        collected.append(SwiftXState.subscribeToChild(childId: childId) { snap in
+            map(snap).map { TypedEvent($0) }
+        })
+    }
 }

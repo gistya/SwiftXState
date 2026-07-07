@@ -263,6 +263,10 @@ enum MachineDefinitionExporter {
             return .string("xstate.log")
         case .emit:
             return .string("xstate.emit")
+        case .listen:
+            return .string("xstate.listen")
+        case .subscribeToChild:
+            return .string("xstate.subscribeTo")
         }
     }
 

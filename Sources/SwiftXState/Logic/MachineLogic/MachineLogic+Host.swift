@@ -135,6 +135,12 @@ extension MachineLogic {
                 host.cancelTimer(resolveCancelId(cancelId, args: args))
             case .enqueueActions:
                 break
+            case let .listen(listenAction):
+                await host.listen(childId: listenAction.childId,
+                                  eventType: listenAction.eventType,
+                                  map: listenAction.map)
+            case let .subscribeToChild(subscribeAction):
+                await host.subscribeToChild(childId: subscribeAction.childId, map: subscribeAction.map)
             }
         }
 
