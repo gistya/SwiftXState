@@ -59,11 +59,13 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     public nonisolated let id: String
 
     #if canImport(Darwin)
-    // Custom executor backing, matching Actor: `ActorOptions.useMainExecutor` runs on the MainActor's
-    // serial executor (no thread hop from the main actor, for SwiftUI); otherwise a dedicated serial
-    // queue preserves off-main serialization. `ownedExecutorQueue` retains the queue for the actor's
-    // lifetime (an `UnownedSerialExecutor` does not retain).
-    private nonisolated let ownedExecutorQueue: DispatchSerialQueue?
+    // Custom executor backing: `ActorOptions.useMainExecutor` runs on the MainActor's serial executor
+    // (no thread hop from the main actor, for SwiftUI); otherwise a dedicated `ActorSerialExecutor`
+    // preserves off-main serialization. `ownedExecutor` retains that executor for the actor's lifetime
+    // (an `UnownedSerialExecutor` does not retain). NB: backing the actor *directly* with
+    // `DispatchSerialQueue.asUnownedSerialExecutor()` did NOT serialize the actor — TSan caught real
+    // races and dropped child-done events; `ActorSerialExecutor`'s explicit `enqueue` fixes it.
+    private nonisolated let ownedExecutor: ActorSerialExecutor?
     private nonisolated let _unownedExecutor: UnownedSerialExecutor
 
     public nonisolated var unownedExecutor: UnownedSerialExecutor { _unownedExecutor }
@@ -91,12 +93,12 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         self.scheduler = DelayScheduler(clock: options.clock)
         #if canImport(Darwin)
         if options.useMainExecutor {
-            self.ownedExecutorQueue = nil
+            self.ownedExecutor = nil
             self._unownedExecutor = MainActor.sharedUnownedExecutor
         } else {
-            let queue = DispatchSerialQueue(label: "SwiftXState.Actor")
-            self.ownedExecutorQueue = queue
-            self._unownedExecutor = queue.asUnownedSerialExecutor()
+            let executor = ActorSerialExecutor(id: id)
+            self.ownedExecutor = executor
+            self._unownedExecutor = executor.asUnownedSerialExecutor()
         }
         #endif
         self.parent = parent
