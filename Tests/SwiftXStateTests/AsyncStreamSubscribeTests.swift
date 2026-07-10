@@ -68,6 +68,40 @@ struct AsyncStreamSubscribeTests {
         #expect(sawNil)
     }
 
+    @Test func streamRegisteredAfterStopFinishes() async {
+        let m = createActor(Toggler())
+        await m.start()
+        let actor = m.actor
+        await actor.stop()                  // plain stop(): sets no terminalStatus, drains continuations
+
+        // A `snapshots()` created *after* stop must replay-then-finish, not enroll a continuation into
+        // the already-drained registry (which nothing would ever finish — a `for await` that hangs
+        // forever). The watchdog only fires on regression; on the fixed path the drain returns at once,
+        // so there's no delay-dependent flakiness.
+        let finished = await completesWithin(seconds: 5) {
+            for await _ in actor.snapshots() {}
+        }
+        #expect(finished, "snapshots() registered after stop() should finish, not hang")
+
+        #expect(await actor.status == .stopped)   // status is a single source of truth for the stopped state
+    }
+
+    /// Runs `operation`, returning true if it finished within `seconds`, false if it timed out.
+    /// Cancelling the group unblocks a hung `for await` (AsyncStream's `next()` returns nil on
+    /// cancellation), so a regression fails the assertion instead of hanging the whole suite.
+    private func completesWithin(seconds: Double, _ operation: @escaping @Sendable () async -> Void) async -> Bool {
+        await withTaskGroup(of: Bool.self) { group in
+            group.addTask { await operation(); return true }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return false
+            }
+            let result = await group.next() ?? false
+            group.cancelAll()
+            return result
+        }
+    }
+
     struct Ctx: Sendable, Equatable { var count: Int }
 
     @Test func storeStreamReplaysUpdatesAndFinishes() async {

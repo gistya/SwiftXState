@@ -68,11 +68,13 @@ public func emit<Context: Sendable>(_ type: String) -> ActionRef<Context> {
 /// Registry for `actor.on(…)` and child actor emit listeners.
 public final class EmitListeners: @unchecked Sendable {
     private struct Listener {
+        let id: Int
         let eventType: String
         let handler: @Sendable (EmittedEvent) -> Void
     }
 
     private var listeners: [Listener] = []
+    private var nextListenerID = 0
     private let lock = NSLock()
 
     public init() {}
@@ -82,16 +84,15 @@ public final class EmitListeners: @unchecked Sendable {
         handler: @escaping @Sendable (EmittedEvent) -> Void
     ) -> Subscription {
         lock.lock()
-        listeners.append(Listener(eventType: eventType, handler: handler))
-        let index = listeners.count - 1
+        let id = nextListenerID
+        nextListenerID += 1
+        listeners.append(Listener(id: id, eventType: eventType, handler: handler))
         lock.unlock()
 
         return Subscription { [weak self] in
             guard let self else { return }
             self.lock.lock()
-            if index < self.listeners.count {
-                self.listeners.remove(at: index)
-            }
+            self.listeners.removeAll { $0.id == id }
             self.lock.unlock()
         }
     }

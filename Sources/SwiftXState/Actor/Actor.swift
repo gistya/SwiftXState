@@ -39,6 +39,12 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     // adapter cache status changes.
     private var terminalStatus: SnapshotStatus?
     private var lastError: String?
+    // The single source of truth for "this actor was stopped via `stop()`". Unlike `markTerminal`
+    // (completing children), `stop()` sets no `terminalStatus`, and for task/observable/transition/
+    // reducer logics its `stoppedSnapshot` is identity so the snapshot's own status stays `.active`.
+    // Without this flag a `snapshots()` registered *after* stop would enroll a continuation into the
+    // already-drained `snapshotContinuations` (which nothing ever finishes — the stream hangs forever).
+    private var isStopped = false
     // For machine children: emit a SnapshotActorEvent per active snapshot, and one Done/Error event
     // when the snapshot itself reaches a terminal state (final). Gated on having a parent.
     private nonisolated let childSyncSnapshot: Bool
@@ -141,6 +147,7 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
 
     public var status: SnapshotStatus {
         if let terminalStatus { return terminalStatus }
+        if isStopped { return .stopped }
         guard let snapshot = _snapshot else { return .stopped }
         return logic.status(of: snapshot)
     }
@@ -275,6 +282,7 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
 
     /// Stops the background driver and all children. Events already in flight still drain.
     public func stop() async {
+        isStopped = true
         runTask?.cancel()
         runTask = nil
         runCleanup?()
@@ -401,7 +409,7 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
 
     private func registerSnapshotStream(_ continuation: AsyncStream<L.Snapshot>.Continuation) {
         if let snapshot = _snapshot { continuation.yield(snapshot) }   // current-value replay (matches subscribe)
-        guard terminalStatus == nil else {                             // already stopped: replay-then-finish
+        guard terminalStatus == nil, !isStopped else {                 // already terminal/stopped: replay-then-finish
             continuation.finish()
             return
         }

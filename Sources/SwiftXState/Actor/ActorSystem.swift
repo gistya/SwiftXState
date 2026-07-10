@@ -4,7 +4,8 @@ import Foundation
 public final class ActorSystem: @unchecked Sendable {
     private var keyedActors: [String: any ActorSystemRef] = [:]
     private var sessionActors: [String: any ActorSystemRef] = [:]
-    private var inspectionObservers: [(@Sendable (InspectionEvent) -> Void)] = []
+    private var inspectionObservers: [(id: Int, observer: @Sendable (InspectionEvent) -> Void)] = []
+    private var nextObserverID = 0
     private var rootId: String?
     private let lock = NSLock()
 
@@ -31,16 +32,16 @@ public final class ActorSystem: @unchecked Sendable {
         _ observer: @escaping @Sendable (InspectionEvent) -> Void
     ) -> Subscription {
         lock.lock()
-        inspectionObservers.append(observer)
-        let index = inspectionObservers.count - 1
+        let id = nextObserverID
+        nextObserverID += 1
+        inspectionObservers.append((id: id, observer: observer))
         lock.unlock()
 
         return Subscription { [weak self] in
-            self?.lock.lock()
-            if let self, index < self.inspectionObservers.count {
-                self.inspectionObservers.remove(at: index)
-            }
-            self?.lock.unlock()
+            guard let self else { return }
+            self.lock.lock()
+            self.inspectionObservers.removeAll { $0.id == id }
+            self.lock.unlock()
         }
     }
 
@@ -48,8 +49,8 @@ public final class ActorSystem: @unchecked Sendable {
         lock.lock()
         let observers = inspectionObservers
         lock.unlock()
-        for observer in observers {
-            observer(event)
+        for entry in observers {
+            entry.observer(event)
         }
     }
 
