@@ -18,11 +18,12 @@ let package = Package(
     name: "SwiftXState",
     defaultLocalization: "en",
     platforms: [
-        .macOS(.v14),
-        .iOS(.v17),
-        .watchOS(.v10),
-        .tvOS(.v17),
-        .macCatalyst(.v17),
+        .iOS(.v18),
+        .macCatalyst(.v18),
+        .macOS(.v15),
+        .tvOS(.v18),
+        .visionOS(.v2),
+        .watchOS(.v11),
     ],
     products: [
         .library(
