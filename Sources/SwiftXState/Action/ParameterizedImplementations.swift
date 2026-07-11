@@ -1,4 +1,3 @@
-import Foundation
 import FridayTheCodable
 
 // MARK: - Params transport (runtime / wire)
@@ -48,7 +47,6 @@ public struct ParamsBox: Sendable, Equatable {
 
 extension JSONValue {
     static func fromAny(_ value: Any) -> JSONValue {
-        if value is NSNull { return .null }
         switch value {
         case let string as String:
             return .string(string)
@@ -83,8 +81,8 @@ extension JSONValue {
         }
     }
 
-    func codableData() throws -> Data {
-        Data(try JSONValue.encode(self).utf8)
+    func codableData() throws -> [UInt8] {
+        [UInt8](try JSONValue.encode(self).utf8)
     }
 }
 

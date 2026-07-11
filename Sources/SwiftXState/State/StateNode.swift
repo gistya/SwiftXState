@@ -1,4 +1,3 @@
-import Foundation
 
 /// A node in the state machine graph.
 public final class StateNode<Context: Sendable>: @unchecked Sendable {

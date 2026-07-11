@@ -1,4 +1,4 @@
-import Foundation
+import FridayTheCodable
 import Testing
 @testable import SwiftXState
 
@@ -158,7 +158,7 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         #expect(persisted.children["worker"] != nil)
         if case let .machine(childPersisted) = persisted.children["worker"] {
-            let childContext = try JSONDecoder().decode(
+            let childContext = try FridayJSONDecoder().decode(
                 WorkerContext.self,
                 from: childPersisted.context
             )
@@ -183,9 +183,12 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
 
-        var object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        object?.removeValue(forKey: "children")
-        let legacyData = try JSONSerialization.data(withJSONObject: object!)
+        var json = try JSON.parse(utf8: data)
+        if case .object(var object) = json {
+            object.removeValue(forKey: "children")
+            json = .object(object)
+        }
+        let legacyData = JSON.serialize(json)
 
         let decoded = try PersistedSnapshot.decodeJSON(legacyData)
         let restored = try restoreSnapshot(machine: counterMachine, persisted: decoded)
@@ -268,7 +271,7 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         if case let .machine(midPersisted) = persisted.children["mid"],
            case let .machine(leafPersisted) = midPersisted.children["leaf"] {
-            let leafContext = try JSONDecoder().decode(
+            let leafContext = try FridayJSONDecoder().decode(
                 LeafContext.self,
                 from: leafPersisted.context
             )

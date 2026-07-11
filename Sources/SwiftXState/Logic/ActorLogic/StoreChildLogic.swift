@@ -1,4 +1,3 @@
-import Foundation
 
 /// The `fromStore` child as an `ActorLogic` (XState's `fromStore`). Named `StoreChildLogic` to avoid
 /// the existing `StoreLogic` reducer type. Creates the store in `setUp`, routes incoming events to

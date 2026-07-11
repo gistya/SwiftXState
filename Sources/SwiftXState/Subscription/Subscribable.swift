@@ -1,4 +1,3 @@
-import Foundation
 
 /// A stream that can be subscribed to, mirroring XState's `Subscribable` (RxJS-compatible).
 public protocol Subscribable<Element>: Sendable {

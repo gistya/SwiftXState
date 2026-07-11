@@ -1,4 +1,3 @@
-import Foundation
 
 /// The `fromTaskGroup` child as an `ActorLogic` — structurally identical to `TaskLogic`, but the
 /// output is the collected `[Output]` from the structured-concurrency group.

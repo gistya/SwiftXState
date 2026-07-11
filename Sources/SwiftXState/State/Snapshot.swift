@@ -1,4 +1,3 @@
-import Foundation
 
 /// The lifecycle status of a machine snapshot.
 public enum SnapshotStatus: Sendable, Equatable, Codable {

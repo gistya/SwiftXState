@@ -1,4 +1,3 @@
-import Foundation
 #if canImport(Dispatch)
 import Dispatch
 #endif
@@ -84,7 +83,7 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
 
     public init(
         _ logic: L,
-        id: String = UUID().uuidString,
+        id: String = randomUUIDString(),
         options: ActorOptions = ActorOptions(),
         parent: (any ParentActorRepresentable)? = nil,
         system: ActorSystem? = nil,

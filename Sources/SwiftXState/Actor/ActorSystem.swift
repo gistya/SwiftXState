@@ -1,4 +1,3 @@
-import Foundation
 import Synchronization
 
 /// Registry for actors within a state machine system, mirroring XState's `system`.

@@ -1,4 +1,3 @@
-import Foundation
 
 /// Configuration for invoking a child actor when entering a state.
 public struct InvokeConfig<Context: Sendable>: Sendable {

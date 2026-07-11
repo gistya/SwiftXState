@@ -1,4 +1,3 @@
-import Foundation
 
 /// Evaluates whether a guard passes for the given context and event.
 public func evaluateGuard<Context: Sendable>(

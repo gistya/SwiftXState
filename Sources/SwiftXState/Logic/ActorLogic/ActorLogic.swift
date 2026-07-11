@@ -1,4 +1,3 @@
-import Foundation
 
 /// The behaviour an actor runs, abstracted away from how it is run. A conformer supplies an
 /// opaque `Snapshot`, its initial value, and a pure step that folds one event into the next

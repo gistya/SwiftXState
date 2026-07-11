@@ -1,4 +1,3 @@
-import Foundation
 
 /// Builds child actor references for `invoke` / `spawn`, given a resolved actor source.
 ///

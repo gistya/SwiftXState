@@ -1,4 +1,3 @@
-import Foundation
 
 /// Identifies a child actor by id or runtime expression.
 public enum ChildTarget<Context: Sendable>: Sendable {

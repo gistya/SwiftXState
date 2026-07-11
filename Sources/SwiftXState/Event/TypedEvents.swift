@@ -1,4 +1,3 @@
-import Foundation
 
 // MARK: - Tier 2: typed events with per-event narrowing
 //

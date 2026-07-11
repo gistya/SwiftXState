@@ -1,4 +1,3 @@
-import Foundation
 
 public extension Actor where L: MachineActorLogic {
     /// Create an actor for a state machine — `Actor(machine)`, the form `createActor(_:)` builds on.

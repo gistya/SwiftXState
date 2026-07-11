@@ -1,4 +1,3 @@
-import Foundation
 
 /// An event that can be sent to a state machine actor. Conform a Swift enum for a typed event
 /// union, or use the built-in `Event` for string events. `type` is the discriminator transitions

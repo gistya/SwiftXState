@@ -1,4 +1,3 @@
-import Foundation
 
 /// One mapped value collected from an active state node (leaf-to-root ordering).
 public struct MapStateEntry<T: Sendable>: Sendable {

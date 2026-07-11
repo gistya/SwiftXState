@@ -1,4 +1,3 @@
-import Foundation
 
 /// The `fromTask` child as an `ActorLogic` (XState's `fromPromise`). Status-only snapshot; the async
 /// work runs in `run`, then `scope.complete(output)` / `scope.fail(error)` deliver the

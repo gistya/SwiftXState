@@ -1,4 +1,3 @@
-import Foundation
 import Synchronization
 
 /// Output from a `log` action.

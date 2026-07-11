@@ -1,4 +1,3 @@
-import Foundation
 
 /// The engine event a typed `EventID` lowers to — an `Eventable` whose `type` is the id's
 /// discriminant `name` (so the engine routes on it) while the whole `id` value rides along, so a

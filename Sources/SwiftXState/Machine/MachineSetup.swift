@@ -1,4 +1,3 @@
-import Foundation
 
 /// Builder for creating type-safe state machines with predefined actions and guards.
 /// Mirrors XState's `setup().createMachine()` API.

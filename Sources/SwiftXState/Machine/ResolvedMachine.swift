@@ -1,4 +1,3 @@
-import Foundation
 
 /// A state machine definition — the pure, reusable logic of a statechart. Created with
 /// `createMachine(_:)` and run by `createActor(_:)`. Stateless and `Sendable`: one machine can

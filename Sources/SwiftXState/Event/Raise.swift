@@ -1,4 +1,3 @@
-import Foundation
 
 /// A delayed event produced by a `raise` action with a `delay`.
 public struct DelayedRaise: Sendable, Equatable {

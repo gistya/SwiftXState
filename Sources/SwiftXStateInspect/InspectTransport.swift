@@ -31,7 +31,7 @@ public struct InspectWireEvent: Sendable, Equatable, Codable {
     public var snapshot: InspectWireSnapshot?
     public var actionType: String?
     public var transitions: [InspectWireTransition]?
-    public var timestamp: TimeInterval
+    public var timestamp: Double
 
     public init(from inspectionEvent: InspectionEvent) {
         kind = inspectionEvent.kind.rawValue

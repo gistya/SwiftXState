@@ -1,4 +1,3 @@
-import Foundation
 
 enum MachineDefinitionExporter {
     static func export<Context: Sendable>(_ machine: ResolvedMachine<Context>) throws -> String {

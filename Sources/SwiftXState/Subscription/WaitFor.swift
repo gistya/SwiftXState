@@ -1,4 +1,3 @@
-import Foundation
 import Synchronization
 
 private final class WaitForState<Context: Sendable>: @unchecked Sendable {
@@ -57,7 +56,7 @@ public struct WaitForOptions: Sendable {
 }
 
 /// Errors thrown by `waitFor`.
-public enum WaitForError: Error, Equatable, LocalizedError {
+public enum WaitForError: Error, Equatable {
     case timeout(milliseconds: Int)
     case actorTerminated
 

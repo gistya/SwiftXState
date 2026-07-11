@@ -1,4 +1,3 @@
-import Foundation
 
 /// The `fromTransition` child as an `ActorLogic` (XState's `fromTransition`) — a genuine reducer:
 /// the snapshot *is* the context, and each event folds through `logic.transition`. Runs effectful

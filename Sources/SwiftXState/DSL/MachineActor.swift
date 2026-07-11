@@ -1,4 +1,3 @@
-import Foundation
 
 /// A typed actor facade over a `StateMachine` declaration — the *running* counterpart of the typed
 /// DSL. Where the engine's `Actor` speaks strings (`send(Event("GO"))`, `snapshot.value: StateValue`),

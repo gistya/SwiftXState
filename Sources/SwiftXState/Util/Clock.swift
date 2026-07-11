@@ -1,4 +1,3 @@
-import Foundation
 import Synchronization
 
 /// Handle returned by `Clock.setTimeout`, used to cancel a scheduled callback.

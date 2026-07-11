@@ -1,4 +1,3 @@
-import Foundation
 import Synchronization
 
 // MARK: - Replayable events
@@ -91,7 +90,7 @@ public enum ReplayableEvent: Sendable, Equatable, Codable {
 /// One root-actor transition captured during a recording session.
 public struct RecordedStep: Sendable, Equatable, Codable {
     public let index: Int
-    public let timestamp: TimeInterval
+    public let timestamp: Double
     public let event: ReplayableEvent
     public let snapshotBefore: InspectionSnapshot?
     public let snapshotAfter: InspectionSnapshot
@@ -99,7 +98,7 @@ public struct RecordedStep: Sendable, Equatable, Codable {
 
     public init(
         index: Int,
-        timestamp: TimeInterval,
+        timestamp: Double,
         event: ReplayableEvent,
         snapshotBefore: InspectionSnapshot?,
         snapshotAfter: InspectionSnapshot,

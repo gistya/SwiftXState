@@ -1,4 +1,3 @@
-import Foundation
 
 /// A compile-time-checked state reference — the raw value is the dot-path from the machine root
 /// (`"red.wait"`). Declare a conformer as a `String`-backed enum with one case per state, so the

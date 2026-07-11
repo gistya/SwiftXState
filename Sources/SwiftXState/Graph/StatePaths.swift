@@ -1,4 +1,3 @@
-import Foundation
 
 /// One step along a path: an event and the snapshot reached *after* applying it.
 public struct PathStep<Context: Sendable>: Sendable {

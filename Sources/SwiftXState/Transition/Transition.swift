@@ -1,4 +1,3 @@
-import Foundation
 
 /// Given a machine, snapshot, and event, returns the next snapshot and actions to execute.
 /// This is a pure function that does not execute actions.

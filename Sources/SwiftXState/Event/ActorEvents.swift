@@ -1,4 +1,3 @@
-import Foundation
 
 /// Event emitted when a nested state region reaches a final state.
 public struct DoneStateEvent: Eventable {

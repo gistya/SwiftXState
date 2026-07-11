@@ -1,4 +1,3 @@
-import Foundation
 
 /// The inspection side of `MachineLogic`'s `ActorLogic` conformance: builds the machine-specific
 /// `@xstate.*` events from `MachineSnapshot`. `Actor` owns the *plumbing* (the `inspectable`

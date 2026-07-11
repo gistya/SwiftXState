@@ -1,4 +1,3 @@
-import Foundation
 
 /// Represents the active state value of a state machine snapshot.
 ///

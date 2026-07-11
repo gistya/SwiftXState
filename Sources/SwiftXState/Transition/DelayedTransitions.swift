@@ -1,4 +1,3 @@
-import Foundation
 
 /// Metadata for a delayed (`after`) transition on a state node.
 struct AfterSchedule: Sendable {

@@ -4,5 +4,4 @@
 //   - packages/core (state machines, actors, transitions, guards, actions)
 //   - packages/xstate-store (event-driven stores)
 
-@_exported import struct Foundation.UUID
 @_exported import CompositionalInit

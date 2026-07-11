@@ -1,4 +1,3 @@
-import Foundation
 
 /// Configuration for a `sendTo` action.
 public struct SendToAction<Context: Sendable>: Sendable {

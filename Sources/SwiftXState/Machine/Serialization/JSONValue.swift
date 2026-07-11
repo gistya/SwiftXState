@@ -3,6 +3,9 @@ import FridayTheCodable
 /// A JSON-compatible value for machine definition export.
 public enum JSONValue: Sendable, Equatable {
     case string(String)
+    // TODO (when Hastings lands): add an `integer` case (matching FridayTheThirteenth's Int64/float
+    // split, ideally Hastings' XSInteger) so big integers (> 2^53) survive the assign/inspection
+    // round-trip. `.number(Double)` is lossy for large ints today; then drop `writeWholeFloatsAsIntegers`.
     case number(Double)
     case bool(Bool)
     case object([String: JSONValue])

@@ -1,4 +1,3 @@
-import Foundation
 
 /// Owns an actor's delayed-event timers — the schedule behind `after:` transitions and delayed
 /// `raise` / `sendTo`. Extracted from `Actor` so the same timer behaviour can back any actor

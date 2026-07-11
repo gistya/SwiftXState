@@ -1,4 +1,3 @@
-import Foundation
 import FridayTheCodable
 
 /// A persisted snapshot for a non-machine child actor (task, callback, etc.).
@@ -66,7 +65,7 @@ public struct PersistedSnapshot: Codable, Sendable, Equatable {
     public var machineId: String
     public var status: SnapshotStatus
     public var value: StateValue
-    public var context: Data
+    public var context: [UInt8]
     public var tags: [String]
     public var historyValue: [String: [String]]
     public var output: JSONValue?
@@ -77,7 +76,7 @@ public struct PersistedSnapshot: Codable, Sendable, Equatable {
         machineId: String,
         status: SnapshotStatus,
         value: StateValue,
-        context: Data,
+        context: [UInt8],
         tags: [String],
         historyValue: [String: [String]] = [:],
         output: JSONValue? = nil,
@@ -100,7 +99,7 @@ public struct PersistedSnapshot: Codable, Sendable, Equatable {
         machineId = try container.decode(String.self, forKey: .machineId)
         status = try container.decode(SnapshotStatus.self, forKey: .status)
         value = try container.decode(StateValue.self, forKey: .value)
-        context = try container.decode(Data.self, forKey: .context)
+        context = try container.decode([UInt8].self, forKey: .context)
         tags = try container.decode([String].self, forKey: .tags)
         historyValue = try container.decodeIfPresent([String: [String]].self, forKey: .historyValue) ?? [:]
         output = try container.decodeIfPresent(JSONValue.self, forKey: .output)
@@ -108,16 +107,16 @@ public struct PersistedSnapshot: Codable, Sendable, Equatable {
         children = try container.decodeIfPresent([String: PersistedChildSnapshot].self, forKey: .children) ?? [:]
     }
 
-    public func encodeJSON() throws -> Data {
-        Data(try FridayJSONEncoder.swiftXState.encode(self))
+    public func encodeJSON() throws -> [UInt8] {
+        [UInt8](try FridayJSONEncoder.swiftXState.encode(self))
     }
 
-    public static func decodeJSON(_ data: Data) throws -> PersistedSnapshot {
+    public static func decodeJSON(_ data: [UInt8]) throws -> PersistedSnapshot {
         try FridayJSONDecoder().decode(PersistedSnapshot.self, from: Array(data))
     }
 }
 
-public enum PersistenceError: Error, Equatable, LocalizedError {
+public enum PersistenceError: Error, Equatable {
     case actorNotStarted
     case machineMismatch(expected: String, actual: String)
     case contextEncodingFailed
@@ -151,7 +150,7 @@ public func getPersistedSnapshot<Context: Codable & Sendable>(
     guard let contextBytes = try? FridayJSONEncoder.swiftXState.encode(snapshot.context) else {
         throw PersistenceError.contextEncodingFailed
     }
-    let contextData = Data(contextBytes)
+    let contextData = [UInt8](contextBytes)
 
     return PersistedSnapshot(
         machineId: snapshot.machine.id,

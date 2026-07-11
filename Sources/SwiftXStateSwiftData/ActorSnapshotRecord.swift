@@ -7,13 +7,13 @@ import SwiftData
 public final class ActorSnapshotRecord {
     @Attribute(.unique) public var key: String
     public var machineId: String
-    public var snapshotData: Data
+    public var snapshotData: [UInt8]
     public var updatedAt: Date
 
     public init(
         key: String,
         machineId: String,
-        snapshotData: Data,
+        snapshotData: [UInt8],
         updatedAt: Date = .now
     ) {
         self.key = key

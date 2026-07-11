@@ -1,4 +1,3 @@
-import Foundation
 
 /// The effectful side of `MachineLogic`'s `ActorLogic` conformance: the machine orchestration
 /// (side-effect dispatch, `after`, `invoke`) run against a `MachineHosting`. This is the same logic
@@ -287,7 +286,7 @@ extension MachineLogic {
         args: ActionArgs<Context>,
         host: isolated H
     ) async {
-        let childId = spawn.id ?? UUID().uuidString
+        let childId = spawn.id ?? randomUUIDString()
         guard !host.childRegistry.contains(childId) else { return }
         let input = spawn.input?(args)
         if let child = makeChildActor(

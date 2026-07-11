@@ -1,4 +1,3 @@
-import Foundation
 import Synchronization
 #if canImport(Darwin)
 import Darwin
@@ -204,7 +203,7 @@ public struct InspectionEvent: Sendable, Equatable, Codable {
     public let transitions: [InspectionTransitionInfo]?
     public let parentSessionId: String?
     public let definitionJSON: String?
-    public let timestamp: TimeInterval
+    public let timestamp: Double
     /// Wall-clock nanoseconds since the Unix epoch — full-precision counterpart of `timestamp` (which,
     /// being a `Double`, loses sub-microsecond resolution). Use for nanosecond-precise display/ordering.
     public let timestampNanos: UInt64

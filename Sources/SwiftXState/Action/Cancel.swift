@@ -1,4 +1,3 @@
-import Foundation
 
 /// Identifies a scheduled delayed action to cancel.
 public enum CancelId<Context: Sendable>: Sendable {

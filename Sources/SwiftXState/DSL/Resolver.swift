@@ -1,4 +1,3 @@
-import Foundation
 
 // MARK: - Schema → engine resolution (the build-time "destringing" boundary)
 

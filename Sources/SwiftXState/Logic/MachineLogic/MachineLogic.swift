@@ -1,4 +1,3 @@
-import Foundation
 
 /// The state-machine `ActorLogic`: the reducer that drives a `Actor<MachineLogic<Context>>`,
 /// which is the generic actor's machine specialization (full parity with `Actor`).

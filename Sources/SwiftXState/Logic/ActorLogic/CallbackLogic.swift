@@ -1,4 +1,3 @@
-import Foundation
 
 /// The `fromCallback` child expressed as an `ActorLogic` (XState v6's `CallbackActorLogic`). It has
 /// no meaningful snapshot — just a lifecycle status — and drives itself from `run`: it hands the

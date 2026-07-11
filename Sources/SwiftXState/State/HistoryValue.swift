@@ -1,4 +1,3 @@
-import Foundation
 
 /// Maps history state node IDs to the state nodes that were active when their
 /// parent region was last exited.

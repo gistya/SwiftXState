@@ -8,7 +8,7 @@ public final class ReplaySessionRecord {
     @Attribute(.unique) public var key: String
     public var rootId: String
     public var machineId: String?
-    public var sessionData: Data
+    public var sessionData: [UInt8]
     public var stepCount: Int
     public var updatedAt: Date
 
@@ -16,7 +16,7 @@ public final class ReplaySessionRecord {
         key: String,
         rootId: String,
         machineId: String?,
-        sessionData: Data,
+        sessionData: [UInt8],
         stepCount: Int,
         updatedAt: Date = .now
     ) {

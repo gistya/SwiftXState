@@ -1,4 +1,3 @@
-import Foundation
 
 /// Identity-based set of state nodes (class instances cannot be Hashable).
 struct StateNodeSet<Context: Sendable>: Sendable {
