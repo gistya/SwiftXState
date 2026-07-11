@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 /// Handle returned by `Clock.setTimeout`, used to cancel a scheduled callback.
 public struct TimeoutHandle: Sendable {
@@ -73,7 +74,7 @@ public final class SimulatedClock: Clock, @unchecked Sendable {
     private var nextId: Int = 0
     private var flushing = false
     private var flushingInvalidated = false
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     public init() {}
 

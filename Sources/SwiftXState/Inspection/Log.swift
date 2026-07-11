@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 /// Output from a `log` action.
 public struct LogOutput: Sendable, Equatable {
@@ -13,7 +14,7 @@ public struct LogOutput: Sendable, Equatable {
 
 /// Receives messages from `log` actions. Defaults to `print`; override in tests or apps.
 public enum LogHandler: Sendable {
-    private static let lock = NSLock()
+    private static let lock = Mutex(false)
     nonisolated(unsafe) private static var sink: (@Sendable (LogOutput) -> Void)?
 
     public static func setSink(_ handler: (@Sendable (LogOutput) -> Void)?) {

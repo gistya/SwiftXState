@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import SwiftXState
 
 /// The opening book as a typed — but **data-driven** — `StateMachine`: states and transitions are
@@ -49,7 +50,7 @@ public struct OpeningMoveTreeMachine: StateMachine {
 
     // MARK: - Resolved-machine builders (for current consumers; cached, since the tree is large)
 
-    private static let lock = NSLock()
+    private static let lock = Mutex(false)
     private nonisolated(unsafe) static var cached: ResolvedMachine<OpeningTreeContext>?
 
     public static func make(dataset: OpeningDataset = .bundled) -> ResolvedMachine<OpeningTreeContext> {

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -388,7 +389,7 @@ extension InspectionEvent {
 /// Collects raw inspection events. For structured recording and replay, use `InspectionRecorder`.
 public final class InspectionCollector: @unchecked Sendable {
     private var events: [InspectionEvent] = []
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     public init() {}
 

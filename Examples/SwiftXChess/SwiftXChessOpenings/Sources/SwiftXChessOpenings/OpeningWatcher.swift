@@ -1,5 +1,6 @@
 import ChessKit
 import Foundation
+import Synchronization
 import SwiftXState
 
 /// Read-only supervisor over the pure opening move-tree actor.
@@ -200,7 +201,7 @@ public final class OpeningTreeSession: @unchecked Sendable {
 
 private final class InspectMux: @unchecked Sendable {
     private var handlers: [@Sendable (InspectionEvent) -> Void] = []
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     func add(_ handler: @escaping @Sendable (InspectionEvent) -> Void) {
         lock.lock()

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import SwiftXState
 
 /// Every state in the chess machine. The machine *root* is parallel (`isParallel`) over the two
@@ -148,7 +149,7 @@ struct ChessGameMachine: StateMachine {
 
 /// Bridges UI-recorded sessions into machine actions (unchanged).
 enum ChessReplayBridge {
-    private static let lock = NSLock()
+    private static let lock = Mutex(false)
     private nonisolated(unsafe) static var pendingSession: ReplaySession?
 
     static func setPendingSession(_ session: ReplaySession?) {

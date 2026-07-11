@@ -1,4 +1,4 @@
-import Foundation
+import Synchronization
 
 /// The `fromObservable` child as an `ActorLogic` (XState's `fromObservable`). Subscribes
 /// synchronously in `setUp` (returning the unsubscribe as cleanup). Each value optionally pushes a
@@ -42,7 +42,7 @@ struct ObservableLogic<Context: Sendable & Equatable>: ActorLogic {
 
 /// Thread-safe holder for an observable's latest value (set on the stream's thread, read at complete).
 private final class LastValueBox<Value: Sendable>: @unchecked Sendable {
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var value: Value?
     func set(_ newValue: Value) { lock.lock(); value = newValue; lock.unlock() }
     func get() -> Value? { lock.lock(); defer { lock.unlock() }; return value }

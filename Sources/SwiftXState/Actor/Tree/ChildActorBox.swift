@@ -1,4 +1,4 @@
-import Foundation
+import Synchronization
 
 /// A `ChildActorRepresentable` adapter wrapping the generic `Actor` — XState's "an `ActorRef` wraps the
 /// interpreter". One generic adapter replaces the per-kind `*ChildRef` classes: the parent talks to
@@ -24,13 +24,13 @@ final class ChildActorBox<L: ActorLogic>: ChildActorRepresentable, @unchecked Se
     private let startAction: @Sendable (Actor<L>) async -> Void
     private let persistAction: @Sendable (Actor<L>, SnapshotStatus, String?) async throws -> PersistedChildSnapshot?
 
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var cachedStatus: SnapshotStatus = .stopped
     private var cachedError: String?
     private var statusSubscription: Subscription?
 
-    var status: SnapshotStatus { lock.withLock { cachedStatus } }
-    var errorMessage: String? { lock.withLock { cachedError } }
+    var status: SnapshotStatus { lock.withLock { _ in cachedStatus } }
+    var errorMessage: String? { lock.withLock { _ in cachedError } }
     var inspectable: Bool { inspectableValue }
 
     init(
@@ -78,7 +78,7 @@ final class ChildActorBox<L: ActorLogic>: ChildActorRepresentable, @unchecked Se
         // Subscribe before start so a fast-completing child's terminal status isn't missed.
         statusSubscription = await actor.subscribeStatus { [weak self] status, error in
             guard let self else { return }
-            lock.withLock { cachedStatus = status; cachedError = error }
+            lock.withLock { _ in cachedStatus = status; cachedError = error }
         }
         await startAction(actor)
     }
@@ -87,7 +87,7 @@ final class ChildActorBox<L: ActorLogic>: ChildActorRepresentable, @unchecked Se
         statusSubscription?.cancel()
         statusSubscription = nil
         await actor.stop()
-        lock.withLock { cachedStatus = .stopped }
+        lock.withLock { _ in cachedStatus = .stopped }
     }
 
     func send(_ event: any Eventable) async {

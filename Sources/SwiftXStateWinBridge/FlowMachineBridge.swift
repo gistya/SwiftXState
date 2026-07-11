@@ -13,11 +13,12 @@
 //  back. Keep any real data (paths, progress) on the C# side.
 //
 import Foundation
+import Synchronization
 import SwiftXState
 /// One C#-defined machine: its simulator plus the current state value, behind a lock so C# can drive
 /// it from any thread.
 private final class FlowMachine: @unchecked Sendable {
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     let sim: MachineSimulator
     private var current: StateValue
     let slot = CallbackSlot()
@@ -41,7 +42,7 @@ private final class FlowMachine: @unchecked Sendable {
 }
 private final class FlowRegistry: @unchecked Sendable {
     static let shared = FlowRegistry()
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var items: [Int64: FlowMachine] = [:]
     private var nextHandle: Int64 = 1
     func add(_ m: FlowMachine) -> Int64 {

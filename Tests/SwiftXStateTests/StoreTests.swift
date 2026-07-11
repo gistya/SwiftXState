@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import SwiftXState
 
@@ -309,7 +310,7 @@ private final class StoreFlag: @unchecked Sendable {
 }
 
 private final class StoreEmittedCapture: @unchecked Sendable {
-    private var lock = NSLock()
+    private let lock = Mutex(false)
     private(set) var values: [String] = []
 
     func append(_ value: String) {

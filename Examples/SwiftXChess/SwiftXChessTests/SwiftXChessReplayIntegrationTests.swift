@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import SwiftXChess
 @testable import SwiftXState
@@ -136,7 +137,7 @@ struct SwiftXChessReplayIntegrationTests {
     func sessionStyleReplayFlow() async {
         final class Gate: @unchecked Sendable {
             private var enabled = true
-            private let lock = NSLock()
+            private let lock = Mutex(false)
             func setEnabled(_ value: Bool) {
                 lock.lock()
                 enabled = value

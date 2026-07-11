@@ -1,4 +1,4 @@
-import Foundation
+import Synchronization
 
 /// An event emitted to external listeners via `actor.on(…)`, separate from state machine events.
 public struct EmittedEvent: Eventable, Sendable, Equatable {
@@ -75,7 +75,7 @@ public final class EmitListeners: @unchecked Sendable {
 
     private var listeners: [Listener] = []
     private var nextListenerID = 0
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     public init() {}
 

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 // MARK: - Store Types
 
@@ -185,7 +186,7 @@ public final class StoreSelector<
     private let equals: (T, T) -> Bool
     private var observers: [(T) -> Void] = []
     private var snapshotSubscription: Subscription?
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     init(
         store: Store<Context, E>,
@@ -256,7 +257,7 @@ public final class Store<Context: Sendable, E: Eventable>: @unchecked Sendable w
     private let assigners: [String: StoreAssigner<Context, E>]
     private let emitListeners = EmitListeners()
     private var inspectors: [(StoreInspectionEvent<Context>) -> Void] = []
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     public init(_ config: StoreConfig<Context, E>) {
         self._snapshot = StoreSnapshot(context: config.context)
@@ -312,7 +313,7 @@ public final class Store<Context: Sendable, E: Eventable>: @unchecked Sendable w
         notify(stoppedSnapshot)
         // Detach continuations under the lock, then `finish()` OUTSIDE it: `finish()` invokes each
         // stream's `onTermination` synchronously, which re-acquires `lock` — finishing under the lock
-        // would self-deadlock (NSLock is non-recursive).
+        // would self-deadlock (Mutex is non-recursive).
         lock.lock()
         let finishing = Array(snapshotContinuations.values)
         snapshotContinuations.removeAll()
@@ -560,7 +561,7 @@ public final class TransitionFunctionStore<Context: Sendable & Equatable, E: Eve
     private let initialSnapshotValue: StoreSnapshot<Context>
     private var observers: [(StoreSnapshot<Context>) -> Void] = []
     private let transitionFn: @Sendable (StoreSnapshot<Context>, E) -> StoreSnapshot<Context>
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     public init(
         context: Context,

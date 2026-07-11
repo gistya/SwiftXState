@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 // MARK: - Replayable events
 
@@ -184,7 +185,7 @@ public final class InspectionRecorder: @unchecked Sendable {
     private var lastSnapshot: InspectionSnapshot?
     private var pendingEvent: ReplayableEvent?
     private var pendingActions: [String] = []
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     public init() {}
 
@@ -451,7 +452,7 @@ public struct StoreReplaySession<Context: Sendable & Equatable>: Sendable, Equat
 public final class StoreRecorder<Context: Sendable & Equatable, E: Eventable>: @unchecked Sendable {
     private var steps: [StoreRecordedStep<Context>] = []
     private var initial: StoreSnapshot<Context>?
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     public init() {}
 

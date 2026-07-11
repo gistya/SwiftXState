@@ -1,5 +1,6 @@
 #if SWIFTXSTATE_APPLE_SWIFTDATA
 import Foundation
+import Synchronization
 
 /// Serializes SwiftData `ModelContainer` creation across the whole test process.
 ///
@@ -12,7 +13,7 @@ import Foundation
 /// a different, random test each run). Building each container inside this lock
 /// constructs stores one at a time; the finished, independent in-memory
 /// containers are then safe to use concurrently.
-private let swiftDataContainerCreationLock = NSLock()
+private let swiftDataContainerCreationLock = Mutex(false)
 
 /// Runs `body` (a `ModelContainer` construction) while holding the process-wide
 /// container-creation lock.

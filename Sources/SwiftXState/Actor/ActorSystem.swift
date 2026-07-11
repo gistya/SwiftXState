@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 /// Registry for actors within a state machine system, mirroring XState's `system`.
 public final class ActorSystem: @unchecked Sendable {
@@ -7,7 +8,7 @@ public final class ActorSystem: @unchecked Sendable {
     private var inspectionObservers: [(id: Int, observer: @Sendable (InspectionEvent) -> Void)] = []
     private var nextObserverID = 0
     private var rootId: String?
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     public init() {}
 

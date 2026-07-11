@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 @testable import SwiftXState
 
 /// A thread-safe, single-resolution box used to bridge a callback (snapshot
@@ -7,7 +8,7 @@ import Foundation
 /// await a *deterministic completion signal* instead of sleeping for a fixed
 /// duration and hoping the work finished (which races under parallel load).
 final class OneShot<T: Sendable>: @unchecked Sendable {
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var continuation: CheckedContinuation<T, Never>?
     private var resolvedValue: T?
     private var isResolved = false

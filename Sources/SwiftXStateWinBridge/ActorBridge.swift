@@ -11,6 +11,7 @@
 //  Strings out are heap-allocated; C# frees them (see Interop/csharp/SwiftXStateWinBridge.cs).
 //
 import Foundation
+import Synchronization
 import SwiftXState
 // MARK: - Inspection callback plumbing
 /// A C callback `void (*)(const char *json)` that C# can register to receive live inspection events.
@@ -18,7 +19,7 @@ public typealias InspectCCallback = @convention(c) (UnsafePointer<CChar>?) -> Vo
 /// Holds the (settable) C callback for one actor and forwards inspection events to it as JSON. The C
 /// string is valid only for the duration of the call — C# must copy it (PtrToStringUTF8) immediately.
 final class CallbackSlot: @unchecked Sendable {
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var callback: InspectCCallback?
     func set(_ cb: InspectCCallback?) { lock.lock(); callback = cb; lock.unlock() }
     func fire(_ json: String) {
@@ -43,7 +44,7 @@ private struct ActorHandleBox {
     let inspect: CallbackSlot           // live inspection events go here (set via actorSetSnapshotCallback)
 }
 private final class SnapshotCache<C: Sendable>: @unchecked Sendable {
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var snapshot: MachineSnapshot<C>
     init(_ snapshot: MachineSnapshot<C>) {
         self.snapshot = snapshot
@@ -104,7 +105,7 @@ private func makeBox<C: Sendable & Equatable>(_ machine: ResolvedMachine<C>) -> 
 /// themselves are `@unchecked Sendable` with their own internal queue.
 private final class BridgeRegistry: @unchecked Sendable {
     static let shared = BridgeRegistry()
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var actors: [Int64: ActorHandleBox] = [:]
     private var nextHandle: Int64 = 1
     func add(_ box: ActorHandleBox) -> Int64 {

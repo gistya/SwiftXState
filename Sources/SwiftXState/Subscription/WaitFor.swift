@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 private final class WaitForState<Context: Sendable>: @unchecked Sendable {
     var subscription: Subscription?
@@ -6,7 +7,7 @@ private final class WaitForState<Context: Sendable>: @unchecked Sendable {
     private var finished = false
     private var continuation: CheckedContinuation<MachineSnapshot<Context>, Error>?
     private var pending: Result<MachineSnapshot<Context>, Error>?
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     /// Attaches the continuation. If a result already arrived (the subscription / timeout can fire
     /// before the continuation is installed, now that `subscribe` is async), resume immediately.
