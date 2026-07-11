@@ -40,6 +40,7 @@ func actionType<Context: Sendable>(for ref: ActionRef<Context>) -> String {
     case .emit: return "xstate.emit"
     case .listen: return "xstate.listen"
     case .subscribeToChild: return "xstate.subscribeTo"
+    case .subscribeToAtom: return "xstate.subscribeToAtom"
     }
 }
 
@@ -76,7 +77,7 @@ public func executeAction<Context: Sendable>(
             label: logAction.label,
             value: resolveLogValue(logAction, args: args)
         )
-    case .spawn, .stopChild, .forwardTo, .sendTo, .sendToParent, .raise, .cancel, .enqueueActions, .emit, .listen, .subscribeToChild:
+    case .spawn, .stopChild, .forwardTo, .sendTo, .sendToParent, .raise, .cancel, .enqueueActions, .emit, .listen, .subscribeToChild, .subscribeToAtom:
         break
     }
 }

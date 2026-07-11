@@ -267,6 +267,8 @@ enum MachineDefinitionExporter {
             return .string("xstate.listen")
         case .subscribeToChild:
             return .string("xstate.subscribeTo")
+        case .subscribeToAtom:
+            return .string("xstate.subscribeToAtom")
         }
     }
 

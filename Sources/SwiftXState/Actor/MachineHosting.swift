@@ -28,6 +28,12 @@ public protocol MachineHosting: _Concurrency.Actor, ParentActorRepresentable, Ac
     /// (XState v6 `enq.subscribeTo`). Torn down when this actor stops. Default: no-op.
     func subscribeToChild(childId: String,
                           map: @escaping @Sendable (ChildActorSnapshot) -> (any Eventable)?) async
+    /// Subscribe to a reactive atom and relay mapped events back into this actor (XState v6
+    /// `enq.subscribeTo(atom)`). `subscribe` is given a relay to enqueue events and returns the
+    /// subscription to cancel on stop. Torn down when this actor stops. Default: no-op.
+    func subscribeToAtom(
+        _ subscribe: @escaping @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Subscription
+    ) async
     /// The persisted snapshot to seed a child with during restore (nil in normal operation).
     func pendingChildSnapshot(_ id: String) -> PersistedChildSnapshot?
 
@@ -44,4 +50,7 @@ public extension MachineHosting {
                 map: @escaping @Sendable (EmittedEvent) -> (any Eventable)?) async {}
     func subscribeToChild(childId: String,
                           map: @escaping @Sendable (ChildActorSnapshot) -> (any Eventable)?) async {}
+    func subscribeToAtom(
+        _ subscribe: @escaping @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Subscription
+    ) async {}
 }

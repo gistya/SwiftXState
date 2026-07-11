@@ -141,6 +141,8 @@ extension MachineLogic {
                                   map: listenAction.map)
             case let .subscribeToChild(subscribeAction):
                 await host.subscribeToChild(childId: subscribeAction.childId, map: subscribeAction.map)
+            case let .subscribeToAtom(atomAction):
+                await host.subscribeToAtom(atomAction.subscribe)
             }
         }
 

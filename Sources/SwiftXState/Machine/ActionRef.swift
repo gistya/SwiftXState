@@ -35,6 +35,9 @@ public enum ActionRef<Context: Sendable>: Sendable {
     /// Subscribe to a child actor's snapshot changes and relay a mapped event back into this machine
     /// (XState v6 `enq.subscribeTo`). The subscription is torn down when this actor stops.
     case subscribeToChild(SubscribeChildAction<Context>)
+    /// Subscribe to a reactive ``ReadableAtom``'s changes and relay a mapped event back into this
+    /// machine (XState v6 `enq.subscribeTo(atom)`). The subscription is torn down when this actor stops.
+    case subscribeToAtom(SubscribeAtomAction<Context>)
 }
 
 /// A `listen` effect: subscribe to child `childId`'s emitted events of type `eventType` (`"*"` = all)
@@ -67,4 +70,23 @@ public func subscribeToChild<Context: Sendable>(
     map: @escaping @Sendable (ChildActorSnapshot) -> (any Eventable)?
 ) -> ActionRef<Context> {
     .subscribeToChild(SubscribeChildAction(childId: childId, map: map))
+}
+
+/// A `subscribeTo(atom)` effect: subscribe to a reactive atom and relay each mapped value back into
+/// this machine. The atom's value type is erased here into `subscribe`, which takes the actor's relay
+/// (call it with the event to enqueue) and returns the ``Subscription`` to cancel on stop.
+public struct SubscribeAtomAction<Context: Sendable>: Sendable {
+    public let subscribe: @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Subscription
+}
+
+/// Build a `subscribeTo(atom)` effect (see `SubscribeAtomAction`). Prefer `enq.subscribeTo(atom) { … }`.
+public func subscribeToAtom<Context: Sendable, V>(
+    _ atom: any ReadableAtom<V>,
+    map: @escaping @Sendable (V) -> (any Eventable)?
+) -> ActionRef<Context> {
+    .subscribeToAtom(SubscribeAtomAction { relay in
+        atom.subscribe { value in
+            if let event = map(value) { relay(event) }
+        }
+    })
 }

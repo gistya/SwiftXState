@@ -89,4 +89,16 @@ public final class Enqueue<Context: Sendable, EventID: EventIdentifying>: @unche
             map(snap).map { TypedEvent($0) }
         })
     }
+
+    /// Subscribe to a reactive ``ReadableAtom`` and relay a mapped event back into this machine —
+    /// XState v6's `enq.subscribeTo(atom)`. Fires with the atom's current value first (BehaviorSubject),
+    /// then on every change; `map` returning `nil` drops that value. Torn down when this actor stops.
+    ///
+    /// `enq.subscribeTo(threshold) { $0 > 10 ? .exceeded : nil }`
+    public func subscribeTo<V>(_ atom: any ReadableAtom<V>,
+                               _ map: @escaping @Sendable (V) -> EventID?) {
+        collected.append(SwiftXState.subscribeToAtom(atom) { value in
+            map(value).map { TypedEvent($0) }
+        })
+    }
 }

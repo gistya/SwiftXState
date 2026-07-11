@@ -347,6 +347,17 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         listenerSubscriptions.append(sub)
     }
 
+    /// `enq.subscribeTo(atom)`: subscribe to a reactive atom and relay each mapped event back into this
+    /// actor. The `Subscription` is retained here and cancelled on `stop()`.
+    public func subscribeToAtom(
+        _ subscribe: @escaping @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Subscription
+    ) async {
+        let sub = subscribe { [weak self] event in
+            Task { await self?.receiveRelay(event) }
+        }
+        listenerSubscriptions.append(sub)
+    }
+
     /// Deliver a relayed event from a listened child. It is the machine reacting to its own child, so
     /// it bypasses the external `internalEvents` gate (an internal reaction, not an outside send).
     private func receiveRelay(_ event: any Eventable) async {
