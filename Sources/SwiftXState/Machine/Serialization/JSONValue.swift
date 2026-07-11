@@ -1,4 +1,4 @@
-import Foundation
+import FridayTheCodable
 
 /// A JSON-compatible value for machine definition export.
 public enum JSONValue: Sendable, Equatable {
@@ -10,13 +10,22 @@ public enum JSONValue: Sendable, Equatable {
     case null
 
     public static func encode(_ value: JSONValue) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let data = try encoder.encode(value)
-        guard let text = String(data: data, encoding: .utf8) else {
-            throw MachineDefinitionError.encodingFailed
-        }
-        return text
+        try FridayJSONEncoder.swiftXStateSorted.encodeString(value)
+    }
+}
+
+extension FridayJSONEncoder {
+    /// SwiftXState's standard JSON encoder. `writeWholeFloatsAsIntegers` mirrors the old Foundation
+    /// output (a whole `Double` like `5.0` is written `5`) and — crucially — lets a
+    /// `JSONValue.number(Double)` round-trip back into an `Int`-typed `Codable`, since
+    /// FridayTheThirteenth decodes integers strictly (a JSON float won't decode into `Int`).
+    static var swiftXState: FridayJSONEncoder {
+        FridayJSONEncoder(outputFormatting: JSONSerializeOptions(writeWholeFloatsAsIntegers: true))
+    }
+
+    /// As ``swiftXState`` but with sorted keys, for deterministic machine-definition output.
+    static var swiftXStateSorted: FridayJSONEncoder {
+        FridayJSONEncoder(outputFormatting: JSONSerializeOptions(sortedKeys: true, writeWholeFloatsAsIntegers: true))
     }
 }
 

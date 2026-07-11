@@ -1,4 +1,4 @@
-import Foundation
+import FridayTheCodable
 
 /// A *structural* simulator over a static XState machine definition: given the current state
 /// value and an event name, it computes the next state value by following the definition's `on`
@@ -32,8 +32,7 @@ public struct MachineSimulator: Sendable {
 
     /// Parse a machine definition JSON string. Returns `nil` if it isn't a JSON object.
     public init?(definitionJSON json: String, machineID: String) {
-        guard let data = json.data(using: .utf8),
-              let value = try? JSONDecoder().decode(JSONValue.self, from: data),
+        guard let value = try? FridayJSONDecoder().decode(JSONValue.self, from: json),
               case let .object(root) = value else { return nil }
         self.init(root: root, machineID: machineID)
     }

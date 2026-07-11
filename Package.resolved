@@ -1,6 +1,15 @@
 {
-  "originHash" : "b9d159f86d342013d531d83851d9905665d844b14e6138ea44912ee58e6accd6",
+  "originHash" : "6b7160ee8ee060d2f7d51b7a6ee1dbd90aa08bdeb981d17ddccd04a739a23990",
   "pins" : [
+    {
+      "identity" : "friday-the-thirteenth",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gistya/friday-the-thirteenth",
+      "state" : {
+        "revision" : "8c74b2aae86b44a854deda408bf1b059dcfad157",
+        "version" : "1.1.0"
+      }
+    },
     {
       "identity" : "swift-compositional-init",
       "kind" : "remoteSourceControl",

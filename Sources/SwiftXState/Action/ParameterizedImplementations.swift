@@ -1,4 +1,5 @@
 import Foundation
+import FridayTheCodable
 
 // MARK: - Params transport (runtime / wire)
 
@@ -83,11 +84,7 @@ extension JSONValue {
     }
 
     func codableData() throws -> Data {
-        let text = try JSONValue.encode(self)
-        guard let data = text.data(using: .utf8) else {
-            throw MachineDefinitionError.encodingFailed
-        }
-        return data
+        Data(try JSONValue.encode(self).utf8)
     }
 }
 
@@ -114,11 +111,11 @@ public struct VoidParams: GuardParamValues, Sendable, Equatable, Codable {
 
 extension GuardParamValues where Self: Codable {
     public func encodeToBox() -> ParamsBox {
-        guard let data = try? JSONEncoder().encode(self),
-              let object = try? JSONSerialization.jsonObject(with: data) else {
+        guard let bytes = try? FridayJSONEncoder.swiftXState.encode(self),
+              let json = try? FridayJSONDecoder().decode(JSONValue.self, from: bytes) else {
             return ParamsBox()
         }
-        return ParamsBox(json: JSONValue.fromAny(object))
+        return ParamsBox(json: json)
     }
 
     public static func decode(from box: ParamsBox?) -> Self? {
@@ -126,8 +123,8 @@ extension GuardParamValues where Self: Codable {
             return (Self.self == VoidParams.self) ? (VoidParams() as? Self) : nil
         }
         guard case let .json(json) = box.storage,
-              let data = try? json.codableData(),
-              let decoded = try? JSONDecoder().decode(Self.self, from: data) else {
+              let bytes = try? FridayJSONEncoder.swiftXState.encode(json),
+              let decoded = try? FridayJSONDecoder().decode(Self.self, from: bytes) else {
             return nil
         }
         return decoded

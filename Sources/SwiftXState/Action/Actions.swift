@@ -1,4 +1,4 @@
-import Foundation
+import FridayTheCodable
 
 /// An executable action captured during a transition (not yet executed).
 public struct ExecutableAction<Context: Sendable>: Sendable {
@@ -111,9 +111,9 @@ private func applyPropertyAssigns<Context: Sendable>(
 }
 
 private func decodeContext<Context: Sendable>(_ type: Context.Type, from value: JSONValue) -> Context? {
-    guard let data = try? JSONEncoder().encode(value) else { return nil }
+    guard let bytes = try? FridayJSONEncoder.swiftXState.encode(value) else { return nil }
     guard let decodable = type as? any Decodable.Type else { return nil }
-    return (try? JSONDecoder().decode(decodable, from: data)) as? Context
+    return (try? FridayJSONDecoder().decode(decodable, from: bytes)) as? Context
 }
 
 /// Creates an assign action from a property map.

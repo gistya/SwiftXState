@@ -1,5 +1,3 @@
-import Foundation
-
 enum InspectJSONEncoder {
     static func encode<Context>(_ context: Context) -> JSONValue {
         if context is EmptyContext {
@@ -52,8 +50,6 @@ enum InspectJSONEncoder {
     }
 
     private static func mirrorEncode(_ value: Any) -> JSONValue? {
-        if value is NSNull { return .null }
-
         switch value {
         case let string as String:
             return .string(string)

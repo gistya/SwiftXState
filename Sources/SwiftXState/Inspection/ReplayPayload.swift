@@ -1,4 +1,4 @@
-import Foundation
+import FridayTheCodable
 
 /// XState-style event with a separate JSON payload for replay and inspection.
 public struct PayloadEvent: Eventable, Equatable, Codable {
@@ -30,8 +30,8 @@ public extension JSONValue {
         _ value: T,
         excludingTypeKey: Bool = false
     ) -> JSONValue? {
-        guard let data = try? JSONEncoder().encode(value),
-              var json = try? JSONDecoder().decode(JSONValue.self, from: data) else {
+        guard let bytes = try? FridayJSONEncoder.swiftXState.encode(value),
+              var json = try? FridayJSONDecoder().decode(JSONValue.self, from: bytes) else {
             return nil
         }
         if excludingTypeKey, case var .object(dict) = json {
@@ -43,8 +43,8 @@ public extension JSONValue {
     }
 
     func decode<T: Decodable>(_ type: T.Type = T.self) -> T? {
-        guard let data = try? JSONEncoder().encode(self) else { return nil }
-        return try? JSONDecoder().decode(T.self, from: data)
+        guard let bytes = try? FridayJSONEncoder.swiftXState.encode(self) else { return nil }
+        return try? FridayJSONDecoder().decode(T.self, from: bytes)
     }
 }
 

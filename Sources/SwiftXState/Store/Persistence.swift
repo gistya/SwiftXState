@@ -1,4 +1,5 @@
 import Foundation
+import FridayTheCodable
 
 /// A persisted snapshot for a non-machine child actor (task, callback, etc.).
 /// These children cannot be fully restored; only their last-known status is kept.
@@ -108,11 +109,11 @@ public struct PersistedSnapshot: Codable, Sendable, Equatable {
     }
 
     public func encodeJSON() throws -> Data {
-        try JSONEncoder().encode(self)
+        Data(try FridayJSONEncoder.swiftXState.encode(self))
     }
 
     public static func decodeJSON(_ data: Data) throws -> PersistedSnapshot {
-        try JSONDecoder().decode(PersistedSnapshot.self, from: data)
+        try FridayJSONDecoder().decode(PersistedSnapshot.self, from: Array(data))
     }
 }
 
@@ -147,10 +148,10 @@ public func getPersistedSnapshot<Context: Codable & Sendable>(
     from snapshot: MachineSnapshot<Context>,
     children: [String: PersistedChildSnapshot] = [:]
 ) throws -> PersistedSnapshot {
-    let encoder = JSONEncoder()
-    guard let contextData = try? encoder.encode(snapshot.context) else {
+    guard let contextBytes = try? FridayJSONEncoder.swiftXState.encode(snapshot.context) else {
         throw PersistenceError.contextEncodingFailed
     }
+    let contextData = Data(contextBytes)
 
     return PersistedSnapshot(
         machineId: snapshot.machine.id,
@@ -175,11 +176,10 @@ public func restoreSnapshot<Context: Codable & Sendable>(
         throw PersistenceError.machineMismatch(expected: persisted.machineId, actual: machine.id)
     }
 
-    let decoder = JSONDecoder()
     let context: Context
     if let overrideContext {
         context = overrideContext
-    } else if let decoded = try? decoder.decode(Context.self, from: persisted.context) {
+    } else if let decoded = try? FridayJSONDecoder().decode(Context.self, from: Array(persisted.context)) {
         context = decoded
     } else {
         throw PersistenceError.contextDecodingFailed

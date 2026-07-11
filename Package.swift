@@ -68,15 +68,15 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0"),
-        // Keypath/case-path optics + functional record update — backs the typed DSL's
-        // `<-` / `clone(mutating:)` / `cloned` and the `CasePath`/`WritableCasePath` prisms.
         .package(url: "https://github.com/gistya/swift-compositional-init", from: "1.1.2"),
+        .package(url: "https://github.com/gistya/friday-the-thirteenth", from: "1.1.0"),
     ],
     targets: [
         .target(
             name: "SwiftXState",
             dependencies: [
                 .product(name: "CompositionalInit", package: "swift-compositional-init"),
+                .product(name: "FridayTheCodable", package: "friday-the-thirteenth"),
             ],
             path: "Sources/SwiftXState",
             swiftSettings: [

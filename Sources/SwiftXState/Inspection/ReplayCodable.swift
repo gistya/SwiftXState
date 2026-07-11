@@ -1,12 +1,13 @@
 import Foundation
+import FridayTheCodable
 
 extension ReplaySession {
     public func encodeJSON() throws -> Data {
-        try JSONEncoder().encode(self)
+        Data(try FridayJSONEncoder.swiftXState.encode(self))
     }
 
     public static func decodeJSON(_ data: Data) throws -> ReplaySession {
-        try JSONDecoder().decode(ReplaySession.self, from: data)
+        try FridayJSONDecoder().decode(ReplaySession.self, from: Array(data))
     }
 }
 
