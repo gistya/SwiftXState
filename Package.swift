@@ -53,6 +53,10 @@ let package = Package(
             targets: ["SwiftXStateInspect"]
         ),
         .library(
+            name: "SwiftXStateInspectLog",
+            targets: ["SwiftXStateInspectLog"]
+        ),
+        .library(
             name: "SwiftXStateInspectURLSession",
             targets: ["SwiftXStateInspectURLSession"]
         ),
@@ -129,8 +133,19 @@ let package = Package(
         ),
         .target(
             name: "SwiftXStateInspect",
-            dependencies: ["SwiftXState"],
+            dependencies: [
+                "SwiftXState",
+                .product(name: "FridayTheCodable", package: "friday-the-thirteenth"),
+            ],
             path: "Sources/SwiftXStateInspect",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency"),
+            ]
+        ),
+        .target(
+            name: "SwiftXStateInspectLog",
+            dependencies: ["SwiftXStateInspect"],
+            path: "Sources/SwiftXStateInspectLog",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
             ]

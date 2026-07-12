@@ -1,5 +1,3 @@
-import Foundation
-
 /// How local network access is scoped for inspect transports.
 public enum ConnectivityPolicy: Sendable, Equatable {
     /// Loopback only (`127.0.0.1`, `::1`, `localhost`).
@@ -57,32 +55,11 @@ public struct InspectEndpoint: Sendable, Equatable, Codable {
         self.path = path
     }
 
-    public var url: URL? {
-        var components = URLComponents()
-        components.scheme = scheme.rawValue
-        components.host = host
-        components.port = port
-        components.path = path.hasPrefix("/") ? path : "/\(path)"
-        return components.url
-    }
-
-    public init?(url: URL) {
-        guard let schemeRaw = url.scheme,
-              let scheme = InspectScheme(rawValue: schemeRaw),
-              let host = url.host
-        else { return nil }
-
-        self.scheme = scheme
-        self.host = host
-        self.port = url.port ?? Self.defaultPort(for: scheme)
-        self.path = url.path.isEmpty ? "/" : url.path
-    }
-
-    private static func defaultPort(for scheme: InspectScheme) -> Int {
-        switch scheme {
-        case .ws, .http: return 80
-        case .wss, .https: return 443
-        }
+    /// The endpoint as a URL string (Foundation-free). Transports that need a `URL` — e.g.
+    /// `SwiftXStateInspectURLSession` — build one from this; the base module never depends on `URL`.
+    public var urlString: String {
+        let normalizedPath = path.hasPrefix("/") ? path : "/\(path)"
+        return "\(scheme.rawValue)://\(host):\(port)\(normalizedPath)"
     }
 }
 

@@ -1,4 +1,3 @@
-import Foundation
 import SwiftXState
 
 /// Connects `InspectionEvent` streams to an `InspectTransport`.

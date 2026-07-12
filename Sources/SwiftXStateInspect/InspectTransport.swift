@@ -1,22 +1,22 @@
-import Foundation
+import FridayTheCodable
 import SwiftXState
 
-/// A single outbound inspect message on the wire.
+/// A single outbound inspect message on the wire. `payload` is raw UTF-8 JSON bytes (no Foundation).
 public struct InspectWireMessage: Sendable, Equatable, Codable {
     public var type: String
-    public var payload: Data
+    public var payload: [UInt8]
 
-    public init(type: String, payload: Data) {
+    public init(type: String, payload: [UInt8]) {
         self.type = type
         self.payload = payload
     }
 
     public static func inspectionEvent(_ event: InspectWireEvent) throws -> InspectWireMessage {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        return InspectWireMessage(
+        InspectWireMessage(
             type: "inspection.event",
-            payload: try encoder.encode(event)
+            payload: try FridayJSONEncoder(
+                outputFormatting: JSONSerializeOptions(sortedKeys: true, writeWholeFloatsAsIntegers: true)
+            ).encode(event)
         )
     }
 }

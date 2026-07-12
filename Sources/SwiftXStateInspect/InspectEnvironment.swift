@@ -1,5 +1,3 @@
-import Foundation
-
 /// Where the inspect client is running.
 public enum InspectHostKind: String, Sendable, Equatable, Codable {
     case macApp
