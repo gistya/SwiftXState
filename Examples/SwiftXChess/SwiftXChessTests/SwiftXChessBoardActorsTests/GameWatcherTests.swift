@@ -56,7 +56,7 @@ struct GameWatcherTests {
             #expect(!sessionId.hasPrefix("piece."))
 
             guard let wireData = converter.wireData(for: event),
-                  let object = try JSONSerialization.jsonObject(with: wireData) as? [String: Any] else {
+                  let object = try JSONSerialization.jsonObject(with: Data(wireData)) as? [String: Any] else {
                 continue
             }
 

@@ -44,7 +44,7 @@ final class ChessSession {
         port: Int = 8080
     ) async {
         endpoint = InspectEndpoint(host: host, port: port)
-        inspectorEndpoint = endpoint.url?.absoluteString ?? "ws://\(host):\(port)"
+        inspectorEndpoint = endpoint.urlString
         transport = URLSessionInspect.transport(
             policy: .localhostOnly(ports: .only([port])),
             runtime: InspectRuntimeContext(isDebugBuild: true)

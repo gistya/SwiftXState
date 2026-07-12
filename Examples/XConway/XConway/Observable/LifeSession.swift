@@ -204,7 +204,7 @@ public final class LifeSession {
         var descriptor = FetchDescriptor<ActorSnapshotRecord>(predicate: #Predicate { $0.key == key })
         descriptor.fetchLimit = 1
         guard let record = try? mc.fetch(descriptor).first else { return nil }
-        return try? JSONDecoder().decode(LifeContext.self, from: record.snapshotData)
+        return try? JSONDecoder().decode(LifeContext.self, from: Data(record.snapshotData))
     }
 
     public func saveSnapshot() {
@@ -214,11 +214,11 @@ public final class LifeSession {
         var descriptor = FetchDescriptor<ActorSnapshotRecord>(predicate: #Predicate { $0.key == key })
         descriptor.fetchLimit = 1
         if let existing = try? mc.fetch(descriptor).first {
-            existing.snapshotData = data
+            existing.snapshotData = Array(data)
             existing.machineId = "life"
             existing.updatedAt = .now
         } else {
-            mc.insert(ActorSnapshotRecord(key: key, machineId: "life", snapshotData: data))
+            mc.insert(ActorSnapshotRecord(key: key, machineId: "life", snapshotData: Array(data)))
         }
         try? mc.save()
     }

@@ -80,7 +80,7 @@ final class DistributedChessSession {
         extraInspect: (@Sendable (InspectionEvent) -> Void)? = nil
     ) async throws {
         let endpoint = InspectEndpoint(host: host, port: port)
-        inspectorEndpoint = endpoint.url?.absoluteString ?? "ws://\(host):\(port)"
+        inspectorEndpoint = endpoint.urlString
         let transport = URLSessionInspect.transport(
             policy: .localhostOnly(ports: .only([port])),
             runtime: InspectRuntimeContext(isDebugBuild: true)

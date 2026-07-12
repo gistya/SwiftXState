@@ -25,11 +25,56 @@ public protocol ReadableAtom<Value>: AnyObject, Sendable {
 
 /// The single gate guarding the whole atom dependency graph, built on `Synchronization.Mutex`.
 ///
-/// **Non-reentrant** (a `Mutex` is not recursive): it is *never* held across a compute closure or an
-/// observer callback — those run with the gate released, and a callback that reads/writes atoms
-/// simply re-acquires it. One gate (rather than per-atom mutexes) means graph walks touch no lock
-/// ordering, so there is no ABBA hazard. Uses the house `Mutex(false)` + `lock()/unlock()` idiom
-/// (`Util/Mutex+Locking`) because the critical sections must temporarily release the gate.
+/// ## Why one *global* lock — yes, on purpose
+///
+/// A process-global lock (and the global mutable graph state it guards) trips every "this is an
+/// antipattern" alarm. It is deliberate, and it is the cheapest *correct* option. The reasoning,
+/// since it is genuinely not obvious:
+///
+/// **What it protects is the graph, not an atom.** Glitch-free propagation means one write must
+/// atomically mark *every* transitive computed dependent stale before any observer can read (see
+/// `markStaleAndCollectObserved`). That critical section inherently spans many atoms at once — it is
+/// not per-atom state, so a per-atom lock cannot even express the invariant.
+///
+/// **Per-atom locks would be worse, not better.** A write walks *downstream*, touching each dependent
+/// to mark it stale; a computed's read walks *upstream*, touching each source to register a dependency
+/// edge. Those two walks would take the same per-atom locks in opposite orders → textbook ABBA
+/// deadlock, avoidable only with a global lock-ordering protocol over the entire graph — and you'd be
+/// holding a *chain* of locks across each walk, strictly more contention than one gate buys. One gate
+/// means graph walks touch no lock ordering at all, so there is no ABBA hazard to reason about.
+///
+/// **It is cheap because of what it does *not* hold.** The gate covers only O(graph-bookkeeping)
+/// pointer work: compare, swap a field, walk the dependent set, snapshot the observer list. It is
+/// *never* held across a `compute` closure or an observer callback — those run with the gate released
+/// (a callback that itself touches atoms just re-acquires it). An uncontended `Mutex` on Darwin is
+/// `os_unfair_lock`-class — a compare-exchange, no syscall — so when nothing actually contends (the
+/// common case) "global" costs a handful of nanoseconds. The lock's *reach* (every atom) is not its
+/// *cost* (nanoseconds of uncontended bookkeeping); conflating the two is the reflex to resist here.
+///
+/// **Where it genuinely serializes.** Two *independent* atom graphs written concurrently from
+/// different threads do contend on this gate despite sharing no data. That is a non-issue under the
+/// intended usage — each graph driven from one view model or one `Actor`, i.e. XState's single-
+/// writer-per-domain model, where a graph's writes are already serialized upstream of this lock. If a
+/// real workload ever shows cross-graph gate contention in a profile, the fix is to partition the gate
+/// *per store* (one lock per graph). It is global today only because `createAtom` yields free-floating
+/// atoms with no owning store object to scope a lock to, and a computed may read atoms from anywhere.
+/// JS XState dodges the whole question by being single-threaded; this gate is the price of making it
+/// thread-safe in Swift at all.
+///
+/// ## "But is the *locking discipline itself* racy?"
+///
+/// The mutex cannot race. But because it is **non-reentrant** (a `Mutex` is not recursive) it must be
+/// *released* across every `compute()` and every delivery — which does open deliberate check-then-act
+/// windows: state is read under one acquisition and acted on under a later one. Those windows are not
+/// bugs; they are closed by two explicit mechanisms, and **any change here must preserve them**:
+///   - `ComputedAtom.dirtyVersion` — if a source changes *during* a recompute, the value just produced
+///     may already be stale, so the node stays `dirty` instead of clearing over a lost invalidation
+///     (`settledValue`).
+///   - `deliveryGen` — a delivery a newer write has already superseded is dropped, coalescing
+///     redundant / out-of-order notifications so observers converge on the settled value.
+///
+/// Uses the house `Mutex(false)` + `lock()/unlock()` idiom (`Util/Mutex+Locking`) precisely because
+/// these critical sections must temporarily release the gate.
 private let gate = Mutex(false)
 
 /// Lock-free source of monotonic observer ids.

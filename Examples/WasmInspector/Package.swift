@@ -32,11 +32,11 @@ let swiftXMinVersion: Version = "1.0.0"
 let package = Package(
     name: "WasmInspector",
     platforms: [
-        .macOS(.v14),
-        .iOS(.v17),
-        .watchOS(.v10),
-        .tvOS(.v17),
-        .macCatalyst(.v17),
+        .macOS(.v15),
+        .iOS(.v18),
+        .watchOS(.v11),
+        .tvOS(.v18),
+        .macCatalyst(.v18),
     ],
     products: [
         .library(name: "WebInspector", targets: ["WebInspector"]),
