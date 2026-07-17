@@ -4,7 +4,8 @@ Model your app's behavior as explicit, visualizable, testable state machines —
 
 ## Overview
 
-Welcome to **SwiftXState** — a native Swift port of [XState v5](https://stately.ai/docs). It lets
+Welcome to **SwiftXState** — a native Swift port of [XState](https://stately.ai/docs), tracking its
+**v6** model (including `@xstate/store` reactive <doc:Atoms>). It lets
 you describe *what your app does* as a **statechart**: a finite set of named states and the
 transitions allowed between them. Instead of juggling a pile of `Bool`s and optionals
 (`isLoading`, `error`, `data`, `isRetrying`) and guarding against impossible combinations, you
@@ -27,6 +28,8 @@ declare the states once and the machine guarantees you can only ever be in one o
 - **Testability** — machines are pure and `Sendable`; the `SwiftXStateGraph` module adds
   `@xstate/graph` path generation and model-based testing.
 - **Persistence & replay** — snapshot an actor and restore it, or replay a recorded event log.
+- **Reactive atoms** — standalone writable and computed reactive values (the port of XState v6's
+  `@xstate/store`); observe one directly, or drive a machine from it. See <doc:Atoms>.
 - **SwiftUI & SwiftData bindings**, and a cross-platform core (Apple platforms + Linux/Windows).
 
 ### Choose your path
@@ -81,6 +84,7 @@ talk to one another.
 - <doc:AsyncWork>
 - <doc:DrivingSwiftUI>
 - <doc:NamedImplementations>
+- <doc:Atoms>
 
 ### Building Machines
 
@@ -115,6 +119,14 @@ talk to one another.
 
 - ``Eventable``
 - ``Event``
+
+### Reactive Atoms
+
+- ``Atom``
+- ``ComputedAtom``
+- ``ReadableAtom``
+- ``Subscription``
+- ``subscribeToAtom(_:map:)``
 
 ### Async Work & Children
 

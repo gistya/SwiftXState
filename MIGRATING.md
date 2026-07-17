@@ -9,8 +9,8 @@ abstraction every actor is built from.
 
 The good news for upgrading: **almost all of your code is source-compatible.** The way
 you create and drive actors (`createActor`, `start`, `send`, `snapshot`, `subscribe`,
-`on`, persistence, `waitFor`, typed actors) is unchanged. There are only **two**
-breaking changes, both about the actor *type*.
+`on`, persistence, `waitFor`) is unchanged. The **two** breaking changes you're most
+likely to hit are both about the actor *type* (plus one note on typed actors at the end).
 
 ---
 
@@ -97,17 +97,19 @@ await actor.stop()                        // stop
 let data = try await actor.getPersistedSnapshot()
 await createActor(toggle).start(from: persisted)
 
-// typed actors
-let typed = createActor(player, as: Mode.self)
-let branded = createActor(player).typed(as: Mode.self)
-
 // waiting
 let settled = try await actor.waitFor { $0.matches("ready") }
 ```
 
-`createActor`, `createActor(_:as:)`, `TypedActor`, `MachineSnapshot`, `ActorOptions`,
-`createMachine`, `useMachine`, `useSelector`, SwiftData `save`/`restore`, the inspector,
-and the SwiftUI/Graph integrations keep the same public signatures and behavior.
+`createActor`, `MachineSnapshot`, `ActorOptions`, `createMachine`, `useMachine`,
+`useSelector`, SwiftData `save`/`restore`, the inspector, and the SwiftUI/Graph
+integrations keep the same public signatures and behavior.
+
+> **Typed actors changed.** The 1.x `createActor(_:as:)` / `TypedActor` state-branding was
+> removed. The type-safe authoring path in 2.0 is the `StateMachine` result-builder DSL:
+> declare your machine as a `StateMachine` (with `StateIdentifying` / `EventIdentifying`
+> enums) and `createActor` hands back a fully-typed `MachineActor` whose `send` / `matches` /
+> `start` are compile-checked. See the type-safe guide in the README / DocC.
 
 > **Note** Actors stayed Swift `actor`s (as in 1.1.0), so `send` / `snapshot` / `start`
 > were already `async`. If you're coming from an *older* 1.x that predates the actor
