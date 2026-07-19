@@ -73,7 +73,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0"),
         .package(url: "https://github.com/gistya/swift-compositional-init", from: "1.1.2"),
-        .package(url: "https://github.com/gistya/friday-the-thirteenth", from: "1.1.0"),
+        .package(url: "https://github.com/gistya/friday-the-thirteenth", from: "2.0.0"),
     ],
     targets: [
         .target(

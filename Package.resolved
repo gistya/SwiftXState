@@ -1,13 +1,13 @@
 {
-  "originHash" : "6b7160ee8ee060d2f7d51b7a6ee1dbd90aa08bdeb981d17ddccd04a739a23990",
+  "originHash" : "59d52b55a7215bf249d48a7243defe0b3d9956af0727bc7d3f3f6ffc13121235",
   "pins" : [
     {
       "identity" : "friday-the-thirteenth",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/friday-the-thirteenth",
       "state" : {
-        "revision" : "8c74b2aae86b44a854deda408bf1b059dcfad157",
-        "version" : "1.1.0"
+        "revision" : "be87de47919c3e6591e3f681812a411f30f870da",
+        "version" : "2.0.0"
       }
     },
     {
