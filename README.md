@@ -72,15 +72,16 @@
 
 ## What is SwiftXState useful for?
 
-1. Own your logic and events with (state)-flow-(state) graphs. 
-2. Track it live with built-in JSON streams & 2D/3D visualizer. 
+1. Understand your app's business logic with declarative statechart syntax.
+2. Get streaming JSON for everything that happens, for free, built-in. 
 3. Rewind/replay your whole program with snapshots. 
 4. Load statecharts from JSON at runtime to tweak behavior.
-5. Offload business logic to threadsafe background executors with asynchronous Swift `actor`s, which gain deterministic behavior thanks to XState wizardry.
+5. Offload business logic to threadsafe background executors (actors).
+6. Watch your state machines operate in real time with a free SwiftUI-based visualizer module that you build right into the app -- or use our XState-API-compatible websocket server.
 
 ## Where can I run it?
 
-1. Server or client.
+1. Server or client. App or browser (WASM).
 2. Node.js: use [Stately.a's XState.js](https://github.com/statelyai/xstate).
 3. WebAssembly: *experimental* — the [browser inspector](https://github.com/gistya/swiftxstate/tree/main/Examples/WasmInspector) runs SwiftXState in wasm with a WebGPU state-graph
 4. Linux ([Linux build README](LINUX_SETUP.md), or get prebuilt NuGet)
