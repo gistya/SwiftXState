@@ -3,6 +3,8 @@ import Synchronization
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(WASILibc)
+import WASILibc
 #endif
 
 /// Wall-clock nanoseconds since the Unix epoch. `TimeInterval` (a `Double`) can't hold true
@@ -14,8 +16,16 @@ public func wallClockNanosecondsSince1970() -> UInt64 {
     var ts = timespec()
     clock_gettime(CLOCK_REALTIME, &ts)
     return UInt64(ts.tv_sec) &* 1_000_000_000 &+ UInt64(ts.tv_nsec)
+    #elseif canImport(WASILibc)
+    // wasi-libc defines CLOCK_REALTIME as `(&_CLOCK_REALTIME)` over an incomplete
+    // struct, so neither the macro nor the symbol imports into Swift (clockid_t
+    // lands as OpaquePointer). Call the underlying WASI syscall directly instead;
+    // this keeps the module free of Foundation.
+    var nanos: __wasi_timestamp_t = 0
+    _ = __wasi_clock_time_get(__wasi_clockid_t(0), 1_000, &nanos)  // 0 == REALTIME
+    return UInt64(nanos)
     #else
-    return UInt64((Date().timeIntervalSince1970 * 1_000_000_000).rounded())
+    return 0
     #endif
 }
 
