@@ -1,7 +1,9 @@
-#if hasFeature(Embedded)
-// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
-import _Concurrency
-#endif
+// Reactive atoms are the port of XState v6's @xstate/store. They are excluded from Embedded
+// Swift: the dependency graph relies on weak references (prohibited in Embedded) to let a
+// computed atom observe atoms that may go away, and the engine is additive rather than core
+// statechart machinery. Everything else in SwiftXState works without it.
+#if !hasFeature(Embedded)
+
 
 import Synchronization
 
@@ -382,3 +384,5 @@ public func createAtom<Value: Sendable & Equatable>(_ initialValue: Value) -> At
 public func createAtom<Value: Sendable & Equatable>(_ compute: @escaping @Sendable () -> Value) -> ComputedAtom<Value> {
     ComputedAtom(compute)
 }
+
+#endif // !hasFeature(Embedded)

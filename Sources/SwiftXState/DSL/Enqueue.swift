@@ -94,10 +94,15 @@ public final class Enqueue<Context: Sendable, EventID: EventIdentifying>: @unche
     /// then on every change; `map` returning `nil` drops that value. Torn down when this actor stops.
     ///
     /// `enq.subscribeTo(threshold) { $0 > 10 ? .exceeded : nil }`
+    ///
+    /// Unavailable on Embedded Swift, which excludes reactive atoms. The child-actor overload
+    /// `subscribeTo(_ childId:)` above is unaffected.
+    #if !hasFeature(Embedded)
     public func subscribeTo<V>(_ atom: any ReadableAtom<V>,
                                _ map: @escaping @Sendable (V) -> EventID?) {
         collected.append(SwiftXState.subscribeToAtom(atom) { value in
             map(value).map { TypedEvent($0) }
         })
     }
+    #endif
 }

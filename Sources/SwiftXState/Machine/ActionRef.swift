@@ -80,6 +80,11 @@ public struct SubscribeAtomAction<Context: Sendable>: Sendable {
 }
 
 /// Build a `subscribeTo(atom)` effect (see `SubscribeAtomAction`). Prefer `enq.subscribeTo(atom) { … }`.
+///
+/// Unavailable on Embedded Swift, which excludes reactive atoms. The `subscribeToAtom` *case* and
+/// ``SubscribeAtomAction`` remain — they are atom-agnostic (the value type is erased into
+/// `subscribe`), so a host can still drive the effect from another reactive source.
+#if !hasFeature(Embedded)
 public func subscribeToAtom<Context: Sendable, V>(
     _ atom: any ReadableAtom<V>,
     map: @escaping @Sendable (V) -> (any Eventable)?
@@ -90,3 +95,4 @@ public func subscribeToAtom<Context: Sendable, V>(
         }
     })
 }
+#endif
