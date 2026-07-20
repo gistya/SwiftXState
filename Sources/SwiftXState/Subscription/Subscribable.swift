@@ -1,3 +1,8 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+import _Concurrency
+#endif
+
 
 /// A stream that can be subscribed to, mirroring XState's `Subscribable` (RxJS-compatible).
 public protocol Subscribable<Element>: Sendable {

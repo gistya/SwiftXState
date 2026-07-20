@@ -1,3 +1,8 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+import _Concurrency
+#endif
+
 /// The concrete logic kinds an `ActorSource` resolves to. Exactly one box is non-nil (or `named`,
 /// for an unresolved lookup). Was nested in `Actor`; lifted alongside the factory functions below.
 struct ResolvedActorSource {

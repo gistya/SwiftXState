@@ -1,3 +1,8 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+import _Concurrency
+#endif
+
 /// Machine implementations provided at interpretation time (actions, guards).
 /// Registered actor logic for named `invoke` / `spawnChild` sources.
 public struct ActorLogicEntry: Sendable {

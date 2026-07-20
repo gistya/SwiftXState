@@ -1,3 +1,8 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+import _Concurrency
+#endif
+
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 import os
 #else

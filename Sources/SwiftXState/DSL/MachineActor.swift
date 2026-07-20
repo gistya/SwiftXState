@@ -1,3 +1,8 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+import _Concurrency
+#endif
+
 
 /// A typed actor facade over a `StateMachine` declaration — the *running* counterpart of the typed
 /// DSL. Where the engine's `Actor` speaks strings (`send(Event("GO"))`, `snapshot.value: StateValue`),

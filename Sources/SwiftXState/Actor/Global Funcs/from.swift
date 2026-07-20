@@ -1,3 +1,8 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+import _Concurrency
+#endif
+
 /// Actor logic backed by an `async` task — XState's `fromPromise`. The returned `Output` becomes
 /// the child's `done` data (drives `onDone`); throwing drives `onError`; `onCancel` runs if the
 /// invoking state exits first. Use as an `invoke` `src` or with `spawnChild`.

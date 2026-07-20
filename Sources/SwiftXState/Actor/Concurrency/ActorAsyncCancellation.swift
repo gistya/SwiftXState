@@ -1,3 +1,8 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+import _Concurrency
+#endif
+
 /// Cancellation helpers for `fromTask` / `fromTaskGroup` actor logic.
 ///
 /// Use `checkCancellation()` or `isCancelled` inside long loops, and `withCancellationHandler`

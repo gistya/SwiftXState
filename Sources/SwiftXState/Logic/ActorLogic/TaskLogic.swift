@@ -1,3 +1,8 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+import _Concurrency
+#endif
+
 
 /// The `fromTask` child as an `ActorLogic` (XState's `fromPromise`). Status-only snapshot; the async
 /// work runs in `run`, then `scope.complete(output)` / `scope.fail(error)` deliver the

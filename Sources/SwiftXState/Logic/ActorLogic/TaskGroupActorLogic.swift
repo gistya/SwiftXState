@@ -1,3 +1,8 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+import _Concurrency
+#endif
+
 /// Task group logic for structured concurrent child work.
 public struct TaskGroupActorLogic<Output: Sendable & Equatable>: Sendable {
     public let run: @Sendable (TaskGroupScope) async throws -> [Output]
