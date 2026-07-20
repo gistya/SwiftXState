@@ -3,10 +3,11 @@
 # NOTE: this number is NOT monotonically decreasing progress, and a rise is not always a
 # regression. Embedded reports errors in layers: the type checker first, then SIL/IRGen. Clearing
 # a type-check blocker can *raise* the count by letting the compiler reach code it previously
-# never lowered, exposing a deeper restriction.
+# never lowered, exposing a deeper restriction. That is what happened at 76 -> 86.
 #
-# That is what happened at 76 -> 86. Every remaining type-check blocker was cleared, which
-# unmasked the IRGen layer: `any Eventable` and other existentials, dynamic casts (`as?`), and
-# key paths, none of which Embedded Swift permits. Those are architectural, not mechanical — see
-# the discussion in Util/BackRef.swift and the migration notes.
-86
+# What remains at 72 is architectural, not mechanical. Embedded permits class-bound (AnyObject)
+# protocol existentials but not value existentials, and permits no dynamic casts. So
+# `any ParentActorRepresentable` and `any ChildActorRepresentable` are fine, while `any Eventable`,
+# SendableValue's `any Equatable & Sendable` box, and every `as?` are not. Closing those means
+# changing how the engine represents events and erased values — see the migration plan.
+72

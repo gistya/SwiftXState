@@ -85,9 +85,13 @@ if [ "$COUNT" -eq 0 ]; then
 fi
 
 OURS=$(grep -c "Sources/$TARGET/" "$LOG.err")
-DEPS=$(grep -vc "Sources/$TARGET/" "$LOG.err")
+# `<unknown>:0:` errors carry no source location — they are whole-module diagnostics from this
+# target, NOT dependency errors. Counting them as dependencies made the warning below fire
+# misleadingly.
+UNLOCATED=$(grep -c "^<unknown>:0: error:" "$LOG.err")
+DEPS=$((COUNT - OURS - UNLOCATED))
 echo ""
-echo "$COUNT errors — $OURS in Sources/$TARGET, $DEPS in dependencies."
+echo "$COUNT errors — $OURS in Sources/$TARGET, $UNLOCATED whole-module, $DEPS in dependencies."
 
 if [ "$DEPS" -gt 0 ] && [ "$OURS" -eq 0 ]; then
     echo ""

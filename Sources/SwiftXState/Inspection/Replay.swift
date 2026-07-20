@@ -134,7 +134,8 @@ public struct ReplaySession: Sendable, Equatable {
 
     /// Events to send when replaying on a live actor (skips `xstate.init`).
     public var replayEvents: [ReplayableEvent] {
-        steps.map(\.event).filter(\.isReplayable)
+        // Closures rather than key paths — Embedded Swift supports no key paths.
+        steps.map { $0.event }.filter { $0.isReplayable }
     }
 
     public var initialSnapshot: InspectionSnapshot? {

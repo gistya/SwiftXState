@@ -10,7 +10,10 @@ import _Concurrency
 public enum ActorAsyncCancellation {
     public static var isCancelled: Bool { Task.isCancelled }
 
-    public static func checkCancellation() throws {
+    /// Typed `throws` because an untyped one boxes into `any Error`, and Embedded Swift permits no
+    /// value existentials. The concrete error type was always `CancellationError`, so naming it
+    /// costs callers nothing and documents the contract.
+    public static func checkCancellation() throws(CancellationError) {
         if Task.isCancelled { throw CancellationError() }
     }
 
