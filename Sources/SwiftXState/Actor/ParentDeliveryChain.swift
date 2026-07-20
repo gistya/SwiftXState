@@ -17,9 +17,10 @@ final class ParentDeliveryChain: @unchecked Sendable {
     func deliver(to parent: (any ParentActorRepresentable)?, _ event: any Eventable) {
         lock.lock()
         let previous = tail
-        tail = Task { [weak parent] in
+        let parentRef = ParentRef(parent)
+        tail = Task {
             await previous?.value
-            await parent?.enqueueFromChild(event)
+            await parentRef.value?.enqueueFromChild(event)
         }
         lock.unlock()
     }

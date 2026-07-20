@@ -448,10 +448,12 @@ public final class InspectionCollector: @unchecked Sendable {
     public init() {}
 
     public func observe() -> @Sendable (InspectionEvent) -> Void {
-        { [weak self] event in
-            self?.lock.lock()
-            self?.events.append(event)
-            self?.lock.unlock()
+        let selfRef = BackRef(self)
+        return { event in
+            guard let owner = selfRef.value else { return }
+            owner.lock.lock()
+            owner.events.append(event)
+            owner.lock.unlock()
         }
     }
 

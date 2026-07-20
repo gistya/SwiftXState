@@ -190,8 +190,9 @@ public final class InspectionRecorder: @unchecked Sendable {
 
     /// Returns an inspection observer suitable for `ActorOptions.inspect` or `ActorSystem.inspect`.
     public func observe() -> @Sendable (InspectionEvent) -> Void {
-        { [weak self] event in
-            self?.handle(event)
+        let selfRef = BackRef(self)
+        return { event in
+            selfRef.value?.handle(event)
         }
     }
 

@@ -76,9 +76,10 @@ final class ChildActorBox<L: ActorLogic>: ChildActorRepresentable, @unchecked Se
 
     func start() async {
         // Subscribe before start so a fast-completing child's terminal status isn't missed.
-        statusSubscription = await actor.subscribeStatus { [weak self] status, error in
-            guard let self else { return }
-            lock.withLock { _ in cachedStatus = status; cachedError = error }
+        let selfRef = BackRef(self)
+        statusSubscription = await actor.subscribeStatus { status, error in
+            guard let owner = selfRef.value else { return }
+            owner.lock.withLock { _ in owner.cachedStatus = status; owner.cachedError = error }
         }
         await startAction(actor)
     }

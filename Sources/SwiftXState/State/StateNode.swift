@@ -7,7 +7,12 @@ public final class StateNode<Context: Sendable>: @unchecked Sendable {
     public let path: [String]
     public private(set) var states: [String: StateNode<Context>]
     public let parent: StateNode<Context>?
+    // Embedded prohibits `weak`; see BackRef.swift for why a strong link is sound there.
+    #if hasFeature(Embedded)
+    var machine: ResolvedMachine<Context>?
+    #else
     weak var machine: ResolvedMachine<Context>?
+    #endif
 
     public let initial: String?
     public let entry: [ActionRef<Context>]

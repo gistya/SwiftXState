@@ -89,11 +89,12 @@ public final class EmitListeners: @unchecked Sendable {
         listeners.append(Listener(id: id, eventType: eventType, handler: handler))
         lock.unlock()
 
-        return Subscription { [weak self] in
-            guard let self else { return }
-            self.lock.lock()
-            self.listeners.removeAll { $0.id == id }
-            self.lock.unlock()
+        let selfRef = BackRef(self)
+        return Subscription {
+            guard let owner = selfRef.value else { return }
+            owner.lock.lock()
+            owner.listeners.removeAll { $0.id == id }
+            owner.lock.unlock()
         }
     }
 

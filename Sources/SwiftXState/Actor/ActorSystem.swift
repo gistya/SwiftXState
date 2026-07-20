@@ -37,11 +37,12 @@ public final class ActorSystem: @unchecked Sendable {
         inspectionObservers.append((id: id, observer: observer))
         lock.unlock()
 
-        return Subscription { [weak self] in
-            guard let self else { return }
-            self.lock.lock()
-            self.inspectionObservers.removeAll { $0.id == id }
-            self.lock.unlock()
+        let selfRef = BackRef(self)
+        return Subscription {
+            guard let owner = selfRef.value else { return }
+            owner.lock.lock()
+            owner.inspectionObservers.removeAll { $0.id == id }
+            owner.lock.unlock()
         }
     }
 

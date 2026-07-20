@@ -61,7 +61,12 @@ public struct StoreInspectionEvent<Context: Sendable & Equatable>: Sendable, Equ
 public final class StoreEnqueue<Context: Sendable & Equatable, E: Eventable>: @unchecked Sendable {
     private var effects: [StoreQueuedEffect] = []
     private var triggered: [E] = []
+    // Embedded prohibits `weak`; see BackRef.swift for why a strong link is sound there.
+    #if hasFeature(Embedded)
+    private var store: Store<Context, E>?
+    #else
     private weak var store: Store<Context, E>?
+    #endif
 
     init(store: Store<Context, E>?) {
         self.store = store
@@ -185,7 +190,12 @@ public final class StoreSelector<
     E: Eventable,
     T: Sendable & Equatable
 >: @unchecked Sendable {
+    // Embedded prohibits `weak`; see BackRef.swift for why a strong link is sound there.
+    #if hasFeature(Embedded)
+    private var store: Store<Context, E>?
+    #else
     private weak var store: Store<Context, E>?
+    #endif
     private let selector: (Context) -> T
     private let equals: (T, T) -> Bool
     private var observers: [(T) -> Void] = []
@@ -200,8 +210,9 @@ public final class StoreSelector<
         self.store = store
         self.selector = selector
         self.equals = equals
-        self.snapshotSubscription = store.subscribe { [weak self] snapshot in
-            self?.handleSnapshot(snapshot)
+        let selfRef = BackRef(self)
+        self.snapshotSubscription = store.subscribe { snapshot in
+            selfRef.value?.handleSnapshot(snapshot)
         }
     }
 
@@ -220,12 +231,14 @@ public final class StoreSelector<
         let index = observers.count - 1
         lock.unlock()
 
-        return Subscription { [weak self] in
-            self?.lock.lock()
-            if index < self?.observers.count ?? 0 {
-                self?.observers.remove(at: index)
+        let selfRef = BackRef(self)
+        return Subscription {
+            guard let owner = selfRef.value else { return }
+            owner.lock.lock()
+            if index < owner.observers.count {
+                owner.observers.remove(at: index)
             }
-            self?.lock.unlock()
+            owner.lock.unlock()
         }
     }
 
@@ -350,11 +363,13 @@ public final class Store<Context: Sendable, E: Eventable>: @unchecked Sendable w
         let index = observers.count - 1
         lock.unlock()
 
-        return Subscription { [weak self] in
-            self?.lock.lock()
-            defer { self?.lock.unlock() }
-            if index < self?.observers.count ?? 0 {
-                self?.observers.remove(at: index)
+        let selfRef = BackRef(self)
+        return Subscription {
+            guard let owner = selfRef.value else { return }
+            owner.lock.lock()
+            defer { owner.lock.unlock() }
+            if index < owner.observers.count {
+                owner.observers.remove(at: index)
             }
         }
     }
@@ -382,11 +397,12 @@ public final class Store<Context: Sendable, E: Eventable>: @unchecked Sendable w
                 continuation.finish()
                 return
             }
-            continuation.onTermination = { [weak self] _ in
-                guard let self else { return }
-                self.lock.lock()
-                self.snapshotContinuations[id] = nil
-                self.lock.unlock()
+            let selfRef = BackRef(self)
+            continuation.onTermination = { _ in
+                guard let owner = selfRef.value else { return }
+                owner.lock.lock()
+                owner.snapshotContinuations[id] = nil
+                owner.lock.unlock()
             }
         }
     }
@@ -409,11 +425,13 @@ public final class Store<Context: Sendable, E: Eventable>: @unchecked Sendable w
         let index = inspectors.count - 1
         lock.unlock()
 
-        return Subscription { [weak self] in
-            self?.lock.lock()
-            defer { self?.lock.unlock() }
-            if index < self?.inspectors.count ?? 0 {
-                self?.inspectors.remove(at: index)
+        let selfRef = BackRef(self)
+        return Subscription {
+            guard let owner = selfRef.value else { return }
+            owner.lock.lock()
+            defer { owner.lock.unlock() }
+            if index < owner.inspectors.count {
+                owner.inspectors.remove(at: index)
             }
         }
     }
@@ -628,11 +646,13 @@ public final class TransitionFunctionStore<Context: Sendable & Equatable, E: Eve
         let index = observers.count - 1
         lock.unlock()
 
-        return Subscription { [weak self] in
-            self?.lock.lock()
-            defer { self?.lock.unlock() }
-            if index < self?.observers.count ?? 0 {
-                self?.observers.remove(at: index)
+        let selfRef = BackRef(self)
+        return Subscription {
+            guard let owner = selfRef.value else { return }
+            owner.lock.lock()
+            defer { owner.lock.unlock() }
+            if index < owner.observers.count {
+                owner.observers.remove(at: index)
             }
         }
     }
