@@ -2,6 +2,7 @@
 import Foundation
 import SwiftData
 import SwiftXState
+import SwiftXStateCodable
 
 public enum ReplayPersistenceError: Error, Equatable, LocalizedError {
     case noRecordedSession

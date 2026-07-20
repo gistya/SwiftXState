@@ -25,7 +25,7 @@ public func createActor<Context: Sendable>(
 /// The returned actor is already started — equivalent to
 /// `createActor(machine).start(from: snapshot)`, including child re-spawn and
 /// delayed-transition scheduling for restored state nodes.
-public func createActor<Context: Codable & Sendable>(
+public func createActor<Context: ContextPersistable & Sendable>(
     _ machine: ResolvedMachine<Context>,
     snapshot: PersistedSnapshot,
     id: String? = nil,

@@ -1,14 +1,3 @@
-import FridayTheCodable
-
-extension ReplaySession {
-    public func encodeJSON() throws -> [UInt8] {
-        [UInt8](try FridayJSONEncoder.swiftXState.encode(self))
-    }
-
-    public static func decodeJSON(_ data: [UInt8]) throws -> ReplaySession {
-        try FridayJSONDecoder().decode(ReplaySession.self, from: Array(data))
-    }
-}
 
 extension ReplayableEvent {
     private enum Discriminator: String, Codable {

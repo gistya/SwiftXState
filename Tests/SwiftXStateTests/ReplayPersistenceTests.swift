@@ -1,5 +1,6 @@
 import Testing
 @testable import SwiftXState
+import SwiftXStateCodable
 
 private struct ReplayPersistContext: Sendable, Equatable, Codable {
     var count: Int

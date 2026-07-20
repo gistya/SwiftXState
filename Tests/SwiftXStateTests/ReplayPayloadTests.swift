@@ -1,5 +1,6 @@
 import Testing
 @testable import SwiftXState
+import SwiftXStateCodable
 
 private struct TapPayload: Codable, Sendable, Equatable {
     let row: Int

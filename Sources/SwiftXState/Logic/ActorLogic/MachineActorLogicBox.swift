@@ -25,8 +25,8 @@ public struct MachineActorLogicBox: Sendable {
     }
 
     /// Uses the child machine's `context` or `contextFromInput` to build initial context.
-    /// Child snapshots can be persisted and restored when `ChildContext` is `Codable`.
-    public init<ChildContext: Codable & Sendable>(_ machine: ResolvedMachine<ChildContext>) {
+    /// Child snapshots can be persisted and restored when `ChildContext` is ``ContextPersistable``.
+    public init<ChildContext: ContextPersistable & Sendable>(_ machine: ResolvedMachine<ChildContext>) {
         _spawn = { id, input, parent, systemId, options, syncSnapshot, persistedChild in
             spawnCodableMachineChild(
                 machine: machine,
@@ -50,7 +50,7 @@ public struct MachineActorLogicBox: Sendable {
         }
     }
 
-    public init<ChildContext: Codable & Sendable>(
+    public init<ChildContext: ContextPersistable & Sendable>(
         _ machine: ResolvedMachine<ChildContext>,
         context: @escaping @Sendable (SendableValue?) -> ChildContext
     ) {
@@ -98,8 +98,8 @@ private func spawnMachineChild<ChildContext: Sendable>(
     )
 }
 
-/// Codable machine child: persists as `.machine(...)`, restores via `start(from:)`.
-private func spawnCodableMachineChild<ChildContext: Codable & Sendable>(
+/// Persistable machine child: persists as `.machine(...)`, restores via `start(from:)`.
+private func spawnCodableMachineChild<ChildContext: ContextPersistable & Sendable>(
     machine: ResolvedMachine<ChildContext>,
     context: ChildContext,
     id: String,

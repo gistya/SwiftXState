@@ -1,4 +1,4 @@
-extension MachineLogic: PersistableLogic where Context: Codable {
+extension MachineLogic: PersistableLogic where Context: ContextPersistable {
     public func persistedSnapshot(
         _ snapshot: MachineSnapshot<Context>,
         children: [String: PersistedChildSnapshot]

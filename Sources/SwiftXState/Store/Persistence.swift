@@ -1,4 +1,3 @@
-import FridayTheCodable
 
 /// A persisted snapshot for a non-machine child actor (task, callback, etc.).
 /// These children cannot be fully restored; only their last-known status is kept.
@@ -107,13 +106,6 @@ public struct PersistedSnapshot: Codable, Sendable, Equatable {
         children = try container.decodeIfPresent([String: PersistedChildSnapshot].self, forKey: .children) ?? [:]
     }
 
-    public func encodeJSON() throws -> [UInt8] {
-        [UInt8](try FridayJSONEncoder.swiftXState.encode(self))
-    }
-
-    public static func decodeJSON(_ data: [UInt8]) throws -> PersistedSnapshot {
-        try FridayJSONDecoder().decode(PersistedSnapshot.self, from: Array(data))
-    }
 }
 
 public enum PersistenceError: Error, Equatable {
@@ -142,15 +134,20 @@ public enum PersistenceError: Error, Equatable {
     }
 }
 
-/// Creates a persisted snapshot from a live machine snapshot and optional child snapshots.
-public func getPersistedSnapshot<Context: Codable & Sendable>(
+/// Creates a persisted snapshot from a live machine snapshot, given the context **already encoded**
+/// to bytes.
+///
+/// This is the primitive every other overload funnels through: it does all the snapshot work
+/// (state-node resolution, history, child snapshots) without caring *how* the context was encoded, so
+/// it needs neither `Codable` nor reflection and stays available under Embedded Swift. Prefer the
+/// convenience overloads — `getPersistedSnapshot(from:children:)` for a ``ContextPersistable``
+/// context, or the `Codable` overload in `SwiftXStateCodable`.
+public func getPersistedSnapshot<Context: Sendable>(
     from snapshot: MachineSnapshot<Context>,
+    contextBytes: [UInt8],
     children: [String: PersistedChildSnapshot] = [:]
 ) throws -> PersistedSnapshot {
-    guard let contextBytes = try? FridayJSONEncoder.swiftXState.encode(snapshot.context) else {
-        throw PersistenceError.contextEncodingFailed
-    }
-    let contextData = [UInt8](contextBytes)
+    let contextData = contextBytes
 
     return PersistedSnapshot(
         machineId: snapshot.machine.id,
@@ -165,23 +162,33 @@ public func getPersistedSnapshot<Context: Codable & Sendable>(
     )
 }
 
-/// Restores a machine snapshot from persisted data without running side effects.
-public func restoreSnapshot<Context: Codable & Sendable>(
+/// Creates a persisted snapshot from a ``ContextPersistable`` context — the Embedded-safe path.
+/// Projects the context to a ``JSONValue`` and serializes it with the core's dependency-free writer.
+public func getPersistedSnapshot<Context: ContextPersistable & Sendable>(
+    from snapshot: MachineSnapshot<Context>,
+    children: [String: PersistedChildSnapshot] = [:]
+) throws -> PersistedSnapshot {
+    guard let json = try? snapshot.context.persistedProjection() else {
+        throw PersistenceError.contextEncodingFailed
+    }
+    return try getPersistedSnapshot(
+        from: snapshot,
+        contextBytes: Array(json.serialized().utf8),
+        children: children
+    )
+}
+
+/// Restores a machine snapshot from persisted data, given the context **already decoded**.
+///
+/// The primitive every other overload funnels through — no `Codable`, no reflection, so it stays
+/// available under Embedded Swift.
+public func restoreSnapshot<Context: Sendable>(
     machine: ResolvedMachine<Context>,
     persisted: PersistedSnapshot,
-    context overrideContext: Context? = nil
+    decodedContext context: Context
 ) throws -> MachineSnapshot<Context> {
     if persisted.machineId != machine.id {
         throw PersistenceError.machineMismatch(expected: persisted.machineId, actual: machine.id)
-    }
-
-    let context: Context
-    if let overrideContext {
-        context = overrideContext
-    } else if let decoded = try? FridayJSONDecoder().decode(Context.self, from: Array(persisted.context)) {
-        context = decoded
-    } else {
-        throw PersistenceError.contextDecodingFailed
     }
 
     let seedNodes = getStateNodesFromValue(persisted.value, in: machine.root)
@@ -200,6 +207,27 @@ public func restoreSnapshot<Context: Codable & Sendable>(
         error: persisted.error.flatMap(decodeSendableValue),
         children: childActorSnapshots(from: persisted.children)
     )
+}
+
+/// Restores a machine snapshot for a ``ContextPersistable`` context — the Embedded-safe path.
+/// Pass `context:` to override the persisted value instead of materializing it.
+public func restoreSnapshot<Context: ContextPersistable & Sendable>(
+    machine: ResolvedMachine<Context>,
+    persisted: PersistedSnapshot,
+    context overrideContext: Context? = nil
+) throws -> MachineSnapshot<Context> {
+    let context: Context
+    if let overrideContext {
+        context = overrideContext
+    } else {
+        guard let json = JSONValue.parse(String(decoding: persisted.context, as: UTF8.self)),
+              let materialized = try? Context.materialized(from: json)
+        else {
+            throw PersistenceError.contextDecodingFailed
+        }
+        context = materialized
+    }
+    return try restoreSnapshot(machine: machine, persisted: persisted, decodedContext: context)
 }
 
 func childActorSnapshots(

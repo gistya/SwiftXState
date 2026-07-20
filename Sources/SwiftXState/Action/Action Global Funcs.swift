@@ -1,4 +1,3 @@
-import FridayTheCodable
 
 func actionType<Context: Sendable>(for ref: ActionRef<Context>) -> String {
     switch ref {
@@ -78,20 +77,39 @@ private func applyPropertyAssigns<Context: Sendable>(
     context: inout Context,
     args: ActionArgs<Context>
 ) {
-    guard case var .object(fields) = InspectJSONEncoder.encode(context) else { return }
+    guard case var .object(fields) = projectContext(context) else { return }
 
     for (key, assigner) in properties {
         fields[key] = InspectJSONEncoder.encode(assigner(args))
     }
 
-    guard let updated = decodeContext(Context.self, from: .object(fields)) else { return }
+    guard let updated = materializeContext(Context.self, from: .object(fields)) else {
+        // Loud in development, ignored in release — previously this silently dropped the
+        // assignment (and always did so under Embedded, where the old `Codable` path was stubbed out).
+        assertionFailure("""
+        assign(properties:) could not rebuild \(Context.self) from its projected JSON, so the \
+        assignment was ignored. Conform \(Context.self) to `ContextPersistable` — with \
+        `import SwiftXStateCodable` a `Codable` context gets both requirements for free.
+        """)
+        return
+    }
     context = updated
 }
 
-private func decodeContext<Context: Sendable>(_ type: Context.Type, from value: JSONValue) -> Context? {
-    guard let bytes = try? FridayJSONEncoder.swiftXState.encode(value) else { return nil }
-    guard let decodable = type as? any Decodable.Type else { return nil }
-    return (try? FridayJSONDecoder().decode(decodable, from: bytes)) as? Context
+/// Project a context to JSON, preferring the reflection-free ``ContextPersistable`` seam and falling
+/// back to the `Mirror`-based encoder (which is unavailable under Embedded Swift).
+private func projectContext<Context: Sendable>(_ context: Context) -> JSONValue {
+    if let persistable = context as? any ContextPersistable,
+       let json = try? persistable.persistedProjection() {
+        return json
+    }
+    return InspectJSONEncoder.encode(context)
+}
+
+/// Rebuild a context from JSON via the ``ContextPersistable`` seam. No `Codable`, no JSON engine.
+private func materializeContext<Context: Sendable>(_ type: Context.Type, from value: JSONValue) -> Context? {
+    guard let persistableType = type as? any ContextPersistable.Type else { return nil }
+    return (try? persistableType.materialized(from: value)) as? Context
 }
 
 /// Creates an assign action from a property map.

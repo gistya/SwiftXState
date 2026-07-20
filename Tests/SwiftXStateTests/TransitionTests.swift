@@ -1,7 +1,8 @@
 import Testing
 @testable import SwiftXState
+import SwiftXStateCodable
 
-struct CounterContext: Sendable, Equatable, Codable {
+struct CounterContext: Sendable, Equatable, Codable, ContextPersistable {
     var count: Int
 }
 

@@ -1,8 +1,9 @@
 import Testing
 import Foundation
 @testable import SwiftXState
+import SwiftXStateCodable
 
-private struct PCtx: Codable, Sendable, Equatable { var count: Int }
+private struct PCtx: Codable, Sendable, Equatable, ContextPersistable { var count: Int }
 
 @Suite("Actor persistence")
 struct LogicActorPersistenceTests {

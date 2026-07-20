@@ -1,4 +1,3 @@
-import FridayTheCodable
 
 // MARK: - Params transport (runtime / wire)
 
@@ -104,28 +103,6 @@ public struct VoidParams: GuardParamValues, Sendable, Equatable, Codable {
     public static func decode(from box: ParamsBox?) -> VoidParams? {
         guard box == nil || box?.isVoid == true else { return nil }
         return VoidParams()
-    }
-}
-
-extension GuardParamValues where Self: Codable {
-    public func encodeToBox() -> ParamsBox {
-        guard let bytes = try? FridayJSONEncoder.swiftXState.encode(self),
-              let json = try? FridayJSONDecoder().decode(JSONValue.self, from: bytes) else {
-            return ParamsBox()
-        }
-        return ParamsBox(json: json)
-    }
-
-    public static func decode(from box: ParamsBox?) -> Self? {
-        guard let box, !box.isVoid else {
-            return (Self.self == VoidParams.self) ? (VoidParams() as? Self) : nil
-        }
-        guard case let .json(json) = box.storage,
-              let bytes = try? FridayJSONEncoder.swiftXState.encode(json),
-              let decoded = try? FridayJSONDecoder().decode(Self.self, from: bytes) else {
-            return nil
-        }
-        return decoded
     }
 }
 

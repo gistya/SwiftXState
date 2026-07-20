@@ -1,8 +1,9 @@
 import FridayTheCodable
 import Testing
 @testable import SwiftXState
+import SwiftXStateCodable
 
-private struct PersistCounterContext: Sendable, Equatable, Codable {
+private struct PersistCounterContext: Sendable, Equatable, Codable, ContextPersistable {
     var count: Int
 }
 
@@ -112,11 +113,11 @@ struct PersistenceTests {
 
     @Test("persisted snapshot includes invoked child machine state")
     func childMachinePersistence() async throws {
-        struct WorkerContext: Sendable, Equatable, Codable {
+        struct WorkerContext: Sendable, Equatable, Codable, ContextPersistable {
             var count: Int
         }
 
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
@@ -198,15 +199,15 @@ struct PersistenceTests {
 
     @Test("persisted snapshot includes nested grandchild machine state")
     func nestedGrandchildPersistence() async throws {
-        struct LeafContext: Sendable, Equatable, Codable {
+        struct LeafContext: Sendable, Equatable, Codable, ContextPersistable {
             var count: Int
         }
 
-        struct MidContext: Sendable, Equatable, Codable {
+        struct MidContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
-        struct RootContext: Sendable, Equatable, Codable {
+        struct RootContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
@@ -294,11 +295,11 @@ struct PersistenceTests {
 
     @Test("persisted snapshot restores multiple parallel invoked children")
     func parallelInvokePersistence() async throws {
-        struct WorkerContext: Sendable, Equatable, Codable {
+        struct WorkerContext: Sendable, Equatable, Codable, ContextPersistable {
             var count: Int
         }
 
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
@@ -373,11 +374,11 @@ struct PersistenceTests {
 
     @Test("spawned machine child state survives persist and restore")
     func spawnedMachineChildPersistence() async throws {
-        struct ChildContext: Sendable, Equatable, Codable {
+        struct ChildContext: Sendable, Equatable, Codable, ContextPersistable {
             var count: Int
         }
 
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
@@ -427,11 +428,11 @@ struct PersistenceTests {
 
     @Test("restoring done child does not re-emit DoneActorEvent")
     func restoredDoneChildDoesNotReemit() async throws {
-        struct ChildContext: Sendable, Equatable, Codable {
+        struct ChildContext: Sendable, Equatable, Codable, ContextPersistable {
             var value: String
         }
 
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var doneCount: Int
         }
 
@@ -480,7 +481,7 @@ struct PersistenceTests {
 
     @Test("persisted snapshot records opaque task child status")
     func opaqueTaskChildPersistence() async throws {
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 

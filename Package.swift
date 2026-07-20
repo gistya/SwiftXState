@@ -30,6 +30,12 @@ let package = Package(
             name: "SwiftXState",
             targets: ["SwiftXState"],
         ),
+        // `Codable` adapters for the core (persistence, replay, params, Encodable⇄JSONValue).
+        // The core itself is Codable-free so it can target Embedded Swift.
+        .library(
+            name: "SwiftXStateCodable",
+            targets: ["SwiftXStateCodable"]
+        ),
         .library(
             name: "SwiftXStateSwiftUI",
             targets: ["SwiftXStateSwiftUI"]
@@ -76,13 +82,28 @@ let package = Package(
         .package(url: "https://github.com/gistya/friday-the-thirteenth", from: "2.0.0"),
     ],
     targets: [
+        // The Embedded-capable core: no `Codable` machinery, no reflection-based JSON, no Foundation.
+        // `JSONValue` is written/parsed by the hand-rolled codec in `JSONValueCodec.swift`.
         .target(
             name: "SwiftXState",
             dependencies: [
                 .product(name: "CompositionalInit", package: "swift-compositional-init"),
-                .product(name: "FridayTheCodable", package: "friday-the-thirteenth"),
             ],
             path: "Sources/SwiftXState",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency"),
+            ]
+        ),
+        // The `Codable` adapter layer — mirrors how FridayTheCodable sits beside FridayTheThirteenth.
+        // Import it to give a `Codable` context ``ContextPersistable`` for free, and to get the
+        // Codable-constrained persistence / replay / params APIs.
+        .target(
+            name: "SwiftXStateCodable",
+            dependencies: [
+                "SwiftXState",
+                .product(name: "FridayTheCodable", package: "friday-the-thirteenth"),
+            ],
+            path: "Sources/SwiftXStateCodable",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
             ]
@@ -124,7 +145,7 @@ let package = Package(
         ),
         .target(
             name: "SwiftXStateSwiftData",
-            dependencies: ["SwiftXState"],
+            dependencies: ["SwiftXState", "SwiftXStateCodable"],
             path: "Sources/SwiftXStateSwiftData",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
@@ -167,7 +188,7 @@ let package = Package(
         ),
         .testTarget(
             name: "SwiftXStateTests",
-            dependencies: ["SwiftXState"],
+            dependencies: ["SwiftXState", "SwiftXStateCodable"],
             path: "Tests/SwiftXStateTests",
         ),
         .testTarget(
@@ -215,6 +236,7 @@ let package = Package(
             name: "SwiftXStateSwiftDataTests",
             dependencies: [
                 "SwiftXState",
+                "SwiftXStateCodable",
                 "SwiftXStateSwiftData",
             ],
             path: "Tests/SwiftXStateSwiftDataTests",
