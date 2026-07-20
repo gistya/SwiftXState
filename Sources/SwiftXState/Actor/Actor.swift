@@ -318,6 +318,18 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         }
         for continuation in snapshotContinuations.values { continuation.finish() }
         snapshotContinuations.removeAll()
+
+        // Drop the references that would otherwise form a retain cycle. On platforms with `weak`
+        // this is hygiene; on Embedded Swift, where the same links are strong (see `BackRef`), it is
+        // what makes stopping an actor actually release it.
+        //
+        // `parent` is the cycle: the parent holds this actor in its `ChildRegistry` while this actor
+        // points back. `scheduler.cancelAll()` releases pending timer closures, each of which
+        // captures `self`. Everything else above — run task, run cleanup, receivers, listener
+        // subscriptions, children, snapshot continuations — was already being released here.
+        scheduler.cancelAll()
+        parent = nil
+        pendingChildSnapshots.removeAll()
     }
 
     /// Applies a snapshot pushed by `ActorLogic.run`. Dropped once the logic is no longer active,

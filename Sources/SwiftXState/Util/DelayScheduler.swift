@@ -28,4 +28,16 @@ final class DelayScheduler {
     func didFire(_ timerId: String) {
         timers.removeValue(forKey: timerId)
     }
+
+    /// Cancels every outstanding timer. Called from `Actor.stop()`.
+    ///
+    /// A pending timer is not a correctness problem on its own — its callback hops back to the
+    /// owning actor, whose snapshot is already terminal by then, so `process(_:)` drops the event.
+    /// It is a *retention* problem: the scheduled closure captures the actor until it fires, and on
+    /// Embedded Swift that capture is strong (see `BackRef`), so a long `after:` delay would keep a
+    /// stopped actor alive for the whole delay.
+    func cancelAll() {
+        for handle in timers.values { clock.clearTimeout(handle) }
+        timers.removeAll()
+    }
 }
