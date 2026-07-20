@@ -101,7 +101,7 @@ public extension Actor where L: MachineActorLogic {
             throw WaitForError.timeout(milliseconds: timeout)
         }
 
-        try Task.checkCancellation()
+        if Task.isCancelled { throw CancellationError() }
 
         let initial = snapshot
         if predicate(initial) {
@@ -121,12 +121,25 @@ public extension Actor where L: MachineActorLogic {
             }
         }
 
+        // Embedded Swift has no `Task.sleep` — it provides no clock at all, since time is a host
+        // concern there. The wait itself still works; only the *timeout* cannot be enforced, so a
+        // `waitFor` that would have timed out instead waits until the predicate matches or the actor
+        // stops. The assertion makes that visible during development rather than at 3am on a device.
+        //
+        // The proper fix is to route this through the `Clock` abstraction the engine already uses
+        // for `after:` transitions, so the host supplies the timer. That is a larger change than
+        // this migration, and is tracked as the remaining Embedded feature gap.
         if let timeout = options.timeout {
+            #if hasFeature(Embedded)
+            assertionFailure("waitFor(timeout:) cannot be enforced on Embedded Swift — no clock is available")
+            _ = timeout
+            #else
             state.timeoutTask = Task {
                 try? await Task.sleep(for: .milliseconds(timeout))
                 guard !Task.isCancelled else { return }
                 state.resolve(.failure(WaitForError.timeout(milliseconds: timeout)))
             }
+            #endif
         }
 
         return try await withTaskCancellationHandler {

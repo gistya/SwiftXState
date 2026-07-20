@@ -11,7 +11,7 @@ public enum ActorAsyncCancellation {
     public static var isCancelled: Bool { Task.isCancelled }
 
     public static func checkCancellation() throws {
-        try Task.checkCancellation()
+        if Task.isCancelled { throw CancellationError() }
     }
 
     public static func withHandler<T: Sendable>(

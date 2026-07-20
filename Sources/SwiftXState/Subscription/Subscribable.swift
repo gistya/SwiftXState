@@ -68,10 +68,15 @@ public struct SequenceSubscribable<T: Sendable & Equatable>: Subscribable {
         let task = Task {
             do {
                 for value in values {
-                    try Task.checkCancellation()
+                    if Task.isCancelled { throw CancellationError() }
+                    // No `Task.sleep` on Embedded Swift (no clock). The values are still emitted
+                    // in order and the sequence still completes; only the spacing between them is
+                    // lost, so an interval-paced source behaves as an immediate one.
+                    #if !hasFeature(Embedded)
                     if intervalMs > 0 {
                         try await Task.sleep(for: .milliseconds(intervalMs))
                     }
+                    #endif
                     next(value)
                 }
                 onComplete?()

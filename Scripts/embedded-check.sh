@@ -64,7 +64,14 @@ if [ "$COUNT" -eq 0 ] && ! grep -q "Build complete" "$LOG"; then
 fi
 
 if [ "${1:-}" = "--update-baseline" ]; then
-    echo "$COUNT" > "$BASELINE_FILE"
+    # Preserve any leading comment block; replace only the number.
+    if [ -f "$BASELINE_FILE" ]; then
+        grep '^[[:space:]]*#' "$BASELINE_FILE" > "$BASELINE_FILE.tmp" || true
+        echo "$COUNT" >> "$BASELINE_FILE.tmp"
+        mv "$BASELINE_FILE.tmp" "$BASELINE_FILE"
+    else
+        echo "$COUNT" > "$BASELINE_FILE"
+    fi
     echo "✅ Baseline updated to $COUNT."
     exit 0
 fi
@@ -131,7 +138,9 @@ if [ ! -f "$BASELINE_FILE" ]; then
     exit 1
 fi
 
-BASELINE=$(tr -d '[:space:]' < "$BASELINE_FILE")
+# Ignore `#` comment lines so the baseline can carry the reasoning for its current value —
+# a bare number with no explanation invites someone to "fix" a rise that was actually progress.
+BASELINE=$(grep -v '^[[:space:]]*#' "$BASELINE_FILE" | tr -d '[:space:]')
 echo ""
 if [ "$COUNT" -gt "$BASELINE" ]; then
     echo "::error::Embedded errors rose from $BASELINE to $COUNT (+$((COUNT - BASELINE)))."

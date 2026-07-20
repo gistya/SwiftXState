@@ -44,9 +44,15 @@ public struct XTransition<
     /// The cleanest form: pass the unapplied case (`Event.increment`); the case path is derived by
     /// reflection (`EventID: Equatable`, which every `EventIdentifying` is). Registers under the wildcard
     /// `*` (no recoverable case name); prefer the `Blankable`-payload overloads below, which name it.
+    ///
+    /// Unavailable on Embedded Swift: deriving the case path from an unapplied case initializer
+    /// needs reflection. Name the case explicitly with another overload, or give the event id a
+    /// `String` raw value.
+    #if !hasFeature(Embedded)
     public init<Payload>(on caseInit: @escaping @Sendable (Payload) -> EventID, to target: StateID) {
         self.init(on: CasePath(caseInit), to: target)
     }
+    #endif
 
     // MARK: Named payload events (Blankable components → the case name is recoverable)
     //

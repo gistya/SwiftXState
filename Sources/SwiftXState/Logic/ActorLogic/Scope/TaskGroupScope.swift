@@ -29,14 +29,14 @@ public struct TaskGroupScope: Sendable {
     ) async throws -> [Output] {
         try await withThrowingTaskGroup(of: Output.self) { group in
             for operation in operations {
-                try Task.checkCancellation()
+                if Task.isCancelled { throw CancellationError() }
                 group.addTask {
                     try await operation()
                 }
             }
             var results: [Output] = []
             for try await result in group {
-                try Task.checkCancellation()
+                if Task.isCancelled { throw CancellationError() }
                 results.append(result)
             }
             return results

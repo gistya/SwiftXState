@@ -31,7 +31,7 @@ public enum LogHandler: Sendable {
         if let handler {
             handler(output)
         } else if let label {
-            print(label, output.message)
+            print("\(label) \(output.message)")
         } else {
             print(output.message)
         }

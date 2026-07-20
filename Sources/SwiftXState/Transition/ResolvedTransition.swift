@@ -1,7 +1,14 @@
 /// A resolved transition with source state node reference.
 public struct ResolvedTransition<Context: Sendable>: Sendable {
     public let config: TransitionConfig<Context>
+    // `unowned` avoids a retain on the owning node. Embedded Swift prohibits `unowned` as well as
+    // `weak` (only `unowned(unsafe)` survives, which trades a nil check for a dangling pointer), so
+    // there the reference is strong — see BackRef.swift for why that is sound.
+    #if hasFeature(Embedded)
+    public let source: StateNode<Context>
+    #else
     public unowned let source: StateNode<Context>
+    #endif
     public let reenter: Bool
 
     init(config: TransitionConfig<Context>, source: StateNode<Context>) {

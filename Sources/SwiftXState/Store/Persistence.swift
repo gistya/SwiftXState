@@ -97,6 +97,10 @@ public struct PersistedSnapshot: Sendable, Equatable {
         self.children = children
     }
 
+    // Hand-written so historyValue / output / error / children stay optional on the wire.
+    // Excluded from Embedded Swift along with the rest of the Codable surface — the synthesized
+    // CodingKeys it relies on are not generated there either. See CodableConformances.swift.
+    #if !hasFeature(Embedded)
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         machineId = try container.decode(String.self, forKey: .machineId)
@@ -109,6 +113,7 @@ public struct PersistedSnapshot: Sendable, Equatable {
         error = try container.decodeIfPresent(JSONValue.self, forKey: .error)
         children = try container.decodeIfPresent([String: PersistedChildSnapshot].self, forKey: .children) ?? [:]
     }
+    #endif
 
 }
 
