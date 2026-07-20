@@ -1,7 +1,7 @@
 /// Options for creating an actor — clock, system id, input, and inspection wiring.
 public struct ActorOptions: Sendable {
     /// Clock used for `after:` delays and delayed `raise`/`sendTo` (override in tests).
-    public var clock: any Clock
+    public var clock: ClockHandle
     /// Stable id for this actor within its actor system (for `sendTo`/`stateIn` references).
     public var systemId: String?
     /// Input passed to the machine's `contextFromInput` to build the initial context.
@@ -26,8 +26,10 @@ public struct ActorOptions: Sendable {
     /// meaningless without them.
     public var snapshotMicrosteps: Bool
 
-    public init(
-        clock: any Clock = DefaultClock(),
+    /// Generic in the clock so `ActorOptions(clock: SimulatedClock())` still compiles unchanged —
+    /// the concrete type is erased into ``ClockHandle`` here rather than stored as an existential.
+    public init<C: Clock>(
+        clock: C = DefaultClock(),
         systemId: String? = nil,
         input: SendableValue? = nil,
         inspect: (@Sendable (InspectionEvent) -> Void)? = nil,
@@ -35,7 +37,7 @@ public struct ActorOptions: Sendable {
         useMainExecutor: Bool = false,
         snapshotMicrosteps: Bool = true
     ) {
-        self.clock = clock
+        self.clock = ClockHandle(clock)
         self.systemId = systemId
         self.input = input
         self.inspect = inspect

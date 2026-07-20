@@ -68,7 +68,7 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     #endif
     private nonisolated let system: ActorSystem
     private nonisolated let options: ActorOptions
-    private nonisolated let clock: any Clock
+    private nonisolated let clock: ClockHandle
     private nonisolated let inspectable: Bool
 
     public nonisolated let id: String
@@ -89,7 +89,7 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     public nonisolated var actorSystem: ActorSystem { system }
     public nonisolated var sessionId: String { id }
     public nonisolated var systemId: String? { options.systemId }
-    public nonisolated var hostClock: any Clock { clock }
+    public nonisolated var hostClock: ClockHandle { clock }
 
     public init(
         _ logic: L,

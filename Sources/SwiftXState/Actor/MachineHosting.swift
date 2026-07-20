@@ -13,7 +13,7 @@ import _Concurrency
 /// the logic; the host only exposes these non-generic primitives.
 public protocol MachineHosting: _Concurrency.Actor, ParentActorRepresentable, ActorSystemRef {
     var childRegistry: ChildRegistry { get }
-    var hostClock: any Clock { get }
+    var hostClock: ClockHandle { get }
     func emit(_ event: EmittedEvent)
     func deliverToChild(id childId: String, event: any Eventable) async
     func enqueueToParent(_ event: any Eventable) async

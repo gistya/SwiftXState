@@ -7,9 +7,9 @@
 /// touching the scheduler, so it never needs its own lock.
 final class DelayScheduler {
     private var timers: [String: TimeoutHandle] = [:]
-    private let clock: any Clock
+    private let clock: ClockHandle
 
-    init(clock: any Clock) { self.clock = clock }
+    init(clock: ClockHandle) { self.clock = clock }
 
     /// Schedules `fire` after `delay` ms under `timerId`, replacing any existing timer with that id.
     func schedule(_ timerId: String, delay: Int, _ fire: @escaping @Sendable () -> Void) {
