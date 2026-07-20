@@ -60,7 +60,12 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     /// Persisted child snapshots awaiting re-spawn during `start(from:)`; empty otherwise.
     private var pendingChildSnapshots: [String: PersistedChildSnapshot] = [:]
     private let scheduler: DelayScheduler
+    // Embedded prohibits `weak`; see BackRef.swift for why a strong parent link is sound there.
+    #if hasFeature(Embedded)
+    private var parent: (any ParentActorRepresentable)?
+    #else
     private weak var parent: (any ParentActorRepresentable)?
+    #endif
     private nonisolated let system: ActorSystem
     private nonisolated let options: ActorOptions
     private nonisolated let clock: any Clock
@@ -167,8 +172,9 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         let id = nextObserverID
         nextObserverID += 1
         statusObservers.append((id: id, handler: handler))
-        return Subscription { [weak self] in
-            Task { await self?.removeStatusObserver(id: id) }
+        let selfRef = BackRef(self)
+        return Subscription {
+            Task { await selfRef.value?.removeStatusObserver(id: id) }
         }
     }
 
@@ -212,9 +218,10 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     private func startDriver(input: SendableValue?) {
         let scope = makeScope(input: input)
         runCleanup = logic.setUp(scope)   // synchronous — done before start() returns
-        runTask = Task { [logic, weak self] in
+        let selfRef = BackRef(self)
+        runTask = Task { [logic] in
             if let cleanup = await logic.run(scope) {
-                await self?.storeRunCleanup(cleanup)
+                await selfRef.value?.storeRunCleanup(cleanup)
             }
         }
     }
@@ -223,22 +230,23 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         let receivers = self.receivers
         let parentDeliveries = self.parentDeliveries
         let emitListeners = self.emitListeners
-        let parent = self.parent
+        let parentRef = ParentRef(self.parent)
+        let selfRef = BackRef(self)
         let id = self.id
         return ActorScope<L.Snapshot>(
             actorId: id,
             input: input,
-            update: { [weak self] pushed in await self?.applyExternal(pushed) },
+            update: { pushed in await selfRef.value?.applyExternal(pushed) },
             receive: { handler in receivers.add(handler) },
-            sendToParent: { [weak parent] event in parentDeliveries.deliver(to: parent, event) },
+            sendToParent: { event in parentDeliveries.deliver(to: parentRef.value, event) },
             emit: { event in emitListeners.notify(event) },
-            complete: { [weak self, weak parent] output in
-                parentDeliveries.deliver(to: parent, DoneActorEvent(actorId: id, output: output))
-                Task { await self?.markTerminal(.done, error: nil) }
+            complete: { output in
+                parentDeliveries.deliver(to: parentRef.value, DoneActorEvent(actorId: id, output: output))
+                Task { await selfRef.value?.markTerminal(.done, error: nil) }
             },
-            fail: { [weak self, weak parent] message in
-                parentDeliveries.deliver(to: parent, ErrorActorEvent(actorId: id, error: message))
-                Task { await self?.markTerminal(.error, error: message) }
+            fail: { message in
+                parentDeliveries.deliver(to: parentRef.value, ErrorActorEvent(actorId: id, error: message))
+                Task { await selfRef.value?.markTerminal(.error, error: message) }
             }
         )
     }
@@ -333,9 +341,10 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     public func listen(childId: String, eventType: String,
                        map: @escaping @Sendable (EmittedEvent) -> (any Eventable)?) async {
         guard let child = childRegistry.get(childId) else { return }
-        let sub = await child.on(eventType) { [weak self] emitted in
+        let selfRef = BackRef(self)
+        let sub = await child.on(eventType) { emitted in
             guard let mapped = map(emitted) else { return }
-            Task { await self?.receiveRelay(mapped) }
+            Task { await selfRef.value?.receiveRelay(mapped) }
         }
         listenerSubscriptions.append(sub)
     }
@@ -344,9 +353,10 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     public func subscribeToChild(childId: String,
                                  map: @escaping @Sendable (ChildActorSnapshot) -> (any Eventable)?) async {
         guard let child = childRegistry.get(childId) else { return }
-        let sub = await child.subscribe { [weak self] snapshot in
+        let selfRef = BackRef(self)
+        let sub = await child.subscribe { snapshot in
             guard let mapped = map(snapshot) else { return }
-            Task { await self?.receiveRelay(mapped) }
+            Task { await selfRef.value?.receiveRelay(mapped) }
         }
         listenerSubscriptions.append(sub)
     }
@@ -356,8 +366,9 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     public func subscribeToAtom(
         _ subscribe: @escaping @Sendable (@escaping @Sendable (any Eventable) -> Void) -> Subscription
     ) async {
-        let sub = subscribe { [weak self] event in
-            Task { await self?.receiveRelay(event) }
+        let selfRef = BackRef(self)
+        let sub = subscribe { event in
+            Task { await selfRef.value?.receiveRelay(event) }
         }
         listenerSubscriptions.append(sub)
     }
@@ -393,8 +404,9 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         let id = nextObserverID
         nextObserverID += 1
         observers.append((id: id, handler: handler))
-        return Subscription { [weak self] in
-            Task { await self?.removeObserver(id: id) }
+        let selfRef = BackRef(self)
+        return Subscription {
+            Task { await selfRef.value?.removeObserver(id: id) }
         }
     }
 
@@ -431,8 +443,9 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         let id = nextObserverID
         nextObserverID += 1
         snapshotContinuations[id] = continuation
-        continuation.onTermination = { [weak self] _ in
-            Task { await self?.removeSnapshotContinuation(id) }
+        let selfRef = BackRef(self)
+        continuation.onTermination = { _ in
+            Task { await selfRef.value?.removeSnapshotContinuation(id) }
         }
     }
 
@@ -545,14 +558,16 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
     }
 
     public func scheduleSelfEvent(timerId: String, delay: Int, event: Event) {
-        scheduler.schedule(timerId, delay: delay) { [weak self] in
-            Task { await self?.fireSelfEvent(event, timerId: timerId) }
+        let selfRef = BackRef(self)
+        scheduler.schedule(timerId, delay: delay) {
+            Task { await selfRef.value?.fireSelfEvent(event, timerId: timerId) }
         }
     }
 
     public func scheduleChildEvent(timerId: String, delay: Int, childId: String, event: Event) {
-        scheduler.schedule(timerId, delay: delay) { [weak self] in
-            Task { await self?.fireChildEvent(childId: childId, event: event, timerId: timerId) }
+        let selfRef = BackRef(self)
+        scheduler.schedule(timerId, delay: delay) {
+            Task { await selfRef.value?.fireChildEvent(childId: childId, event: event, timerId: timerId) }
         }
     }
 
