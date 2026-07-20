@@ -1,3 +1,9 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+// Without this, the Actor protocol is invisible and `isolated` parameters fail to type-check.
+import _Concurrency
+#endif
+
 
 /// The behaviour an actor runs, abstracted away from how it is run. A conformer supplies an
 /// opaque `Snapshot`, its initial value, and a pure step that folds one event into the next

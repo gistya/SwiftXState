@@ -1,3 +1,9 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+// Without this, the Actor protocol is invisible and `isolated` parameters fail to type-check.
+import _Concurrency
+#endif
+
 
 /// The `fromTransition` child as an `ActorLogic` (XState's `fromTransition`) — a genuine reducer:
 /// the snapshot *is* the context, and each event folds through `logic.transition`. Runs effectful

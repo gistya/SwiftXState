@@ -1,3 +1,9 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+// Without this, the Actor protocol is invisible and `isolated` parameters fail to type-check.
+import _Concurrency
+#endif
+
 /// The Context-agnostic runtime resources an effectful `ActorLogic` needs from its host actor while
 /// handling an event — timers, children, parent/system wiring, emit. Because `Actor` provides
 /// this and `ActorLogic.handle` takes the host as an **`isolated`** parameter, an effectful logic

@@ -1,3 +1,9 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+// Without this, the Actor protocol is invisible and `isolated` parameters fail to type-check.
+import _Concurrency
+#endif
+
 import Synchronization
 
 /// A lock-guarded list of event receivers for a *runnable* logic (the `scope.receive` handlers of a

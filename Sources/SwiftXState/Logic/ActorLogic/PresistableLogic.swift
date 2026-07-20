@@ -1,3 +1,9 @@
+#if hasFeature(Embedded)
+// Embedded Swift does not implicitly import the concurrency module the way full Swift does.
+// Without this, the Actor protocol is invisible and `isolated` parameters fail to type-check.
+import _Concurrency
+#endif
+
 /// A logic whose snapshot can be persisted and restored — the capability behind `Actor`'s
 /// `getPersistedSnapshot()` / `start(from:)`. `MachineLogic` conforms **only when its `Context` is
 /// `Codable`** (conditional conformance), mirroring `Actor`'s `where Context: Codable` constraint.
