@@ -16,7 +16,8 @@ public final class InspectBridge: Sendable {
             transport: transport,
             endpoint: configuration.endpoint,
             wireFormat: configuration.wireFormat,
-            machineDefinitions: configuration.machineDefinitions
+            machineDefinitions: configuration.machineDefinitions,
+            contextPublishing: configuration.contextPublishing
         )
     }
 
@@ -50,16 +51,23 @@ actor InspectBridgeState {
     private var session: (any InspectSession)?
     private var connectTask: Task<Void, Error>?
     private var publishTail: Task<Void, Never>?
+    private let contextPublishing: InspectContextPublishing
+    /// Last context published per actor — the baseline Diff Mode diffs against.
+    private var lastContext: [String: JSONValue] = [:]
+    /// Snapshots published for an actor since its last keyframe.
+    private var sinceKeyframe: [String: Int] = [:]
 
     init(
         transport: any InspectTransport,
         endpoint: InspectEndpoint,
         wireFormat: InspectWireFormat,
-        machineDefinitions: [InspectMachineRegistration]
+        machineDefinitions: [InspectMachineRegistration],
+        contextPublishing: InspectContextPublishing = .full
     ) {
         self.transport = transport
         self.endpoint = endpoint
         self.wireFormat = wireFormat
+        self.contextPublishing = contextPublishing
         var map: [String: String] = [:]
         var stateValues: [String: String] = [:]
         for registration in machineDefinitions {
@@ -108,6 +116,10 @@ actor InspectBridgeState {
 
     private func attach(session: any InspectSession) {
         self.session = session
+        // A new session means a consumer that has never seen this actor's context, so every
+        // baseline is stale — drop them and let the next snapshot publish a keyframe.
+        lastContext.removeAll()
+        sinceKeyframe.removeAll()
     }
 
     func publish(_ event: InspectionEvent) async {
@@ -130,10 +142,51 @@ actor InspectBridgeState {
         guard let session else { return }
 
         do {
-            guard let message = try makeWireMessage(for: event) else { return }
+            guard let message = try makeWireMessage(for: applyContextPolicy(to: event)) else { return }
             try await session.publish(message)
         } catch {
             // Drop on encoding/transport errors — inspect must not crash the app.
+        }
+    }
+
+    /// Rewrites the event's published context per ``InspectContextPublishing``.
+    ///
+    /// Applies to every wire format. The default ``InspectContextPublishing/full`` is a no-op, so
+    /// stock Stately usage is unaffected; opting into another mode is opting into a context payload
+    /// `@statelyai/inspect` cannot fully reconstruct on its own.
+    private func applyContextPolicy(to event: InspectionEvent) -> InspectionEvent {
+        guard let snapshot = event.snapshot else { return event }
+        if case .full = contextPublishing { return event }
+        let sessionId = event.actor.sessionId
+
+        switch contextPublishing {
+        case .full:
+            return event
+
+        case .none:
+            return event.replacingSnapshot(snapshot.publishingContext(.object([:]), delta: nil))
+
+        case let .selected(keys):
+            guard case let .object(fields) = snapshot.context else { return event }
+            let filtered = fields.filter { keys.contains($0.key) }
+            return event.replacingSnapshot(snapshot.publishingContext(.object(filtered), delta: nil))
+
+        case let .diff(keyframeEvery):
+            let current = snapshot.context
+            let count = sinceKeyframe[sessionId, default: 0]
+            let needsKeyframe = lastContext[sessionId] == nil
+                || (keyframeEvery > 0 && count >= keyframeEvery)
+            if needsKeyframe {
+                lastContext[sessionId] = current
+                sinceKeyframe[sessionId] = 0
+                return event                                   // the full context IS the keyframe
+            }
+            let delta = ContextDelta.between(lastContext[sessionId] ?? .object([:]), current)
+            lastContext[sessionId] = current
+            sinceKeyframe[sessionId] = count + 1
+            return event.replacingSnapshot(
+                snapshot.publishingContext(.object([:]), delta: delta.jsonValue())
+            )
         }
     }
 
@@ -155,6 +208,8 @@ actor InspectBridgeState {
         publishTail = nil
         await session?.close()
         session = nil
+        lastContext.removeAll()
+        sinceKeyframe.removeAll()
     }
 }
 

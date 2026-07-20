@@ -192,6 +192,11 @@ public struct StatelyWireConverter: Sendable {
         ]
         object["output"] = snapshot.output ?? .null
         object["error"] = snapshot.error ?? .null
+        // Diff Mode: `context` is empty and the change rides alongside it. Stock
+        // `@statelyai/inspect` ignores this extra key; our own inspectors reassemble from it.
+        if let contextDelta = snapshot.contextDelta {
+            object["contextDelta"] = contextDelta
+        }
         return .object(object)
     }
 

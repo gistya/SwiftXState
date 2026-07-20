@@ -89,6 +89,11 @@ public struct InspectWireSnapshot: Sendable, Equatable, Codable {
     public var stateValue: String
     public var tags: [String]
     public var childCount: Int
+    /// The actor's context, subject to ``InspectContextPublishing``.
+    public var context: JSONValue
+    /// Set when publishing in Diff Mode — the change since the last snapshot (``ContextDelta``'s
+    /// wire form). When non-`nil`, ``context`` is empty.
+    public var contextDelta: JSONValue?
 
     public init(from snapshot: InspectionSnapshot) {
         sessionId = snapshot.actor.sessionId
@@ -99,6 +104,8 @@ public struct InspectWireSnapshot: Sendable, Equatable, Codable {
         stateValue = snapshot.stateValue.description
         tags = snapshot.tags.sorted()
         childCount = snapshot.childCount
+        context = snapshot.context
+        contextDelta = snapshot.contextDelta
     }
 }
 

@@ -155,6 +155,12 @@ public struct InspectionSnapshot: Sendable, Equatable, Codable {
     public let output: JSONValue?
     public let error: JSONValue?
 
+    /// Set when the transport publishes in **Diff Mode**: the change to ``context`` since this
+    /// actor's last published snapshot, in ``ContextDelta``'s wire form. When this is non-`nil`,
+    /// ``context`` is empty and the consumer reconstructs by applying the delta to what it already
+    /// holds. `nil` means ``context`` is the full value (the default).
+    public let contextDelta: JSONValue?
+
     public init(
         actor: InspectionActorRef,
         status: SnapshotStatus,
@@ -166,7 +172,8 @@ public struct InspectionSnapshot: Sendable, Equatable, Codable {
         children: JSONValue = .object([:]),
         historyValue: JSONValue = .object([:]),
         output: JSONValue? = nil,
-        error: JSONValue? = nil
+        error: JSONValue? = nil,
+        contextDelta: JSONValue? = nil
     ) {
         self.actor = actor
         self.status = status
@@ -179,6 +186,26 @@ public struct InspectionSnapshot: Sendable, Equatable, Codable {
         self.historyValue = historyValue
         self.output = output
         self.error = error
+        self.contextDelta = contextDelta
+    }
+
+    /// Returns a copy publishing `context` (typically empty) plus `delta` instead of the full context
+    /// — how a transport switches this snapshot into Diff Mode.
+    public func publishingContext(_ context: JSONValue, delta: JSONValue?) -> InspectionSnapshot {
+        InspectionSnapshot(
+            actor: actor,
+            status: status,
+            value: value,
+            stateValue: stateValue,
+            tags: tags,
+            childCount: childCount,
+            context: context,
+            children: children,
+            historyValue: historyValue,
+            output: output,
+            error: error,
+            contextDelta: delta
+        )
     }
 
     public static func from<Context>(
@@ -217,6 +244,24 @@ public struct InspectionEvent: Sendable, Equatable, Codable {
     /// Wall-clock nanoseconds since the Unix epoch — full-precision counterpart of `timestamp` (which,
     /// being a `Double`, loses sub-microsecond resolution). Use for nanosecond-precise display/ordering.
     public let timestampNanos: UInt64
+
+    /// Returns a copy carrying `snapshot` instead of this event's — how a transport rewrites the
+    /// published context (Diff Mode, redaction) without disturbing timing or identity.
+    public func replacingSnapshot(_ snapshot: InspectionSnapshot?) -> InspectionEvent {
+        InspectionEvent(
+            kind: kind,
+            rootId: rootId,
+            actor: actor,
+            source: source,
+            event: event,
+            snapshot: snapshot,
+            actionType: actionType,
+            transitions: transitions,
+            parentSessionId: parentSessionId,
+            definitionJSON: definitionJSON,
+            timestampNanos: timestampNanos
+        )
+    }
 
     public init(
         kind: InspectionEventKind,
