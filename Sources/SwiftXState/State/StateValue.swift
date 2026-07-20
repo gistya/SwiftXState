@@ -3,7 +3,7 @@
 ///
 /// - Atomic states use a `String` (e.g. `"yellow"`).
 /// - Compound/parallel states use a nested dictionary (e.g. `["red": "wait"]`).
-public enum StateValue: Sendable, Equatable, Hashable, Codable {
+public enum StateValue: Sendable, Equatable, Hashable {
     case atomic(String)
     case compound([String: StateValue])
 
@@ -71,3 +71,8 @@ public enum StateValue: Sendable, Equatable, Hashable, Codable {
         }
     }
 }
+
+// Codable is declared out-of-line and guarded — see CodableConformances.swift for the policy.
+#if !hasFeature(Embedded)
+extension StateValue: Codable {}
+#endif

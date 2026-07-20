@@ -1,7 +1,7 @@
 
 /// A persisted snapshot for a non-machine child actor (task, callback, etc.).
 /// These children cannot be fully restored; only their last-known status is kept.
-public struct PersistedOpaqueChildSnapshot: Codable, Sendable, Equatable {
+public struct PersistedOpaqueChildSnapshot: Sendable, Equatable {
     public var status: SnapshotStatus
     public var error: String?
     public var output: JSONValue?
@@ -23,6 +23,9 @@ public enum PersistedChildSnapshot: Sendable, Equatable {
     case opaque(PersistedOpaqueChildSnapshot)
 }
 
+// Hand-written discriminated union. Excluded from Embedded Swift along with the rest of the
+// Codable surface; see CodableConformances.swift.
+#if !hasFeature(Embedded)
 extension PersistedChildSnapshot: Codable {
     private enum CodingKeys: String, CodingKey {
         case kind
@@ -58,9 +61,10 @@ extension PersistedChildSnapshot: Codable {
         }
     }
 }
+#endif
 
 /// A serializable machine snapshot suitable for persistence and restoration.
-public struct PersistedSnapshot: Codable, Sendable, Equatable {
+public struct PersistedSnapshot: Sendable, Equatable {
     public var machineId: String
     public var status: SnapshotStatus
     public var value: StateValue
@@ -296,3 +300,9 @@ func getStateNodesFromValue<Context: Sendable>(
         return result
     }
 }
+
+// Codable is declared out-of-line and guarded — see CodableConformances.swift for the policy.
+#if !hasFeature(Embedded)
+extension PersistedOpaqueChildSnapshot: Codable {}
+extension PersistedSnapshot: Codable {}
+#endif

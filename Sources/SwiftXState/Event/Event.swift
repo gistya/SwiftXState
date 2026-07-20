@@ -24,7 +24,7 @@ extension String: Eventable {
 public let wildcardEventDescriptor = "*"
 
 /// Internal init event sent when an actor starts.
-public enum SystemEvent: String, Eventable, Codable {
+public enum SystemEvent: String, Eventable {
     case `init` = "xstate.init"
     case stop = "xstate.stop"
 

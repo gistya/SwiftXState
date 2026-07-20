@@ -30,7 +30,7 @@ public func wallClockNanosecondsSince1970() -> UInt64 {
 }
 
 /// Inspection event kinds, aligned with XState's `@xstate.*` protocol.
-public enum InspectionEventKind: String, Sendable, Equatable, Codable {
+public enum InspectionEventKind: String, Sendable, Equatable {
     case actor = "@xstate.actor"
     case event = "@xstate.event"
     case snapshot = "@xstate.snapshot"
@@ -40,7 +40,7 @@ public enum InspectionEventKind: String, Sendable, Equatable, Codable {
 }
 
 /// A stable reference to an actor within an inspection stream.
-public struct InspectionActorRef: Sendable, Equatable, Hashable, Codable {
+public struct InspectionActorRef: Sendable, Equatable, Hashable {
     public let sessionId: String
     public let systemId: String?
     public let machineId: String?
@@ -61,7 +61,7 @@ public struct InspectionActorRef: Sendable, Equatable, Hashable, Codable {
 }
 
 /// Serializable event description for inspection transports.
-public struct InspectionEventDescription: Sendable, Equatable, Codable {
+public struct InspectionEventDescription: Sendable, Equatable {
     public let type: String
     public let payload: JSONValue?
 
@@ -108,7 +108,7 @@ public struct InspectionEventDescription: Sendable, Equatable, Codable {
 }
 
 /// Serializable transition metadata for microstep inspection.
-public struct InspectionTransitionInfo: Sendable, Equatable, Codable {
+public struct InspectionTransitionInfo: Sendable, Equatable {
     public let sourceId: String
     public let targetIds: [String]
     public let reenter: Bool
@@ -142,7 +142,7 @@ public struct InspectionTransitionInfo: Sendable, Equatable, Codable {
 }
 
 /// Serializable snapshot description for inspection transports.
-public struct InspectionSnapshot: Sendable, Equatable, Codable {
+public struct InspectionSnapshot: Sendable, Equatable {
     public let actor: InspectionActorRef
     public let status: SnapshotStatus
     public let value: String
@@ -229,7 +229,7 @@ public struct InspectionSnapshot: Sendable, Equatable, Codable {
 }
 
 /// A single inspection event emitted by the runtime.
-public struct InspectionEvent: Sendable, Equatable, Codable {
+public struct InspectionEvent: Sendable, Equatable {
     public let kind: InspectionEventKind
     public let rootId: String
     public let actor: InspectionActorRef
@@ -467,3 +467,12 @@ public final class InspectionCollector: @unchecked Sendable {
         lock.unlock()
     }
 }
+
+// Codable is declared out-of-line and guarded — see CodableConformances.swift for the policy.
+#if !hasFeature(Embedded)
+extension InspectionActorRef: Codable {}
+extension InspectionEventDescription: Codable {}
+extension InspectionTransitionInfo: Codable {}
+extension InspectionSnapshot: Codable {}
+extension InspectionEvent: Codable {}
+#endif

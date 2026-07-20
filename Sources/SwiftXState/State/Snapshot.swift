@@ -1,6 +1,6 @@
 
 /// The lifecycle status of a machine snapshot.
-public enum SnapshotStatus: Sendable, Equatable, Codable {
+public enum SnapshotStatus: Sendable, Equatable {
     /// Running and able to receive events.
     case active
     /// Reached a top-level final state (may carry `output`).
@@ -105,3 +105,8 @@ public struct MachineSnapshot<Context: Sendable>: Sendable {
         !selectTransitions(event: event, snapshot: self).isEmpty
     }
 }
+
+// Codable is declared out-of-line and guarded — see CodableConformances.swift for the policy.
+#if !hasFeature(Embedded)
+extension SnapshotStatus: Codable {}
+#endif

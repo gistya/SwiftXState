@@ -95,7 +95,7 @@ public protocol GuardParamValues: Sendable {
 public typealias ActionParamValues = GuardParamValues
 
 /// Zero-parameter guard/action payloads.
-public struct VoidParams: GuardParamValues, Sendable, Equatable, Codable {
+public struct VoidParams: GuardParamValues, Sendable, Equatable {
     public init() {}
 
     public func encodeToBox() -> ParamsBox { ParamsBox() }
@@ -310,3 +310,8 @@ func serializeParameterizedReference(name: String, params: ParamsBox) -> JSONVal
         "params": json,
     ])
 }
+
+// Codable is declared out-of-line and guarded — see CodableConformances.swift for the policy.
+#if !hasFeature(Embedded)
+extension VoidParams: Codable {}
+#endif

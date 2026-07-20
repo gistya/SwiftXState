@@ -1,6 +1,6 @@
 
 /// XState-style event with a separate JSON payload for replay and inspection.
-public struct PayloadEvent: Eventable, Equatable, Codable {
+public struct PayloadEvent: Eventable, Equatable {
     public let type: String
     public let payload: JSONValue?
 
@@ -18,3 +18,7 @@ public protocol ReplayPayloadRepresentable: Eventable {
 /// Decodes replayed events back into app-specific `Eventable` values.
 public typealias ReplayEventDecoder = @Sendable (ReplayableEvent) -> (any Eventable)?
 
+// Codable is declared out-of-line and guarded — see CodableConformances.swift for the policy.
+#if !hasFeature(Embedded)
+extension PayloadEvent: Codable {}
+#endif

@@ -3,7 +3,7 @@ import Synchronization
 // MARK: - Replayable events
 
 /// A persisted event that can be replayed through pure or live interpreters.
-public enum ReplayableEvent: Sendable, Equatable, Codable {
+public enum ReplayableEvent: Sendable, Equatable {
     case simple(type: String, payload: JSONValue? = nil)
     case system(SystemEvent)
     case done(actorId: String, outputDescription: String?)
@@ -88,7 +88,7 @@ public enum ReplayableEvent: Sendable, Equatable, Codable {
 // MARK: - Recorded steps
 
 /// One root-actor transition captured during a recording session.
-public struct RecordedStep: Sendable, Equatable, Codable {
+public struct RecordedStep: Sendable, Equatable {
     public let index: Int
     public let timestamp: Double
     public let event: ReplayableEvent
@@ -114,7 +114,7 @@ public struct RecordedStep: Sendable, Equatable, Codable {
 }
 
 /// A complete recording of a root actor session.
-public struct ReplaySession: Sendable, Equatable, Codable {
+public struct ReplaySession: Sendable, Equatable {
     public let rootId: String
     public let machineId: String?
     public let steps: [RecordedStep]
@@ -526,3 +526,9 @@ public func replayStoreTransitions<Context: Sendable & Equatable, E: Eventable>(
     }
     return results
 }
+
+// Codable is declared out-of-line and guarded — see CodableConformances.swift for the policy.
+#if !hasFeature(Embedded)
+extension RecordedStep: Codable {}
+extension ReplaySession: Codable {}
+#endif

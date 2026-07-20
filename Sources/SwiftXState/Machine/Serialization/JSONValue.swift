@@ -19,6 +19,9 @@ public enum JSONValue: Sendable, Equatable {
     }
 }
 
+// Hand-written because JSONValue is a recursive enum. Excluded from Embedded Swift, which has no
+// Codable; JSONValueCodec.swift provides the equivalent read/write path there.
+#if !hasFeature(Embedded)
 extension JSONValue: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -60,3 +63,4 @@ extension JSONValue: Codable {
         }
     }
 }
+#endif

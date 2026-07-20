@@ -1,5 +1,7 @@
-
-extension ReplayableEvent {
+// Hand-written Codable conformance for ReplayableEvent, a discriminated union whose synthesized
+// form would not round-trip stably. Excluded from Embedded Swift; see CodableConformances.swift.
+#if !hasFeature(Embedded)
+extension ReplayableEvent: Codable {
     private enum Discriminator: String, Codable {
         case simple
         case system
@@ -72,3 +74,4 @@ extension ReplayableEvent {
         }
     }
 }
+#endif
