@@ -20,6 +20,7 @@ likely to hit are both about the actor *type* (plus one note on typed actors at 
 | --- | --- |
 | `Actor<MyContext>` | `Actor<MachineLogic<MyContext>>` |
 | `let m = actor.machine` (sync) | `let m = await actor.machine` |
+| `struct Ctx: Codable` (persisted) | `import SwiftXStateCodable` + `struct Ctx: Codable, ContextPersistable` |
 
 If you never write the `Actor<…>` type by name and never read `actor.machine`, **you
 have nothing to change** — `createActor(myMachine)` and everything you do with the
@@ -77,6 +78,52 @@ async property, so reads need `await`:
 This is rarely an issue in practice — you almost always already hold the
 `StateMachine` you passed to `createActor`, so read it from there instead of round-
 tripping through the actor.
+
+## Breaking change 3 — `Codable` support moved to `SwiftXStateCodable`
+
+So the core can target **Embedded Swift** (where `Codable` is unavailable — it needs
+existentials and type metadata), the core module no longer contains any JSON *engine* or
+`Codable`-constrained API. `JSONValue` is now written and parsed by a hand-rolled,
+dependency-free codec, so machine export/import works everywhere; everything needing
+`Codable` moved to a new **`SwiftXStateCodable`** library. This mirrors how
+`FridayTheThirteenth` (the engine) is split from `FridayTheCodable` (the adapters).
+
+Core gained a persistence seam, `ContextPersistable`, which asks a context to project itself
+to `JSONValue` instead of reflecting over it. **You don't implement it by hand** — importing
+`SwiftXStateCodable` supplies both requirements for any `Codable` type:
+
+```diff
++import SwiftXStateCodable
+
+-struct MyContext: Codable, Sendable, Equatable {}
++struct MyContext: Codable, Sendable, Equatable, ContextPersistable {}   // ← no body needed
+```
+
+Everything else about persistence is unchanged: `getPersistedSnapshot(from:children:)` and
+`restoreSnapshot(machine:persisted:context:)` keep their original `Codable`-constrained
+signatures (they live in the adapter now), and the **on-disk format is byte-identical** — old
+snapshots still load, so there's no data migration.
+
+> **Watch out:** a *child* machine's context needs the conformance too. Without it the child
+> quietly takes the non-persistable spawn path and its state won't appear in
+> `persisted.children`. If a child stops round-tripping, this is why.
+
+The property-map form of `assign([...])` runs through this seam as well. It used to silently
+drop the assignment when the context couldn't be rebuilt; it now trips an `assertionFailure`
+in debug builds naming the type that needs the conformance.
+
+### Which modules need the import
+
+| You use | Needs `import SwiftXStateCodable` |
+| --- | --- |
+| `getPersistedSnapshot` / `restoreSnapshot` / `actor.start(from:)` | ✅ |
+| `PersistedSnapshot.encodeJSON()` / `.decodeJSON(_:)` | ✅ |
+| `ReplaySession.encodeJSON()` / `.decodeJSON(_:)` | ✅ |
+| `JSONValue.fromEncodable(_:)` / `.decode(_:)`, `replayDecodeEvent` | ✅ |
+| A `Codable` type conforming to `GuardParamValues` | ✅ |
+| `SwiftXStateSwiftData` persistence | ✅ |
+| `assign([...])` property-map form | ✅ |
+| Machines, actors, atoms, `definitionJSON()`, the inspector | ❌ core only |
 
 ---
 
@@ -150,5 +197,33 @@ built-in logic behind every state-machine actor — which is why the actor type 
 - [ ] Replace explicit `Actor<Context>` annotations with `Actor<MachineLogic<Context>>`
       (or define `typealias MachineActor<Context> = Actor<MachineLogic<Context>>`).
 - [ ] Add `await` to any `actor.machine` reads (or read your own `StateMachine` value).
+- [ ] If you persist, replay, use `assign([...])`, or have `Codable` guard/action params:
+      add `import SwiftXStateCodable` and add `ContextPersistable` to those context types
+      (no body required) — **including any child machine's context**.
 - [ ] Rebuild — that's it. No changes to `createActor`, `send`, `snapshot`, `start`,
-      persistence, typed actors, `waitFor`, or any framework integration.
+      the persisted data format, typed actors, `waitFor`, or any framework integration.
+
+---
+
+## What's new — Diff Mode (optional)
+
+Inspection can now publish only what *changed* in an actor's context instead of the whole
+thing, which matters when you're streaming to a remote API and don't want to resend
+unchanged fields:
+
+```swift
+InspectClientConfiguration(
+    wireFormat: .envelope,
+    contextPublishing: .diff(keyframeEvery: 50)   // or .selected([...]), .none
+)
+```
+
+`.full` is the default, so **existing setups are unaffected**. In `.diff` mode a snapshot
+carries `contextDelta` (a `ContextDelta` — `unchanged` / `replace` / `merge` / `removed`)
+instead of a full `context`, with a full keyframe on an actor's first snapshot, every
+`keyframeEvery` snapshots, and on every reconnect. Apply a delta with
+`ContextDelta.fromJSON(_:)?.applied(to:)`.
+
+> Choosing any mode other than `.full` applies to **every** wire format, including
+> `.stately` — the delta rides in an extra `contextDelta` key that stock
+> `@statelyai/inspect` ignores, so use the reduced modes with your own inspector.

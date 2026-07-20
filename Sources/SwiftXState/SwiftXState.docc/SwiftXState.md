@@ -128,6 +128,23 @@ talk to one another.
 - ``Subscription``
 - ``subscribeToAtom(_:map:)``
 
+### Persistence
+
+The core is `Codable`-free so it can target Embedded Swift. A context opts into persistence by
+conforming to ``ContextPersistable`` — import `SwiftXStateCodable` and a `Codable` type gets both
+requirements for free.
+
+- ``ContextPersistable``
+- ``PersistedSnapshot``
+- ``PersistedChildSnapshot``
+- ``PersistenceError``
+
+### Inspection
+
+- ``InspectionEvent``
+- ``InspectionSnapshot``
+- ``ContextDelta``
+
 ### Async Work & Children
 
 - ``InvokeConfig``

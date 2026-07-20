@@ -19,7 +19,7 @@
 
 <br>
 
-> **Upgrading from 1.x?** See the [Migration Guide](MIGRATING.md) — 2.0 is almost entirely source-compatible (two small type-level changes).
+> **Upgrading from 1.x?** See the [Migration Guide](MIGRATING.md) — 2.0 is almost entirely source-compatible: two small type-level changes, plus an `import SwiftXStateCodable` (and one added conformance) if you persist or replay.
 
 <br>
 
@@ -95,14 +95,15 @@ Every effort has been made to ensure you can trust this library. For details, se
 
 ## What libraries comes in the package?
 
-1. SwiftXState - all platforms - static library, core features (state machines, actors, stores, and reactive **atoms**)
-2. SwiftXStateInspect - all platforms - localhost JSON streaming in [XState.js](https://stately.ai)-format (Foundation-free; pluggable `LogWriteable` / `InspectLoggable` sinks)
-3. SwiftXStateInspectLog - all platforms - opt-in Foundation-backed file logger for Inspect streams (`FileLogWriter`)
-4. SwiftXStateGraph - all Apple platforms - SwiftUI state graph renderer in 2D and 3D (note: does not render in 3D on visionOS yet)
-5. SwiftXStateInspectorUI - all Apple platforms - SwiftUI info displays for displaying Inspect streams
-6. SwiftXStateSwiftUI - all Apple platforms - wire your SwiftUI view states up to SwiftXState state stores
-7. SwiftXStateSwiftData - all Apple platforms - persistent data storage adapter
-8. ... plus some fun bonus items ;D
+1. SwiftXState - all platforms - static library, core features (state machines, actors, stores, and reactive **atoms**). No Foundation, no `Codable`, no JSON engine — targets Embedded Swift
+2. SwiftXStateCodable - all platforms - opt-in `Codable` adapters: persistence, replay serialization, `Encodable`⇄`JSONValue`, and `Codable` guard/action params
+3. SwiftXStateInspect - all platforms - localhost JSON streaming in [XState.js](https://stately.ai)-format (Foundation-free; pluggable `LogWriteable` / `InspectLoggable` sinks)
+4. SwiftXStateInspectLog - all platforms - opt-in Foundation-backed file logger for Inspect streams (`FileLogWriter`)
+5. SwiftXStateGraph - all Apple platforms - SwiftUI state graph renderer in 2D and 3D (note: does not render in 3D on visionOS yet)
+6. SwiftXStateInspectorUI - all Apple platforms - SwiftUI info displays for displaying Inspect streams
+7. SwiftXStateSwiftUI - all Apple platforms - wire your SwiftUI view states up to SwiftXState state stores
+8. SwiftXStateSwiftData - all Apple platforms - persistent data storage adapter
+9. ... plus some fun bonus items ;D
 
 ## How far along is this project?
 
@@ -125,7 +126,7 @@ Every effort has been made to ensure you can trust this library. For details, se
 
 ## Dependencies
 
-- **Core & Inspect are Foundation-free since 2.0.** JSON runs on [FridayTheThirteenth](https://github.com/gistya/friday-the-thirteenth) / FridayTheCodable instead of `Foundation`; `SwiftXStateInspect` sends output through a pluggable `LogWriteable` / `InspectLoggable` sink (default: `os.Logger` on Apple, `print` elsewhere).
+- **The core has no Foundation, no `Codable`, and no JSON engine since 2.0.** `JSONValue` is written and parsed by a hand-rolled, dependency-free codec, so machine export/import runs anywhere — including Embedded Swift. Everything needing `Codable` lives in the opt-in `SwiftXStateCodable` target (which uses [FridayTheCodable](https://github.com/gistya/friday-the-thirteenth)), mirroring the FridayTheThirteenth/FridayTheCodable split. `SwiftXStateInspect` is Foundation-free too, sending output through a pluggable `LogWriteable` / `InspectLoggable` sink (default: `os.Logger` on Apple, `print` elsewhere).
 - Foundation-backed sinks are opt-in: file logging lives in the `SwiftXStateInspectLog` module, and the optional `SwiftXStateInspectURLSession` WebSocket transport uses `URLSession` (Apple platforms).
 - SwiftUI and/or SwiftData modules require Apple platforms.
 - WebAssembly requires [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit).

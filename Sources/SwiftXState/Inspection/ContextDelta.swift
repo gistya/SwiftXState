@@ -23,7 +23,7 @@ public extension ContextDelta {
     /// Computes the delta that turns `old` into `new`.
     ///
     /// Objects recurse key-by-key so only the changed leaves travel. Everything else (arrays,
-    /// scalars, or a change of shape) is a wholesale ``replace`` — arrays are treated atomically,
+    /// scalars, or a change of shape) is a wholesale `replace` — arrays are treated atomically,
     /// which keeps the delta small and unambiguous for the common "context is a struct" case.
     static func between(_ old: JSONValue, _ new: JSONValue) -> ContextDelta {
         if old == new { return .unchanged }
