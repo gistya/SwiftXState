@@ -78,7 +78,7 @@ public struct SequenceSubscribable<T: Sendable & Equatable>: Subscribable {
             } catch is CancellationError {
                 return
             } catch {
-                onError?(String(describing: error))
+                onError?(describeValue(error))
             }
         }
 

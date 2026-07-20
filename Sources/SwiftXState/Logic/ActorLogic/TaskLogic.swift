@@ -36,7 +36,7 @@ struct TaskLogic<Output: Sendable & Equatable>: ActorLogic {
             return nil
         } catch {
             guard !Task.isCancelled else { return nil }
-            scope.fail(String(describing: error))
+            scope.fail(describeValue(error))
         }
         return nil
     }

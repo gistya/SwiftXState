@@ -110,9 +110,9 @@ enum InspectJSONEncoder {
             if let display = mirror.children.first?.label {
                 return .string(display)
             }
-            return .string(String(describing: value))
+            return .string(describeValue(value))
         default:
-            return .string(String(describing: value))
+            return .string(describeValue(value))
         }
     }
 }

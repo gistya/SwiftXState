@@ -43,7 +43,7 @@ struct TransitionLogic<Context: Sendable & Equatable>: ActorLogic {
     private func pushSnapshot<H: MachineHosting>(_ context: Context, host: isolated H) {
         host.sendToParentOrdered(SnapshotActorEvent(
             actorId: host.sessionId,
-            snapshot: ChildActorSnapshot(id: host.sessionId, status: .active, value: String(describing: context))
+            snapshot: ChildActorSnapshot(id: host.sessionId, status: .active, value: describeValue(context))
         ))
     }
 }

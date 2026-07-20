@@ -16,7 +16,7 @@ public enum ReplayableEvent: Sendable, Equatable {
         } else if let done = event as? DoneActorEvent {
             self = .done(
                 actorId: done.actorId,
-                outputDescription: done.output.map { String(describing: $0) }
+                outputDescription: done.output.map { describeValue($0) }
             )
         } else if let error = event as? ErrorActorEvent {
             self = .error(actorId: error.actorId, message: error.error)

@@ -16,6 +16,19 @@ public extension BasicIdentifying {
     /// Default: the case *discriminant* (e.g. `Light.State.red` → `"red"`, and crucially
     /// `Event.increment(by: 5)` → `"increment"`, not `"increment(by: 5)"`). Using `Mirror` to read the
     /// enum label keeps the routing key stable across an event's payload. Override for custom wire names.
+    ///
+    /// Unavailable on Embedded Swift, which has no `Mirror`. Give the identifier a `String` raw
+    /// value and the `RawRepresentable` overload below supplies `name` for free — that covers the
+    /// common case:
+    ///
+    /// ```swift
+    /// enum State: String, StateIdentifying { case red, green }
+    /// ```
+    ///
+    /// Identifiers carrying associated values must declare `name` themselves. As with
+    /// ``StateEvent/eventType``, a compile error by design rather than a degraded default: `name` is
+    /// the engine's node/event key, so a placeholder would misroute rather than fail.
+    #if !hasFeature(Embedded)
     var name: String {
         let mirror = Mirror(reflecting: self)
         if mirror.displayStyle == .enum, let label = mirror.children.first?.label {
@@ -23,6 +36,7 @@ public extension BasicIdentifying {
         }
         return String(describing: self)
     }
+    #endif
 }
 
 public extension BasicIdentifying where Self: RawRepresentable, Self.RawValue == String {

@@ -29,7 +29,7 @@ struct ObservableLogic<Context: Sendable & Equatable>: ActorLogic {
                 if syncSnapshot {
                     scope.sendToParent(SnapshotActorEvent(
                         actorId: scope.actorId,
-                        snapshot: ChildActorSnapshot(id: scope.actorId, status: .active, value: String(describing: value))
+                        snapshot: ChildActorSnapshot(id: scope.actorId, status: .active, value: describeValue(value))
                     ))
                 }
             },

@@ -22,7 +22,7 @@ struct StoreChildLogic<Context: Sendable & Equatable, E: Eventable>: ActorLogic 
             guard syncSnapshot else { return }
             scope.sendToParent(SnapshotActorEvent(
                 actorId: scope.actorId,
-                snapshot: ChildActorSnapshot(id: scope.actorId, status: .active, value: String(describing: store.context))
+                snapshot: ChildActorSnapshot(id: scope.actorId, status: .active, value: describeValue(store.context))
             ))
         }
 

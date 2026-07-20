@@ -79,13 +79,13 @@ public struct InspectionEventDescription: Sendable, Equatable {
         if let done = event as? DoneStateEvent {
             return InspectionEventDescription(
                 type: done.type,
-                payloadString: done.output.map { String(describing: $0) }
+                payloadString: done.output.map { describeValue($0) }
             )
         }
         if let done = event as? DoneActorEvent {
             return InspectionEventDescription(
                 type: done.type,
-                payloadString: done.output.map { String(describing: $0) }
+                payloadString: done.output.map { describeValue($0) }
             )
         }
         if let error = event as? ErrorActorEvent {

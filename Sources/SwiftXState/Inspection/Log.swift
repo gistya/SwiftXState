@@ -23,7 +23,7 @@ public enum LogHandler: Sendable {
     }
 
     static func emit(label: String?, value: Any) {
-        let output = LogOutput(label: label, message: String(describing: value))
+        let output = LogOutput(label: label, message: describeValue(value))
         lock.lock()
         let handler = sink
         lock.unlock()
@@ -65,7 +65,7 @@ func resolveLogValue<Context: Sendable>(
     case let .expression(expression):
         return expression(args).boxedForInspection
     case .contextAndEvent:
-        return "(context: \(String(describing: args.context)), event: \(args.event.type))"
+        return "(context: \(describeValue(args.context)), event: \(args.event.type))"
     }
 }
 

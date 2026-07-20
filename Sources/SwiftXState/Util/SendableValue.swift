@@ -11,11 +11,23 @@ public struct SendableValue: @unchecked Sendable, Equatable {
     }
 
     public static func == (lhs: SendableValue, rhs: SendableValue) -> Bool {
-        guard let l = lhs.box as (any Equatable)?, let r = rhs.box as (any Equatable)? else {
-            return false
-        }
-        return String(describing: l) == String(describing: r)
+        areEqual(lhs.box, rhs.box)
     }
 
     var boxedForInspection: Any { box }
+}
+
+/// Compares two type-erased `Equatable` values using their own `==`, by opening the existential and
+/// casting the right-hand side to the left's concrete type. Distinct types are never equal.
+///
+/// This replaces an earlier `String(describing:) == String(describing:)` comparison. That version
+/// relied on reflection (unavailable on Embedded Swift, where it would have degraded to a constant
+/// placeholder and made *every* value compare equal), and it was already wrong on any platform for
+/// two distinct types that happen to render identically.
+private func areEqual(_ lhs: any Equatable, _ rhs: any Equatable) -> Bool {
+    func compare<T: Equatable>(_ typed: T) -> Bool {
+        guard let other = rhs as? T else { return false }
+        return typed == other
+    }
+    return compare(lhs)
 }

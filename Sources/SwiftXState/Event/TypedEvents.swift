@@ -21,7 +21,24 @@ public protocol StateEvent: Eventable {
 }
 
 public extension StateEvent {
+    /// Defaults to the type name.
+    ///
+    /// Unavailable on Embedded Swift, which has no reflection to read a type name from. There, every
+    /// conforming type must declare `eventType` explicitly:
+    ///
+    /// ```swift
+    /// struct InputChange: StateEvent {
+    ///     static let eventType = "input.change"
+    /// }
+    /// ```
+    ///
+    /// Deliberately a compile error rather than a degraded default: `eventType` is the routing key
+    /// transitions match on, so a placeholder would silently collapse every event into one bucket
+    /// instead of failing.
+    #if !hasFeature(Embedded)
     static var eventType: String { String(describing: Self.self) }
+    #endif
+
     var type: String { Self.eventType }
 }
 
