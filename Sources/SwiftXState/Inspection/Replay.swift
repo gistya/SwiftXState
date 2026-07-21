@@ -24,10 +24,8 @@ public enum ReplayableEvent: Sendable, Equatable {
             self = .snapshotSync(actorId: snapshot.actorId, value: snapshot.snapshot.value)
         } else if let payloadEvent = event as? PayloadEvent {
             self = .simple(type: payloadEvent.type, payload: payloadEvent.payload)
-        } else if let replayable = event as? any ReplayPayloadRepresentable {
-            self = .simple(type: event.type, payload: replayable.replayPayload)
         } else {
-            self = .simple(type: event.type)
+            self = .simple(type: event.type, payload: event.replayPayload)
         }
     }
 

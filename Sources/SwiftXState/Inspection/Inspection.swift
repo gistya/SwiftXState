@@ -100,10 +100,7 @@ public struct InspectionEventDescription: Sendable, Equatable {
         if let payloadEvent = event as? PayloadEvent {
             return InspectionEventDescription(type: payloadEvent.type, payload: payloadEvent.payload)
         }
-        if let replayable = event as? any ReplayPayloadRepresentable {
-            return InspectionEventDescription(type: event.type, payload: replayable.replayPayload)
-        }
-        return InspectionEventDescription(type: event.type)
+        return InspectionEventDescription(type: event.type, payload: event.replayPayload)
     }
 }
 

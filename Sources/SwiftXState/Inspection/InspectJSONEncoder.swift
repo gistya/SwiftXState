@@ -78,15 +78,18 @@ enum InspectJSONEncoder {
         // Everything above is a plain type switch and works anywhere. Everything below walks the
         // value with `Mirror`, which Embedded Swift does not have.
         //
-        // On Embedded the structured fallback is the ``ContextPersistable`` seam instead: a context
-        // that opts into persistence already knows how to project itself to a `JSONValue`, and that
-        // projection is exactly what the inspector wants. A context that conforms to neither is
-        // reported as `nil`, which callers render as an empty object — inspection loses detail, but
-        // no routing or persistence behaviour depends on it.
+        // On Embedded there is no structured fallback, so a non-scalar value reports `nil` and
+        // callers render an empty object. Inspection loses context detail; nothing else depends on
+        // it — routing keys and persistence go through their own paths.
+        //
+        // The ``ContextPersistable`` seam cannot be used here. Reaching it would mean
+        // `value as? any ContextPersistable`, and Embedded Swift permits `as?` only to a *concrete*
+        // type, never to an existential. Nor can it be resolved statically: by the time a value
+        // arrives here it is `Any`, and the generic entry points above are called from contexts
+        // generic over an *unconstrained* `Context`, so a `ContextPersistable`-constrained overload
+        // would never be selected. Restoring this would mean constraining `Context` throughout the
+        // action/inspection surface, which is a much larger change than the feature is worth.
         #if hasFeature(Embedded)
-        if let persistable = value as? any ContextPersistable {
-            return try? persistable.persistedProjection()
-        }
         return nil
         #else
         let mirror = Mirror(reflecting: value)

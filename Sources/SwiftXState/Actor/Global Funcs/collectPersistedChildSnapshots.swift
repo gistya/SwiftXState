@@ -3,8 +3,7 @@ func collectPersistedChildSnapshots(
 ) async throws -> [String: PersistedChildSnapshot] {
     var result: [String: PersistedChildSnapshot] = [:]
     for (id, child) in children {
-        guard let provider = child as? any PersistedChildSnapshotProviding else { continue }
-        if let snapshot = try await provider.makePersistedChildSnapshot() {
+        if let snapshot = try await child.makePersistedChildSnapshot() {
             result[id] = snapshot
         }
     }
