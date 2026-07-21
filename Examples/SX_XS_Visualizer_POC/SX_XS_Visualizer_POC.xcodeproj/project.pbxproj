@@ -244,7 +244,7 @@
 			mainGroup = 73FE74D22FD48B6E002805A4;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				73EB49292FF2B40F00A7456C /* XCLocalSwiftPackageReference "../../../SwiftXState" */,
+				73EF399B300FF3F3001DA470 /* XCRemoteSwiftPackageReference "SwiftXState" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 73FE74DC2FD48B6E002805A4 /* Products */;
@@ -650,12 +650,17 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		73EB49292FF2B40F00A7456C /* XCLocalSwiftPackageReference "../../../SwiftXState" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../SwiftXState;
+/* Begin XCRemoteSwiftPackageReference section */
+		73EF399B300FF3F3001DA470 /* XCRemoteSwiftPackageReference "SwiftXState" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gistya/SwiftXState";
+			requirement = {
+				kind = versionRange;
+				maximumVersion = 3.0.0;
+				minimumVersion = "2.0.0-alpha.11";
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		73EB492A2FF2B40F00A7456C /* SwiftXState */ = {

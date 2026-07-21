@@ -1,6 +1,15 @@
 {
-  "originHash" : "308b1f1af0759b4dbb4523222bd34ba1c915d0d8631c8887dab26fdb66cc181f",
+  "originHash" : "e6325bfce77f4148f568867c796bc5f13430ca4cb7a1bee678a79bffbb77947f",
   "pins" : [
+    {
+      "identity" : "friday-the-thirteenth",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gistya/friday-the-thirteenth",
+      "state" : {
+        "revision" : "be87de47919c3e6591e3f681812a411f30f870da",
+        "version" : "2.0.0"
+      }
+    },
     {
       "identity" : "javascriptkit",
       "kind" : "remoteSourceControl",
@@ -15,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/swift-compositional-init",
       "state" : {
-        "revision" : "2633ee5b9837df48031714e41912d8ca77183f18",
-        "version" : "1.0.0"
+        "revision" : "af4835e941fe00409ea076e4f49c9fe7e800a9e8",
+        "version" : "1.2.0"
       }
     },
     {
