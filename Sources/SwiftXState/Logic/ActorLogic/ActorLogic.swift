@@ -93,9 +93,14 @@ public extension ActorLogic {
 
     func setUp(_ scope: ActorScope<Snapshot>) -> (@Sendable () -> Void)? { nil }
 
+    // Embedded Swift does not support dynamic casting to protocol SendableValue.
+    // Embedded consumers will need to implement this function directly in your
+    // custom conformances. Literally just copy-paste this function.
+    #if !hasFeature(Embedded)
     func started<H: MachineHosting>(input: SendableValue?, host: isolated H) async -> Snapshot {
         initialState(input: input)
     }
+    #endif
 
     func handle<H: MachineHosting>(_ event: any Eventable, _ snapshot: Snapshot, host: isolated H) async -> Snapshot {
         step(snapshot, on: event)

@@ -12,6 +12,12 @@ struct StoreChildLogic<Context: Sendable & Equatable, E: Eventable>: ActorLogic 
     func initialState(input: SendableValue?) -> State { State() }
     func step(_ snapshot: State, on event: any Eventable) -> State { snapshot }
     func status(of snapshot: State) -> SnapshotStatus { .active }
+    
+    #if hasFeature(Embedded)
+    func started<H: MachineHosting>(input: SendableValue?, host: isolated H) async -> Snapshot {
+        initialState(input: input)
+    }
+    #endif
 
     func setUp(_ scope: ActorScope<State>) -> (@Sendable () -> Void)? {
         let store = logic.logic.createStore(input: scope.input)

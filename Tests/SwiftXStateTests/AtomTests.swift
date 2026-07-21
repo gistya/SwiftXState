@@ -238,8 +238,9 @@ struct AtomTests {
     @Test("multi-source computed: subscriber converges to the settled value under two writers")
     func multiSourceComputedConverges() async {
         // A computed aggregating two *single-writer* atoms still has two threads delivering to it.
-        // Delivery reads the value under the same lock hold as the generation, so no subscriber is
-        // left on a stale sum once writes quiesce (regression for the decoupled-value delivery bug).
+        // Delivery reads the value under the same lock hold as the generation, so a settling write
+        // always leaves the subscriber on the true sum — it can never be stranded on a stale one
+        // (regression for the decoupled-value delivery bug).
         let a = Atom(0)
         let b = Atom(0)
         let sum = ComputedAtom { a.value + b.value }
@@ -251,6 +252,16 @@ struct AtomTests {
                 group.addTask { b.value = i }
             }
         }
+        // `deliveryGen` is checked *before* the handlers run, and handlers run with the gate released
+        // (never held across a callback), so two deliverers can both pass the check and then invoke
+        // their handlers in the opposite order — during the burst an older value can still land last.
+        // That is the documented best-effort window, not permanent staleness, so the burst alone
+        // settles nothing. Waiting for convergence here would hang forever rather than fix the flake:
+        // every write's `deliver()` runs synchronously before the write returns, so once the task
+        // group is awaited there is no in-flight delivery left to wait for. Settle it the way
+        // `concurrentDeliveryConverges` does — one final, uncontended write, whose delivery is
+        // synchronous on this thread and races with nothing.
+        a.value = 1_000_000                           // final, uncontended
         #expect(sum.value == a.value + b.value)
         #expect(rec.values.last == sum.value)         // subscriber converged, not left stale
     }

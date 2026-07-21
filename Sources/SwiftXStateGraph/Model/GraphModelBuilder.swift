@@ -169,7 +169,6 @@ public enum GraphModelBuilder {
             }
 
             for (event, value) in (object(node["on"]) ?? [:]).sorted(by: { $0.key < $1.key }) {
-                let classification: (label: String, kind: GraphEdgeKind?) = classify(eventType: event)
                 for t in targets(value) {
                     pending.append(.init(source: id, label: event, kind: .event, target: t.target, guarded: t.guarded))
                 }

@@ -19,6 +19,12 @@ struct CallbackLogic: ActorLogic {
     func step(_ snapshot: State, on event: any Eventable) -> State { snapshot }
 
     func status(of snapshot: State) -> SnapshotStatus { snapshot.stopped ? .stopped : .active }
+    
+    #if hasFeature(Embedded)
+    func started<H: MachineHosting>(input: SendableValue?, host: isolated H) async -> Snapshot {
+        initialState(input: input)
+    }
+    #endif
 
     func stoppedSnapshot(_ snapshot: State) -> State { State(stopped: true) }
 

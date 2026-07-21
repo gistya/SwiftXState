@@ -16,6 +16,12 @@ struct TaskLogic<Output: Sendable & Equatable>: ActorLogic {
     func initialState(input: SendableValue?) -> State { State() }
     func step(_ snapshot: State, on event: any Eventable) -> State { snapshot }
     func status(of snapshot: State) -> SnapshotStatus { .active }  // terminal status overrides
+    
+    #if hasFeature(Embedded)
+    func started<H: MachineHosting>(input: SendableValue?, host: isolated H) async -> Snapshot {
+        initialState(input: input)
+    }
+    #endif
 
     func run(_ scope: ActorScope<State>) async -> (@Sendable () -> Void)? {
         let taskScope = TaskActorScope(
