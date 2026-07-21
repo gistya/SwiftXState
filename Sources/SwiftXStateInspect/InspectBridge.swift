@@ -1,10 +1,42 @@
+import Synchronization
 import SwiftXState
+
+/// Serializes inspection deliveries in *call* order.
+///
+/// The chaining has to happen synchronously in the caller, which is why this is a lock-protected
+/// class rather than an actor. `observe()` is a plain `@Sendable` closure invoked from arbitrary
+/// isolation, so the previous `Task { await state.publish(event) }` created one unstructured task
+/// per event and let them race to enter the actor: N events could reach the transport in any of N!
+/// orders. Ordering matters here — the Stately sequence view and replay both assume causal order,
+/// and Diff Mode's keyframe counter is order-dependent, so a reorder silently corrupts the stream.
+///
+/// Mirrors `ParentDeliveryChain` in the core, which solves the same problem for parent deliveries.
+final class InspectDeliveryChain: @unchecked Sendable {
+    private let tail = Mutex<Task<Void, Never>?>(nil)
+
+    /// Links `event` behind everything queued so far. Order is fixed at the moment of this call.
+    func deliver(_ event: InspectionEvent, to state: InspectBridgeState) {
+        tail.withLock { slot in
+            let previous = slot
+            slot = Task {
+                await previous?.value
+                await state.publish(event)
+            }
+        }
+    }
+
+    /// Waits for everything queued so far to reach the transport.
+    func drain() async {
+        await tail.withLock { $0 }?.value
+    }
+}
 
 /// Connects `InspectionEvent` streams to an `InspectTransport`.
 public final class InspectBridge: Sendable {
     private let transport: any InspectTransport
     private let configuration: InspectClientConfiguration
     private let state: InspectBridgeState
+    private let deliveries = InspectDeliveryChain()
 
     public init(
         transport: any InspectTransport,
@@ -23,10 +55,10 @@ public final class InspectBridge: Sendable {
 
     /// Returns an observer suitable for `ActorOptions.inspect` or `ActorSystem.inspect`.
     public func observe() -> @Sendable (InspectionEvent) -> Void {
-        { [state, configuration] event in
+        { [state, configuration, deliveries] event in
             guard configuration.isEnabled else { return }
             if let filter = configuration.eventFilter, !filter(event) { return }
-            Task { await state.publish(event) }
+            deliveries.deliver(event, to: state)
         }
     }
 
@@ -37,6 +69,7 @@ public final class InspectBridge: Sendable {
     }
 
     public func stop() async {
+        await deliveries.drain()
         await state.close()
     }
 }
@@ -50,7 +83,6 @@ actor InspectBridgeState {
     private var statelyConverter: StatelyWireConverter
     private var session: (any InspectSession)?
     private var connectTask: Task<Void, Error>?
-    private var publishTail: Task<Void, Never>?
     private let contextPublishing: InspectContextPublishing
     /// Last context published per actor — the baseline Diff Mode diffs against.
     private var lastContext: [String: JSONValue] = [:]
@@ -122,14 +154,11 @@ actor InspectBridgeState {
         sinceKeyframe.removeAll()
     }
 
+    /// Ordering is established by `InspectDeliveryChain` before this is reached, so this no longer
+    /// chains — doing so here could not fix the order anyway, since the race was over which task
+    /// entered the actor first.
     func publish(_ event: InspectionEvent) async {
-        let previous = publishTail
-        let task = Task {
-            await previous?.value
-            await self.publishNow(event)
-        }
-        publishTail = task
-        await task.value
+        await publishNow(event)
     }
 
     private func publishNow(_ event: InspectionEvent) async {
@@ -204,8 +233,6 @@ actor InspectBridgeState {
     func close() async {
         connectTask?.cancel()
         connectTask = nil
-        await publishTail?.value
-        publishTail = nil
         await session?.close()
         session = nil
         lastContext.removeAll()

@@ -52,7 +52,13 @@ struct ContextPublishingTests {
         await bridge.start()
         let observe = bridge.observe()
         for event in events { observe(event) }
-        await waitUntil { await transport.recordedMessages().count >= events.count }
+        // Count *snapshots*, not messages. The assertions below are all about snapshots, and
+        // `publishedSnapshots` filters non-snapshot frames out — so waiting on the raw message
+        // count could satisfy early and let `stop()` cut the stream short.
+        await waitUntil {
+            let snapshots = try? await publishedSnapshots(transport)
+            return (snapshots?.count ?? 0) >= events.count
+        }
         await bridge.stop()
     }
 
