@@ -18,12 +18,12 @@ public struct LifeMachine: StateMachine {
     public var machine: some XStateMachine {
         State(.running) {
             // Payload events — referenced by case path, payload read off args.event.
-            Transition(on: .toggleCell, to: .running).action { args, _ in
+            Transition(on: LifeEvent.toggleCell, to: .running).action { args, _ in
                 var ctx = args.context
                 if case let .toggleCell(x, y)? = args.event { ctx[x, y].toggle() }
                 return ctx
             }
-            Transition(on: LifeEvent.randomize, to: .running).action { args, _ in
+            Transition(on: .randomize, to: .running).action { args, _ in
                 var ctx = args.context
                 var density = 0.28
                 if case let .randomize(d)? = args.event { density = d }
@@ -89,5 +89,9 @@ public struct LifeMachine: StateMachine {
 // https://forums.swift.org/t/pitch-implicit-member-expressions-for-function-typed-parameters/87892/6
 
 extension Map where In == (x: Int, y: Int), Out == LifeEvent {
-    static var toggleCell: Map<(x: Int, y: Int), LifeEvent> { .init(transform: LifeEvent.toggleCell) }
+    static var toggleCell: Map<In, Out> { .init(transform: Out.toggleCell) }
+}
+
+extension Map where In == Double, Out == LifeEvent {
+    static var randomize: Map<In, Out> { .init(transform: Out.randomize) }
 }

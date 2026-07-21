@@ -179,3 +179,11 @@ extension Map where In == Square, Out == ChessEvent {
 extension Map where In == PieceKind, Out == ChessEvent {
     static var promote: Map<In, Out> { .init(transform: Out.promote) }
 }
+
+extension PieceKind: Blankable {
+    static var _blank: PieceKind { .pawn }
+}
+
+extension Square: Blankable {
+    static var _blank: Square { .init(row: 0, col: 0) }
+}

@@ -214,11 +214,11 @@ public final class LifeSession {
         var descriptor = FetchDescriptor<ActorSnapshotRecord>(predicate: #Predicate { $0.key == key })
         descriptor.fetchLimit = 1
         if let existing = try? mc.fetch(descriptor).first {
-            existing.snapshotData = Data(Array(data))
+            existing.snapshotData = Array(data)
             existing.machineId = "life"
             existing.updatedAt = .now
         } else {
-            mc.insert(ActorSnapshotRecord(key: key, machineId: "life", snapshotData: Data(Array(data))))
+            mc.insert(ActorSnapshotRecord(key: key, machineId: "life", snapshotData: Array(data)))
         }
         try? mc.save()
     }
