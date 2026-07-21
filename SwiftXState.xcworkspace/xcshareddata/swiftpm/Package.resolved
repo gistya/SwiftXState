@@ -1,5 +1,5 @@
 {
-  "originHash" : "09bc598cb25abc3528150a294f5d70ffcc0905796c9780e4815d4ff3b9a50a6b",
+  "originHash" : "fb5dc8ef395ec9a45bf476026b69916a6f5d0a1262617e3b20f9a70e9e0b5698",
   "pins" : [
     {
       "identity" : "chesskit-swift",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "44ef7a1aa9da25bf0a9606a8960591a4dde3fad2",
         "version" : "0.17.0"
+      }
+    },
+    {
+      "identity" : "friday-the-thirteenth",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gistya/friday-the-thirteenth",
+      "state" : {
+        "revision" : "be87de47919c3e6591e3f681812a411f30f870da",
+        "version" : "2.0.0"
       }
     },
     {
@@ -24,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/swift-compositional-init",
       "state" : {
-        "revision" : "46115c8285305135cb288a1bf05b9f69297bc619",
-        "version" : "1.1.2"
+        "revision" : "af4835e941fe00409ea076e4f49c9fe7e800a9e8",
+        "version" : "1.2.0"
       }
     },
     {
@@ -44,6 +53,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "df2bc6ad734c96bfe8ea03f313776233bb1c97b0"
+      }
+    },
+    {
+      "identity" : "swiftxstate",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gistya/SwiftXState",
+      "state" : {
+        "revision" : "b7d9a4600a0a01f25ef100b76284fd9e74626c83",
+        "version" : "2.0.0-alpha.11"
       }
     }
   ],

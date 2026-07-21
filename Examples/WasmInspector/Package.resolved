@@ -1,5 +1,5 @@
 {
-  "originHash" : "e6325bfce77f4148f568867c796bc5f13430ca4cb7a1bee678a79bffbb77947f",
+  "originHash" : "7c6696af08cecc49baafebb8ad7311f5df8d51f39a4dda42b77df0b5cb7f251d",
   "pins" : [
     {
       "identity" : "friday-the-thirteenth",
@@ -31,7 +31,7 @@
     {
       "identity" : "swift-syntax",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "location" : "https://github.com/swiftlang/swift-syntax",
       "state" : {
         "revision" : "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
         "version" : "603.0.2"
@@ -44,6 +44,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "df2bc6ad734c96bfe8ea03f313776233bb1c97b0"
+      }
+    },
+    {
+      "identity" : "swiftxstate",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gistya/SwiftXState",
+      "state" : {
+        "revision" : "b7d9a4600a0a01f25ef100b76284fd9e74626c83",
+        "version" : "2.0.0-alpha.11"
       }
     }
   ],
