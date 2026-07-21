@@ -73,16 +73,19 @@ public struct MachineSnapshot<Context: Sendable>: Sendable {
     }
 
     /// Whether the current state value matches the given partial state value.
+    @inlinable
     public func matches(_ partial: StateValue) -> Bool {
         value.matches(partial)
     }
 
     /// Whether the current state value matches a string path.
+    @inlinable
     public func matches(_ path: String) -> Bool {
         value.matches(path)
     }
 
     /// Whether the current state has the given tag.
+    @inlinable
     public func hasTag(_ tag: String) -> Bool {
         tags.contains(tag)
     }

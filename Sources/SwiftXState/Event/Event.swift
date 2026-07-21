@@ -24,6 +24,7 @@ public extension Eventable {
 public struct Event: Eventable, Hashable {
     public let type: String
 
+    @inlinable
     public init(_ type: String) {
         self.type = type
     }

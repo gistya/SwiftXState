@@ -192,6 +192,56 @@ built-in logic behind every state-machine actor — which is why the actor type 
 
 ---
 
+## Breaking changes since 2.0 (alpha)
+
+Small, and all in service of Embedded Swift compatibility. Nothing here changes machine semantics.
+
+### `TimeoutHandle` is an opaque token
+
+Sharpest edge, because custom clocks are a documented extension point (WASI/JS hosts are told to
+inject one). It used to box `any Sendable`, and each clock recovered its payload with a conditional
+cast. It now carries a `UInt64`:
+
+```swift
+public struct TimeoutHandle: Sendable, Hashable {
+    public let id: UInt64
+}
+```
+
+A custom `Clock` keeps its own id-to-timer table instead of stuffing the timer into the handle. Both
+the existential and the cast are prohibited on Embedded, and the token is simpler regardless.
+
+### `ActorOptions.clock` is a `ClockHandle`
+
+`Clock` is still the protocol you conform to; `ClockHandle` is how the engine *stores* one — a
+protocol existential needs a runtime witness table, closures do not. `ActorOptions(clock: MyClock())`
+compiles unchanged, because the initializer is generic and erases for you. Only code *reading*
+`options.clock` sees the new type.
+
+### `ActorAsyncCancellation.checkCancellation()` uses typed throws
+
+```swift
+public static func checkCancellation() throws(CancellationError)
+```
+
+An untyped `throws` boxes into `any Error`, which Embedded does not permit. `try` sites are
+unaffected; a `catch` that matched other error types may now warn as unreachable.
+
+### `SendableValue` equality is type-safe
+
+Previously it compared `String(describing:)` of the two boxed values. It now compares by concrete
+type, so **two distinct types that rendered identically used to be equal and no longer are**. The old
+behaviour relied on reflection and was arguably always a bug, but it is a behaviour change.
+
+### Additive, nothing to do
+
+- `Eventable.replayPayload` and `ChildActorRepresentable.makePersistedChildSnapshot()` are new
+  requirements with defaults — existing conformers are unaffected. They replace runtime casts to
+  `any ReplayPayloadRepresentable` / `any PersistedChildSnapshotProviding`, which Embedded prohibits.
+- Inspection events are now delivered in **causal order**. They previously raced: one unstructured
+  task per event meant N events could reach the transport in any of N! orders, which corrupted the
+  Stately sequence view and Diff Mode's keyframe counter.
+
 ## Checklist
 
 - [ ] Replace explicit `Actor<Context>` annotations with `Actor<MachineLogic<Context>>`

@@ -56,6 +56,57 @@
 ---
 <br>
 
+# Embedded Swift status
+
+The core is written for Embedded Swift — no Foundation, no `Codable`, no reflection, no `weak` — but
+it does **not compile for Embedded yet on a released toolchain**. Existential values (`any Eventable`
+and friends) are rejected by Swift 6.3.x and are accepted from **Swift 6.4 / Xcode 27**, which is
+what the core needs. Until then the Embedded build reports errors that are a toolchain gap rather
+than anything to fix here.
+
+Track it with `./Scripts/embedded-check.sh`, which builds the core against the Wasm Embedded SDK and
+compares the diagnostic count against a recorded baseline. See `Scripts/embedded-baseline.txt` for
+the toolchain matrix.
+
+## Host symbols a bare-metal or libc-less target must provide
+
+Building freestanding (`-target arm64-apple-none-macho`, `wasm32-unknown-none-wasm`, and similar)
+links against no libc, so the host supplies these. Measured from a freestanding object exercising the
+same facilities the core uses:
+
+| symbol | needed for |
+|---|---|
+| `posix_memalign`, `free` | every heap allocation — `Array`, `String`, `Dictionary`, class instances |
+| `memcpy`, `memmove`, `memcmp` | emitted directly by the compiler for value copies and comparisons |
+| `arc4random_buf` | `SystemRandomNumberGenerator`, used by `randomUUIDString()` for actor and child ids |
+| `putchar` | `print`, reached from `Inspection/Log.swift` |
+| `__stack_chk_fail`, `__stack_chk_guard` | stack protector; stub them or build with `-disable-stack-protector` |
+
+Two things you do **not** implement:
+
+- **Unicode tables** — `__swift_stdlib_getComposition`, `getDecompositionEntry`, `getNormData`,
+  `nfd_decompositions` and friends come from `libswiftUnicodeDataTables.a`, shipped in the
+  toolchain's embedded slice. Link it; don't write it.
+- **A clock** — there is no default. `DefaultClock` needs Dispatch, so on a freestanding target you
+  inject your own through `ActorOptions.clock`. Without one, `after:` transitions and delayed
+  `raise` / `sendTo` never fire. Conform `Clock` (`setTimeout` / `clearTimeout` over an opaque
+  `TimeoutHandle`) to a hardware timer or the host's scheduler.
+
+If you never call `randomUUIDString()` — pass explicit actor ids everywhere — `arc4random_buf` drops
+out. Likewise `putchar` disappears if nothing logs.
+
+## Behaviour that degrades on Embedded
+
+| feature | on Embedded |
+|---|---|
+| Reactive atoms | excluded entirely (the dependency graph needs `weak`) |
+| `waitFor(timeout:)` | the wait works; the **timeout does not fire** (no clock), and asserts in debug |
+| `StateEvent.eventType`, `BasicIdentifying.name` | no reflective default — declare them, or give the id a `String` raw value |
+| Inspector context payloads | scalars only; structured contexts report empty |
+| `describeValue` (log/inspector strings) | returns a placeholder |
+| Interval pacing on a values-source | skipped; values emit back to back |
+| `ActorLogic.started` | conformers need their own implementation — the generic default cannot specialize |
+
 # Cross-Platform Setup Guides
 
 - ### **[Apple macOS Setup Guide](MAC_SETUP_GUIDE.md)**
@@ -95,7 +146,7 @@ Every effort has been made to ensure you can trust this library. For details, se
 
 ## What libraries comes in the package?
 
-1. SwiftXState - all platforms - static library, core features (state machines, actors, stores, and reactive **atoms**). No Foundation, no `Codable`, no JSON engine — targets Embedded Swift
+1. SwiftXState - all platforms - static library, core features (state machines, actors, stores, and reactive **atoms**). No Foundation, no `Codable`, no JSON engine — designed for Embedded Swift ([status](#embedded-swift-status))
 2. SwiftXStateCodable - all platforms - opt-in `Codable` adapters: persistence, replay serialization, `Encodable`⇄`JSONValue`, and `Codable` guard/action params
 3. SwiftXStateInspect - all platforms - localhost JSON streaming in [XState.js](https://stately.ai)-format (Foundation-free; pluggable `LogWriteable` / `InspectLoggable` sinks)
 4. SwiftXStateInspectLog - all platforms - opt-in Foundation-backed file logger for Inspect streams (`FileLogWriter`)
@@ -126,7 +177,7 @@ Every effort has been made to ensure you can trust this library. For details, se
 
 ## Dependencies
 
-- **The core has no Foundation, no `Codable`, and no JSON engine since 2.0.** `JSONValue` is written and parsed by a hand-rolled, dependency-free codec, so machine export/import runs anywhere — including Embedded Swift. Everything needing `Codable` lives in the opt-in `SwiftXStateCodable` target (which uses [FridayTheCodable](https://github.com/gistya/friday-the-thirteenth)), mirroring the FridayTheThirteenth/FridayTheCodable split. `SwiftXStateInspect` is Foundation-free too, sending output through a pluggable `LogWriteable` / `InspectLoggable` sink (default: `os.Logger` on Apple, `print` elsewhere).
+- **The core has no Foundation, no `Codable`, and no JSON engine since 2.0.** `JSONValue` is written and parsed by a hand-rolled, dependency-free codec, so machine export/import has no host dependencies of its own (see [Embedded Swift status](#embedded-swift-status) for what the core still needs). Everything needing `Codable` lives in the opt-in `SwiftXStateCodable` target (which uses [FridayTheCodable](https://github.com/gistya/friday-the-thirteenth)), mirroring the FridayTheThirteenth/FridayTheCodable split. `SwiftXStateInspect` is Foundation-free too, sending output through a pluggable `LogWriteable` / `InspectLoggable` sink (default: `os.Logger` on Apple, `print` elsewhere).
 - Foundation-backed sinks are opt-in: file logging lives in the `SwiftXStateInspectLog` module, and the optional `SwiftXStateInspectURLSession` WebSocket transport uses `URLSession` (Apple platforms).
 - SwiftUI and/or SwiftData modules require Apple platforms.
 - WebAssembly requires [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit).

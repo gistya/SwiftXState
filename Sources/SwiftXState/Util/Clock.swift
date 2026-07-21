@@ -9,6 +9,7 @@ public struct TimeoutHandle: Sendable, Hashable {
     /// Unique within the issuing clock. Handles are not portable between clocks.
     public let id: UInt64
 
+    @inlinable
     public init(id: UInt64) {
         self.id = id
     }
