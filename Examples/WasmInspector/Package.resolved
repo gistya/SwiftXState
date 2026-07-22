@@ -43,7 +43,7 @@
       "location" : "https://github.com/1amageek/swift-webgpu",
       "state" : {
         "branch" : "main",
-        "revision" : "df2bc6ad734c96bfe8ea03f313776233bb1c97b0"
+        "revision" : "4eb48363b9e305db7e8f8fb4b84e49d87dcc7140"
       }
     },
     {
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/SwiftXState",
       "state" : {
-        "revision" : "b7d9a4600a0a01f25ef100b76284fd9e74626c83",
-        "version" : "2.0.0-alpha.11"
+        "revision" : "b50c96404373781b4008a0445bd010fc99ca81d2",
+        "version" : "2.0.0-alpha.13"
       }
     }
   ],

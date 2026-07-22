@@ -65,13 +65,16 @@ private func executeAssign<Context: Sendable>(
     args: ActionArgs<Context>
 ) {
     switch action {
+    #if !hasFeature(Embedded)
     case let .properties(properties):
         applyPropertyAssigns(properties, context: &context, args: args)
+    #endif
     case let .function(fn):
         fn(&context, args)
     }
 }
 
+#if !hasFeature(Embedded)
 private func applyPropertyAssigns<Context: Sendable>(
     _ properties: [String: @Sendable (ActionArgs<Context>) -> SendableValue],
     context: inout Context,
@@ -111,13 +114,20 @@ private func materializeContext<Context: Sendable>(_ type: Context.Type, from va
     guard let persistableType = type as? any ContextPersistable.Type else { return nil }
     return (try? persistableType.materialized(from: value)) as? Context
 }
+#endif
 
+#if !hasFeature(Embedded)
 /// Creates an assign action from a property map.
+///
+/// Unavailable under Embedded Swift — the property-map form round-trips context through
+/// JSON via reflection/`ContextPersistable`, which Embedded can't provide. Use the
+/// mutating-closure form below instead; calling this on Embedded is a compile error.
 public func assign<Context: Sendable>(
     _ properties: [String: @Sendable (ActionArgs<Context>) -> SendableValue]
 ) -> ActionRef<Context> {
     .assign(.properties(properties))
 }
+#endif
 
 /// Creates an assign action from a mutating function.
 public func assign<Context: Sendable>(

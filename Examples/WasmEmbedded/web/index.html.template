@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SwiftXState · Embedded WebAssembly</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --panel-2: #1c2330; --border: #2a3441;
+    --text: #e6edf3; --muted: #8b98a9; --accent: #ff5f45; --accent-2: #f5a623;
+    --green: #3fb950; --blue: #58a6ff; --chip: #21262d; --shadow: rgba(0,0,0,.45);
+    --swift: #f05138;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f8fa; --panel: #ffffff; --panel-2: #f0f3f6; --border: #d8dee4;
+      --text: #1f2328; --muted: #656d76; --accent: #e8442a; --accent-2: #b9770a;
+      --green: #1a7f37; --blue: #0969da; --chip: #eef1f4; --shadow: rgba(140,149,159,.2);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(1200px 700px at 80% -10%, color-mix(in srgb, var(--swift) 12%, transparent), transparent 60%), var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    min-height: 100vh; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 28px 20px 60px; }
+  header.hero { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .logo { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg, var(--swift), var(--accent-2)); flex: 0 0 auto; box-shadow: 0 2px 10px var(--shadow); align-self: center; }
+  h1 { font-size: 21px; margin: 0; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 13.5px; margin: 6px 0 22px; }
+  .sub b { color: var(--text); font-weight: 600; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: var(--chip); border: 1px solid var(--border); color: var(--muted); }
+  .badge.hot { color: #fff; background: linear-gradient(135deg, var(--swift), var(--accent)); border: 0; }
+
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 20px; }
+  .tab {
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    padding: 8px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13.5px;
+    transition: transform .06s ease, border-color .15s ease, background .15s ease;
+  }
+  .tab:hover { border-color: color-mix(in srgb, var(--swift) 55%, var(--border)); }
+  .tab[aria-selected="true"] { background: linear-gradient(135deg, var(--swift), var(--accent)); color: #fff; border-color: transparent; box-shadow: 0 4px 14px var(--shadow); }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 22px; box-shadow: 0 8px 30px var(--shadow); }
+  .blurb { color: var(--muted); font-size: 13.5px; margin: 2px 0 18px; }
+
+  .diagram { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .node {
+    font: 600 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+    padding: 9px 14px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+    transition: all .18s ease;
+  }
+  .node.active { background: color-mix(in srgb, var(--green) 20%, var(--panel)); border-color: var(--green); color: var(--text); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent); transform: translateY(-1px); }
+  .arrow { color: var(--muted); font-size: 14px; opacity: .6; }
+
+  .staterow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+  .state-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .state-value { font: 700 22px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--green); }
+  .done { font-size: 11px; font-weight: 700; color: var(--accent-2); border: 1px solid var(--accent-2); border-radius: 20px; padding: 2px 8px; }
+
+  .ctx { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; min-height: 30px; }
+  .kv { display: inline-flex; align-items: baseline; gap: 6px; background: var(--chip); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; }
+  .kv .k { font-size: 12px; color: var(--muted); }
+  .kv .v { font: 700 14px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--blue); }
+  .ctx-empty { color: var(--muted); font-size: 13px; font-style: italic; }
+
+  .events { display: flex; gap: 9px; flex-wrap: wrap; }
+  .ev {
+    border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 700; font-size: 13.5px; cursor: pointer;
+    background: linear-gradient(135deg, var(--swift), var(--accent)); color: #fff; box-shadow: 0 3px 10px var(--shadow);
+    transition: transform .06s ease, filter .15s ease, opacity .15s ease;
+  }
+  .ev:hover { filter: brightness(1.08); }
+  .ev:active { transform: translateY(1px) scale(.98); }
+  .ev:disabled { background: var(--chip); color: var(--muted); box-shadow: none; cursor: not-allowed; opacity: .7; }
+  .ev.reset { background: transparent; color: var(--muted); border: 1px solid var(--border); box-shadow: none; }
+  .ev.reset:hover { color: var(--text); border-color: var(--text); }
+
+  .log { margin-top: 24px; }
+  .log h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+  .log-list { font: 12.5px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; max-height: 190px; overflow: auto; }
+  .log-list div { color: var(--muted); }
+  .log-list div .e { color: var(--accent); font-weight: 700; }
+  .log-list div .s { color: var(--green); }
+  .log-list div .t { opacity: .5; }
+
+  footer { margin-top: 34px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+  footer code { color: var(--text); background: var(--chip); padding: 1px 6px; border-radius: 5px; font-size: 11.5px; }
+  a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <span class="logo"></span>
+    <h1>SwiftXState</h1>
+    <span class="badge hot">Embedded Swift → WebAssembly</span>
+  </header>
+  <p class="sub">
+    Real <b>SwiftXState</b> state machines — states, guards, assign actions, compound states —
+    compiled to <b>Embedded Swift</b> and running entirely in your browser from a
+    <b>__WASM_SIZE__</b> WebAssembly module inlined as base64. No server, no framework, no Foundation.
+  </p>
+
+  <nav class="tabs" id="tabs" aria-label="Machines"></nav>
+
+  <main class="card" id="panel" hidden>
+    <div class="staterow">
+      <div>
+        <div class="state-label">State</div>
+        <div class="state-value" id="state">—</div>
+      </div>
+      <span class="done" id="done" hidden>done</span>
+    </div>
+    <p class="blurb" id="blurb"></p>
+    <div class="diagram" id="diagram"></div>
+    <div class="ctx" id="ctx"></div>
+    <div class="events" id="events"></div>
+
+    <div class="log">
+      <h3>Event log</h3>
+      <div class="log-list" id="loglist"></div>
+    </div>
+  </main>
+
+  <div class="card" id="loading">Booting Embedded Swift…</div>
+
+  <footer>
+    <div><code>MachineLogic.step</code> — the synchronous pure reducer — drives every transition. No async <code>Actor</code>, no <code>Codable</code>, no scheduler.</div>
+    <div id="buildinfo"></div>
+  </footer>
+</div>
+
+<script>
+/* --- inlined loader (WASI shim + reactor ABI) --- */
+__LOADER_JS__
+</script>
+<script>
+(async function () {
+  const WASM_BASE64 = "__WASM_BASE64__";
+  const $ = (id) => document.getElementById(id);
+  const engine = await createSwiftXStateEngine(sxsBase64ToBytes(WASM_BASE64));
+
+  const cat = engine.query({ op: "catalog" }).result;
+  const byId = {};
+  cat.machines.forEach((m) => (byId[m.id] = m));
+  let current = cat.machines[0].id;
+
+  $("loading").hidden = true;
+  $("panel").hidden = false;
+  $("buildinfo").innerHTML =
+    "Module <code>__WASM_SIZE__</code> · Engine <code>" + esc(cat.engine) + " " + esc(cat.version) +
+    "</code> · Toolchain <code>__TOOLCHAIN__</code> · Built __BUILD_DATE__";
+
+  // Tabs
+  const tabs = $("tabs");
+  cat.machines.forEach((m) => {
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.textContent = m.title;
+    b.setAttribute("role", "tab");
+    b.onclick = () => select(m.id);
+    b.dataset.id = m.id;
+    tabs.appendChild(b);
+  });
+
+  function esc(s) { return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+  function logLine(event, state) {
+    const now = new Date();
+    const t = now.toTimeString().slice(0, 8);
+    const div = document.createElement("div");
+    div.innerHTML = '<span class="t">' + t + "</span>  <span class=\"e\">" + esc(event) +
+      "</span> → <span class=\"s\">" + esc(state) + "</span>";
+    const list = $("loglist");
+    list.insertBefore(div, list.firstChild);
+  }
+
+  function render(view) {
+    $("state").textContent = view.state;
+    $("done").hidden = !view.done;
+    $("blurb").textContent = byId[current].blurb;
+
+    // mini diagram
+    const dia = $("diagram");
+    dia.innerHTML = "";
+    const states = byId[current].states || [];
+    states.forEach((name, i) => {
+      if (i > 0) { const a = document.createElement("span"); a.className = "arrow"; a.textContent = "→"; dia.appendChild(a); }
+      const n = document.createElement("span");
+      n.className = "node" + (view.state === name || view.state.startsWith(name + ".") ? " active" : "");
+      n.textContent = name;
+      dia.appendChild(n);
+    });
+
+    // context chips
+    const ctx = $("ctx");
+    ctx.innerHTML = "";
+    const entries = Object.entries(view.context || {});
+    if (entries.length === 0) {
+      ctx.innerHTML = '<span class="ctx-empty">no context</span>';
+    } else {
+      entries.forEach(([k, v]) => {
+        const el = document.createElement("span");
+        el.className = "kv";
+        el.innerHTML = '<span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + "</span>";
+        ctx.appendChild(el);
+      });
+    }
+
+    // event buttons
+    const evs = $("events");
+    evs.innerHTML = "";
+    view.events.forEach((e) => {
+      const b = document.createElement("button");
+      b.className = "ev";
+      b.textContent = e.name;
+      b.disabled = !e.enabled;
+      b.onclick = () => send(e.name);
+      evs.appendChild(b);
+    });
+    const reset = document.createElement("button");
+    reset.className = "ev reset";
+    reset.textContent = "↺ Reset";
+    reset.onclick = () => select(current, true);
+    evs.appendChild(reset);
+  }
+
+  function select(id, isReset) {
+    current = id;
+    [...tabs.children].forEach((t) => t.setAttribute("aria-selected", t.dataset.id === id ? "true" : "false"));
+    const view = engine.query({ op: "reset", machine: id }).result;
+    render(view);
+    logLine(isReset ? "RESET" : "▶ " + byId[id].title, view.state);
+  }
+
+  function send(event) {
+    const view = engine.query({ op: "send", machine: current, event }).result;
+    render(view);
+    logLine(event, view.state);
+  }
+
+  select(current);
+})();
+</script>
+</body>
+</html>
