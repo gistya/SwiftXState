@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gistya/SwiftXState",
       "state" : {
-        "revision" : "b7d9a4600a0a01f25ef100b76284fd9e74626c83",
-        "version" : "2.0.0-alpha.11"
+        "revision" : "6b93cdf23a6f2b30496632fd3f84600ff0ef24de",
+        "version" : "2.0.0-alpha.12"
       }
     }
   ],

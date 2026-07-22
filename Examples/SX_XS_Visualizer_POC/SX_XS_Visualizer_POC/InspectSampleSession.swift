@@ -107,7 +107,7 @@ final class InspectSampleSession {
 
 @MainActor
 private func makeInspectBridge<Context: Sendable>(
-    machine: StateMachine<Context>,
+    machine: ResolvedMachine<Context>,
     transport: URLSessionInspectTransport,
     endpoint: InspectEndpoint
 ) async throws -> (InspectBridge, @Sendable (InspectionEvent) -> Void) {
@@ -127,10 +127,10 @@ private func makeInspectBridge<Context: Sendable>(
 @MainActor
 private final class ToggleRuntime: DemoRuntime {
     let demo: SampleDemoID = .toggle
-    private let machine: StateMachine<EmptyContext>
+    private let machine: ResolvedMachine<EmptyContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<EmptyContext>?
+    private var actor: Actor<MachineLogic<EmptyContext>>?
     private var bridge: InspectBridge?
     var onUpdate: (@MainActor () -> Void)?
     private(set) var stateLine = "inactive"
@@ -138,7 +138,7 @@ private final class ToggleRuntime: DemoRuntime {
     private(set) var eventButtons: [DemoEventButton] = []
 
     init(
-        machine: StateMachine<EmptyContext>,
+        machine: ResolvedMachine<EmptyContext>,
         transport: URLSessionInspectTransport,
         endpoint: InspectEndpoint
     ) {
@@ -191,10 +191,10 @@ private final class ToggleRuntime: DemoRuntime {
 @MainActor
 private final class CounterRuntime: DemoRuntime {
     let demo: SampleDemoID = .counter
-    private let machine: StateMachine<CounterContext>
+    private let machine: ResolvedMachine<CounterContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<CounterContext>?
+    private var actor: Actor<MachineLogic<CounterContext>>?
     private var bridge: InspectBridge?
     var onUpdate: (@MainActor () -> Void)?
     private(set) var stateLine = "ready"
@@ -202,7 +202,7 @@ private final class CounterRuntime: DemoRuntime {
     private(set) var eventButtons: [DemoEventButton] = []
 
     init(
-        machine: StateMachine<CounterContext>,
+        machine: ResolvedMachine<CounterContext>,
         transport: URLSessionInspectTransport,
         endpoint: InspectEndpoint
     ) {
@@ -256,10 +256,10 @@ private final class CounterRuntime: DemoRuntime {
 @MainActor
 private final class FeedbackRuntime: DemoRuntime {
     let demo: SampleDemoID = .feedback
-    private let machine: StateMachine<FeedbackContext>
+    private let machine: ResolvedMachine<FeedbackContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<FeedbackContext>?
+    private var actor: Actor<MachineLogic<FeedbackContext>>?
     private var bridge: InspectBridge?
     private var draftFeedback = ""
     var onUpdate: (@MainActor () -> Void)?
@@ -268,7 +268,7 @@ private final class FeedbackRuntime: DemoRuntime {
     private(set) var eventButtons: [DemoEventButton] = []
 
     init(
-        machine: StateMachine<FeedbackContext>,
+        machine: ResolvedMachine<FeedbackContext>,
         transport: URLSessionInspectTransport,
         endpoint: InspectEndpoint
     ) {
@@ -347,10 +347,10 @@ private final class FeedbackRuntime: DemoRuntime {
 @MainActor
 private final class TrafficLightRuntime: DemoRuntime {
     let demo: SampleDemoID = .trafficLight
-    private let machine: StateMachine<EmptyContext>
+    private let machine: ResolvedMachine<EmptyContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<EmptyContext>?
+    private var actor: Actor<MachineLogic<EmptyContext>>?
     private var bridge: InspectBridge?
     var onUpdate: (@MainActor () -> Void)?
     private(set) var stateLine = "green"
@@ -358,7 +358,7 @@ private final class TrafficLightRuntime: DemoRuntime {
     private(set) var eventButtons: [DemoEventButton] = []
 
     init(
-        machine: StateMachine<EmptyContext>,
+        machine: ResolvedMachine<EmptyContext>,
         transport: URLSessionInspectTransport,
         endpoint: InspectEndpoint
     ) {
@@ -417,10 +417,10 @@ private final class TrafficLightRuntime: DemoRuntime {
 @MainActor
 private final class CheckoutRuntime: DemoRuntime {
     let demo: SampleDemoID = .checkout
-    private let machine: StateMachine<CheckoutContext>
+    private let machine: ResolvedMachine<CheckoutContext>
     private let transport: URLSessionInspectTransport
     private let endpoint: InspectEndpoint
-    private var actor: Actor<CheckoutContext>?
+    private var actor: Actor<MachineLogic<CheckoutContext>>?
     private var bridge: InspectBridge?
     var onUpdate: (@MainActor () -> Void)?
     private(set) var stateLine = "idle"
@@ -428,7 +428,7 @@ private final class CheckoutRuntime: DemoRuntime {
     private(set) var eventButtons: [DemoEventButton] = []
 
     init(
-        machine: StateMachine<CheckoutContext>,
+        machine: ResolvedMachine<CheckoutContext>,
         transport: URLSessionInspectTransport,
         endpoint: InspectEndpoint
     ) {
