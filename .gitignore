@@ -26,3 +26,9 @@ plan.md
 .claude/*
 !.claude/skills/
 /.swift-version
+/Examples/ThreadsProbe/.build-t2t
+/Examples/ThreadsProbe/.build-pthread
+/Assets/FirmwareSwarm.mov
+/Assets/FirmwareSwarm480.mov
+/Assets/FirmwareSwarm720-Discord MPEG-4.mp4
+/Assets/FirmwareSwarm720.mov
