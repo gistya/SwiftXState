@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Firmware Swarm · SwiftXState on Embedded WebAssembly</title>
+<style>
+  :root {
+    --bg:#080b11; --panel:#0f141c; --panel2:#151c27; --border:#212b39; --text:#e6edf3;
+    --muted:#8b98a9; --swift:#f05138; --accent:#ff5f45;
+    --patrol:#58a6ff; --seek:#f5a623; --sample:#3fb950; --evade:#ff5f45; --sleep:#5b6675;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--bg); color:var(--text);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif; }
+  .wrap { max-width:1120px; margin:0 auto; padding:20px 18px 48px; }
+  header { display:flex; align-items:center; gap:11px; flex-wrap:wrap; }
+  .logo { width:24px; height:24px; border-radius:6px; background:linear-gradient(135deg,var(--swift),#f5a623); }
+  h1 { font-size:19px; margin:0; letter-spacing:-.01em; }
+  .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; color:#fff;
+    background:linear-gradient(135deg,var(--swift),var(--accent)); }
+  .sub { color:var(--muted); font-size:13px; margin:7px 0 16px; max-width:80ch; }
+  .sub b { color:var(--text); }
+
+  .stage { position:relative; border:1px solid var(--border); border-radius:14px; overflow:hidden;
+    background:#060910; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  canvas { display:block; width:100%; height:auto; }
+  .hud { position:absolute; top:12px; left:12px; display:flex; gap:18px; pointer-events:none;
+    font-variant-numeric:tabular-nums; }
+  .hud .stat .n { font:800 22px ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .hud .stat .l { font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); }
+  .fpsgood { color:var(--sample); } .fpsmid { color:var(--seek); } .fpsbad { color:var(--evade); }
+
+  .controls { display:flex; gap:18px; align-items:flex-end; flex-wrap:wrap; margin:16px 0 12px; }
+  .ctl { display:flex; flex-direction:column; gap:6px; }
+  .ctl label { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .seg { display:flex; gap:4px; }
+  .seg button, .btn { border:1px solid var(--border); background:var(--panel); color:var(--text);
+    padding:7px 12px; border-radius:9px; cursor:pointer; font-weight:700; font-size:13px; }
+  .seg button[aria-pressed="true"] { background:linear-gradient(135deg,var(--swift),var(--accent)); border-color:transparent; color:#fff; }
+  .btn.primary { background:linear-gradient(135deg,var(--swift),var(--accent)); border:0; color:#fff; }
+  .btn:hover, .seg button:hover { filter:brightness(1.08); }
+
+  .legend { display:flex; gap:16px; flex-wrap:wrap; margin-top:14px; font-variant-numeric:tabular-nums; }
+  .legend .item { display:flex; align-items:center; gap:7px; font-size:13px; }
+  .legend .dot { width:11px; height:11px; border-radius:3px; }
+  .legend .c { color:var(--muted); font:700 13px ui-monospace,Menlo,monospace; min-width:3ch; }
+  .bar { height:6px; border-radius:3px; background:var(--panel2); margin-top:5px; overflow:hidden; }
+  .bar > span { display:block; height:100%; }
+
+  footer { margin-top:22px; color:var(--muted); font-size:12px; line-height:1.7; }
+  footer code { color:var(--text); background:var(--panel2); padding:1px 6px; border-radius:5px; }
+  .note { margin-top:8px; color:var(--muted); font-size:12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="logo"></span>
+    <h1>Firmware Swarm</h1>
+    <span class="badge">Embedded Swift · WebAssembly · Web Workers</span>
+  </header>
+  <p class="sub">
+    Every dot is a simulated device running the <b>same SwiftXState firmware</b> — a battery-aware
+    behaviour machine (<span style="color:var(--patrol)">patrol</span> →
+    <span style="color:var(--seek)">seek</span> →
+    <span style="color:var(--sample)">sample</span>,
+    <span style="color:var(--evade)">evade</span> on interference,
+    <span style="color:var(--sleep)">sleep</span> when flat) compiled to a <b>__WASM_SIZE__</b> Embedded-Swift
+    wasm module. The swarm is <b>sharded across Web Workers</b> — one wasm instance per core — so state
+    for tens of thousands of devices is stepped in parallel. Drop to 1 worker and watch the frame-rate fall.
+  </p>
+
+  <div class="stage">
+    <canvas id="cv" width="1040" height="600"></canvas>
+    <div class="hud">
+      <div class="stat"><div class="n" id="fps">–</div><div class="l">fps</div></div>
+      <div class="stat"><div class="n" id="ups">–</div><div class="l">state updates / sec</div></div>
+      <div class="stat"><div class="n" id="dev">–</div><div class="l">devices</div></div>
+      <div class="stat"><div class="n" id="wk">–</div><div class="l">workers (cores)</div></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctl">
+      <label>Workers</label>
+      <div class="seg" id="workers"></div>
+    </div>
+    <div class="ctl">
+      <label>Devices</label>
+      <div class="seg" id="devices"></div>
+    </div>
+    <div class="ctl">
+      <label>Firmware ticks / frame</label>
+      <div class="seg" id="simrate"></div>
+    </div>
+    <div class="ctl">
+      <label>&nbsp;</label>
+      <button class="btn primary" id="interfere">⚡ Inject interference</button>
+    </div>
+    <div class="ctl">
+      <label>&nbsp;</label>
+      <button class="btn" id="pause">Pause</button>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <div class="note" id="note"></div>
+
+  <footer>
+    <div>Each worker owns an independent shard of devices; there is no shared memory — the parallelism is
+      across <b>independent state machines</b>, exactly what a fleet of embedded devices is. In a real
+      deployment this same firmware flashes to hardware; here it runs hardware-free, at swarm scale, in your browser.</div>
+    <div id="build"></div>
+  </footer>
+</div>
+
+<!-- Worker source: its own wasm instance, one shard of the swarm. Not executed here. -->
+<script id="workerSrc" type="text/plain">
+__LOADER_JS__
+let engine = null, x = null, renderPtr = 0, count = 0;
+self.onmessage = async (e) => {
+  const m = e.data;
+  if (m.type === "init") {
+    engine = await createSwiftXStateEngine(new Uint8Array(m.wasm));
+    x = engine.exports;
+    count = m.count;
+    renderPtr = x.spawnDevices(count, m.seed, m.w, m.h) >>> 0;
+    self.postMessage({ type: "ready" });
+  } else if (m.type === "tick") {
+    const b = m.beacons;                 // Float32Array [x,y,...]
+    const bptr = x.alloc(b.length * 4) >>> 0;
+    new Float32Array(x.memory.buffer, bptr, b.length).set(b);
+    x.setBeacons(bptr, b.length / 2);
+    x.dealloc(bptr, b.length * 4);
+    // Simulate faster than we render: `subticks` firmware steps per frame. This is
+    // where the real per-device STATE work lives — the more of it, the more the
+    // parallel shards matter (and the featherweight 8-byte context stops the single
+    // worker from coasting).
+    const sub = (m.subticks | 0) || 1;
+    let steps = 0;
+    for (let k = 0; k < sub; k++) steps += x.tick(k === 0 ? m.interfere : 0);
+    const out = new Float32Array(x.memory.buffer, renderPtr, count * 3).slice();
+    self.postMessage({ type: "frame", buf: out.buffer, steps, count }, [out.buffer]);
+  }
+};
+</script>
+
+<script>
+(function () {
+  const WASM_B64 = "__WASM_BASE64__";
+  const $ = (id) => document.getElementById(id);
+  const cv = $("cv"), ctx = cv.getContext("2d", { alpha: false });
+  const W = cv.width, H = cv.height;
+  const CORES = Math.max(1, navigator.hardwareConcurrency || 4);
+  const COLORS = ["#58a6ff", "#f5a623", "#3fb950", "#ff5f45", "#5b6675"];
+  const NAMES = ["patrol", "seek", "sample", "evade", "sleep"];
+
+  function b64ToBytes(b64) { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+  const wasmBytes = b64ToBytes(WASM_B64);
+  const workerURL = URL.createObjectURL(new Blob([$("workerSrc").textContent], { type: "application/javascript" }));
+
+  let workers = [], latest = [], pending = 0, readyN = 0, running = true;
+  let devTotal = 8000, workerN = Math.min(8, CORES), subN = 4, interfereFlag = 0;
+  let frameStart = 0, stepsThisFrame = 0, fpsEMA = 0, upsEMA = 0, lastDraw = performance.now();
+
+  // ---- controls ----
+  const workerLevels = [...new Set([1, 2, 4, 6, 8, CORES])].filter((n) => n <= CORES).sort((a, b) => a - b);
+  const deviceLevels = [2000, 4000, 8000, 16000, 30000];
+  const simLevels = [1, 2, 4, 8];
+  function seg(host, levels, cur, fmt, on) {
+    host.innerHTML = "";
+    for (const v of levels) {
+      const b = document.createElement("button");
+      b.textContent = fmt(v); b.setAttribute("aria-pressed", v === cur ? "true" : "false");
+      b.onclick = () => on(v); host.appendChild(b);
+    }
+  }
+  function renderControls() {
+    seg($("workers"), workerLevels, workerN, (v) => v, (v) => { workerN = v; rebuild(); });
+    seg($("devices"), deviceLevels, devTotal, (v) => (v / 1000) + "k", (v) => { devTotal = v; rebuild(); });
+    // Sim-rate needs no rebuild — it only changes how many firmware steps each tick runs.
+    seg($("simrate"), simLevels, subN, (v) => "×" + v, (v) => { subN = v; renderControls(); });
+  }
+  $("interfere").onclick = () => { interfereFlag = 1; };
+  $("pause").onclick = () => { running = !running; $("pause").textContent = running ? "Pause" : "Resume"; if (running) startFrame(); };
+
+  // ---- legend ----
+  const legendEls = [];
+  (function buildLegend() {
+    const host = $("legend");
+    for (let s = 0; s < 5; s++) {
+      const item = document.createElement("div"); item.className = "item";
+      item.innerHTML = `<span class="dot" style="background:${COLORS[s]}"></span><span>${NAMES[s]}</span><span class="c" id="lc${s}">0</span>`;
+      const wrap = document.createElement("div"); wrap.style.minWidth = "150px";
+      wrap.appendChild(item);
+      const bar = document.createElement("div"); bar.className = "bar";
+      const span = document.createElement("span"); span.style.background = COLORS[s]; bar.appendChild(span);
+      wrap.appendChild(bar); host.appendChild(wrap);
+      legendEls.push({ count: $(`lc${s}`), bar: span });
+    }
+  })();
+
+  // ---- swarm lifecycle ----
+  function rebuild() {
+    workers.forEach((w) => w.terminate());
+    const per = Math.floor(devTotal / workerN);
+    const actual = per * workerN;
+    workers = []; latest = new Array(workerN).fill(null); readyN = 0; pending = 0;
+    for (let i = 0; i < workerN; i++) {
+      const w = new Worker(workerURL);
+      w.onmessage = (e) => onMsg(i, e.data);
+      w.postMessage({ type: "init", wasm: wasmBytes, count: per, seed: 1000 + i * 7919, w: W, h: H });
+      workers.push(w);
+    }
+    $("dev").textContent = fmt(actual);
+    $("wk").textContent = workerN;
+    renderControls();
+  }
+  function onMsg(i, d) {
+    // Ignore stragglers from a superseded generation of workers.
+    if (i >= workers.length) return;
+    if (d.type === "ready") { if (++readyN === workerN) startFrame(); return; }
+    if (d.type === "frame") {
+      latest[i] = new Float32Array(d.buf); stepsThisFrame += d.steps;
+      if (--pending === 0) { draw(); requestAnimationFrame(startFrame); }
+    }
+  }
+
+  function beaconsAt(t) {
+    const cx = W / 2, cy = H / 2, rx = W * 0.34, ry = H * 0.34, a = [];
+    for (let k = 0; k < 4; k++) { const p = k * 1.7; a.push(cx + Math.cos(t * 0.23 + p) * rx, cy + Math.sin(t * 0.31 + p * 1.3) * ry); }
+    return new Float32Array(a);
+  }
+  let curBeacons = beaconsAt(0);
+
+  // Drives one parallel batch. Guards: paused, workers not all ready, or a batch
+  // already in flight (pending > 0) — so overlapping calls after a rebuild collapse
+  // to a single loop.
+  function startFrame() {
+    if (!running || readyN < workerN || pending > 0) return;
+    curBeacons = beaconsAt(performance.now() / 1000);
+    const inter = interfereFlag; interfereFlag = 0;
+    pending = workers.length; stepsThisFrame = 0; frameStart = performance.now();
+    for (const w of workers) w.postMessage({ type: "tick", beacons: curBeacons, interfere: inter, subticks: subN });
+  }
+
+  const bins = [[], [], [], [], []];
+  function draw() {
+    // fade for motion trails
+    ctx.fillStyle = "rgba(6,9,16,0.34)"; ctx.fillRect(0, 0, W, H);
+    // beacons
+    for (let k = 0; k < curBeacons.length; k += 2) {
+      const bx = curBeacons[k], by = curBeacons[k + 1];
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, 34);
+      g.addColorStop(0, "rgba(63,185,80,0.5)"); g.addColorStop(1, "rgba(63,185,80,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx, by, 34, 0, 6.2832); ctx.fill();
+    }
+    // devices, batched by state
+    for (let s = 0; s < 5; s++) bins[s].length = 0;
+    let total = 0;
+    for (const buf of latest) {
+      if (!buf) continue;
+      for (let i = 0; i < buf.length; i += 3) { bins[buf[i + 2] | 0].push(buf[i], buf[i + 1]); total++; }
+    }
+    for (let s = 0; s < 5; s++) {
+      ctx.fillStyle = COLORS[s]; const a = bins[s];
+      const sz = s === 4 ? 2.0 : 2.6;
+      for (let k = 0; k < a.length; k += 2) ctx.fillRect(a[k] - sz / 2, a[k + 1] - sz / 2, sz, sz);
+    }
+    // stats
+    const now = performance.now(), dt = now - lastDraw; lastDraw = now;
+    const fps = 1000 / dt, ups = stepsThisFrame * fps;
+    fpsEMA = fpsEMA ? fpsEMA * 0.9 + fps * 0.1 : fps;
+    upsEMA = upsEMA ? upsEMA * 0.9 + ups * 0.1 : ups;
+    const fpsEl = $("fps"); fpsEl.textContent = fpsEMA.toFixed(0);
+    fpsEl.className = "n " + (fpsEMA >= 50 ? "fpsgood" : fpsEMA >= 30 ? "fpsmid" : "fpsbad");
+    $("ups").textContent = fmt(upsEMA);
+    for (let s = 0; s < 5; s++) {
+      const c = bins[s].length / 2;
+      legendEls[s].count.textContent = fmt(c);
+      legendEls[s].bar.style.width = (total ? (c / total * 100) : 0).toFixed(1) + "%";
+    }
+  }
+
+  function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+
+  $("build").innerHTML = "Module <code>__WASM_SIZE__</code> · " + CORES + " cores detected · Embedded Swift <code>__TOOLCHAIN__</code> · built __BUILD_DATE__";
+  $("note").textContent = "Try it: set Devices 16k and Firmware ticks/frame ×4, then drop Workers to 1 — one core drops to single-digit fps. Raise Workers back to " + CORES + " and it climbs back to smooth. Same firmware, spread across cores. (In this in-app preview the frame-rate is only meaningful when the tab is focused.)";
+  rebuild();
+})();
+</script>
+</body>
+</html>
