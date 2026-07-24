@@ -7,57 +7,6 @@ import SwiftXState
 // Each machine is driven through the synchronous reducer (`MachineLogic.step`), so
 // there is no async `Actor`, no scheduler, and no persistence layer to drag in.
 
-// MARK: - Type-erased session
-
-/// A running machine, erased over its concrete `Context`, so the engine can hold a
-/// heterogeneous registry of them. Class-bound (reference existential) so it is
-/// trivially fine under Embedded Swift.
-protocol MachineSession: AnyObject {
-    /// Current top-level state value, rendered as a string (e.g. `"red.walk"`).
-    var stateName: String { get }
-    /// Whether the machine has reached a top-level final state.
-    var isDone: Bool { get }
-    /// The current context, projected to JSON for the UI (hand-written per machine —
-    /// no reflection).
-    var contextJSON: JSONValue { get }
-    /// Every event this machine understands, in display order.
-    var eventNames: [String] { get }
-    /// Whether sending `event` right now would cause a transition (honors guards).
-    func canSend(_ event: String) -> Bool
-    /// Re-create the initial snapshot.
-    func reset()
-    /// Advance the machine by one event.
-    func send(_ event: String)
-}
-
-/// Concrete session over one `Context`. Holds the pure logic plus the current
-/// snapshot value; `send`/`reset` just call the reducer.
-final class GenericSession<Context: Sendable>: MachineSession {
-    private let logic: MachineLogic<Context>
-    private let events: [String]
-    private let project: @Sendable (Context) -> JSONValue
-    private var snapshot: MachineSnapshot<Context>
-
-    init(
-        machine: ResolvedMachine<Context>,
-        events: [String],
-        project: @escaping @Sendable (Context) -> JSONValue
-    ) {
-        self.logic = MachineLogic(machine: machine)
-        self.events = events
-        self.project = project
-        self.snapshot = logic.initialState(input: nil)
-    }
-
-    var stateName: String { snapshot.value.description }
-    var isDone: Bool { snapshot.status == .done }
-    var contextJSON: JSONValue { project(snapshot.context) }
-    var eventNames: [String] { events }
-    func canSend(_ event: String) -> Bool { snapshot.can(Event(event)) }
-    func reset() { snapshot = logic.initialState(input: nil) }
-    func send(_ event: String) { snapshot = logic.step(snapshot, on: Event(event)) }
-}
-
 // MARK: - Contexts
 
 struct ToggleContext: Sendable, Equatable { var toggles = 0 }
@@ -80,7 +29,7 @@ enum Registry {
         ("crossing", "Pedestrian Crossing", "A compound state: red nests walk / dontWalk. Note the dotted state value while red is active.", ["green", "yellow", "red"]),
     ]
 
-    static func makeSession(_ id: String) -> (any MachineSession)? {
+    static func makeSession(_ id: String) -> (any EmbeddableMachine)? {
         switch id {
         case "toggle": return makeToggle()
         case "traffic": return makeTraffic()
@@ -106,7 +55,7 @@ enum Registry {
 
 // MARK: - Machine builders
 
-private func makeToggle() -> GenericSession<ToggleContext> {
+private func makeToggle() -> EmbeddedMachine<ToggleContext> {
     let bump = assign { (c: inout ToggleContext, _: ActionArgs<ToggleContext>) in c.toggles += 1 }
     let machine = createMachine(MachineConfig<ToggleContext>(
         id: "toggle",
@@ -121,12 +70,12 @@ private func makeToggle() -> GenericSession<ToggleContext> {
             ]),
         ]
     ))
-    return GenericSession(machine: machine, events: ["TOGGLE"]) { c in
+    return EmbeddedMachine(machine: machine, events: ["TOGGLE"]) { c in
         .object(["toggles": .number(Double(c.toggles))])
     }
 }
 
-private func makeTraffic() -> GenericSession<TrafficContext> {
+private func makeTraffic() -> EmbeddedMachine<TrafficContext> {
     let countLap = assign { (c: inout TrafficContext, _: ActionArgs<TrafficContext>) in c.laps += 1 }
     let machine = createMachine(MachineConfig<TrafficContext>(
         id: "traffic",
@@ -147,12 +96,12 @@ private func makeTraffic() -> GenericSession<TrafficContext> {
             ]),
         ]
     ))
-    return GenericSession(machine: machine, events: ["NEXT", "PANIC"]) { c in
+    return EmbeddedMachine(machine: machine, events: ["NEXT", "PANIC"]) { c in
         .object(["laps": .number(Double(c.laps))])
     }
 }
 
-private func makeVending() -> GenericSession<VendingContext> {
+private func makeVending() -> EmbeddedMachine<VendingContext> {
     let addCoin = assign { (c: inout VendingContext, _: ActionArgs<VendingContext>) in c.credits += 1 }
     let dispense = assign { (c: inout VendingContext, _: ActionArgs<VendingContext>) in
         c.credits -= 3
@@ -188,7 +137,7 @@ private func makeVending() -> GenericSession<VendingContext> {
             ]),
         ]
     ))
-    return GenericSession(machine: machine, events: ["COIN", "DISPENSE", "REFUND", "TAKE"]) { c in
+    return EmbeddedMachine(machine: machine, events: ["COIN", "DISPENSE", "REFUND", "TAKE"]) { c in
         .object([
             "credits": .number(Double(c.credits)),
             "dispensed": .number(Double(c.dispensed)),
@@ -196,7 +145,7 @@ private func makeVending() -> GenericSession<VendingContext> {
     }
 }
 
-private func makeCounter() -> GenericSession<CounterContext> {
+private func makeCounter() -> EmbeddedMachine<CounterContext> {
     let inc = assign { (c: inout CounterContext, _: ActionArgs<CounterContext>) in c.value += 1 }
     let dec = assign { (c: inout CounterContext, _: ActionArgs<CounterContext>) in c.value -= 1 }
     let zero = assign { (c: inout CounterContext, _: ActionArgs<CounterContext>) in c.value = 0 }
@@ -223,12 +172,12 @@ private func makeCounter() -> GenericSession<CounterContext> {
             ]),
         ]
     ))
-    return GenericSession(machine: machine, events: ["INC", "DEC", "RESET"]) { c in
+    return EmbeddedMachine(machine: machine, events: ["INC", "DEC", "RESET"]) { c in
         .object(["value": .number(Double(c.value))])
     }
 }
 
-private func makeCrossing() -> GenericSession<CrossingContext> {
+private func makeCrossing() -> EmbeddedMachine<CrossingContext> {
     let countCrossing = assign { (c: inout CrossingContext, _: ActionArgs<CrossingContext>) in c.crossings += 1 }
     let machine = createMachine(MachineConfig<CrossingContext>(
         id: "crossing",
@@ -257,7 +206,7 @@ private func makeCrossing() -> GenericSession<CrossingContext> {
             ),
         ]
     ))
-    return GenericSession(machine: machine, events: ["NEXT", "PED"]) { c in
+    return EmbeddedMachine(machine: machine, events: ["NEXT", "PED"]) { c in
         .object(["crossings": .number(Double(c.crossings))])
     }
 }

@@ -13,7 +13,7 @@ enum Engine {
     // live snapshot is held here (keyed by machine id) until the page reloads. State
     // lives here (a `static`), never as a `main.swift` global, so it initialises
     // lazily under the reactor model rather than in a `main()` that never runs.
-    nonisolated(unsafe) static var sessions: [String: any MachineSession] = [:]
+    nonisolated(unsafe) static var sessions: [String: any EmbeddableMachine] = [:]
 
     /// Handle one request: UTF-8 JSON bytes in, UTF-8 JSON bytes out.
     static func handle(requestBytes: [UInt8]) -> [UInt8] {
@@ -48,7 +48,7 @@ enum Engine {
 
     // MARK: - Ops
 
-    private static func session(for id: String) -> (any MachineSession)? {
+    private static func session(for id: String) -> (any EmbeddableMachine)? {
         if let existing = sessions[id] { return existing }
         guard let created = Registry.makeSession(id) else { return nil }
         sessions[id] = created
@@ -79,7 +79,7 @@ enum Engine {
         return ok(snapshotJSON(id: id, session: s))
     }
 
-    private static func snapshotJSON(id: String, session: any MachineSession) -> JSONValue {
+    private static func snapshotJSON(id: String, session: any EmbeddableMachine) -> JSONValue {
         let events: [JSONValue] = session.eventNames.map { name in
             .object([
                 "name": .string(name),

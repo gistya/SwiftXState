@@ -26,17 +26,26 @@ echo "▸ Installing + bundling the JS runtime…"
 
 # Browser entry + the classic worker entry. WebWorkerKit detects a worker context via
 # `importScripts` (classic-worker-only), so the worker entry is a *classic* script that
-# dynamic-imports the ES-module bundle. `CounterWorker.scriptPath` points here — the nil
+# dynamic-imports the ES-module bundle. The workers' `scriptPath` points here — the nil
 # default resolves to the `.wasm` path under WASI, which can't be a Worker script.
 cat > Bundle/index.html <<'HTML'
 <!doctype html>
 <meta charset="utf-8">
-<title>WebWorkerKit + SwiftXState</title>
-<h3>SwiftXState machine in a distributed actor (Web Worker)</h3>
+<title>WebWorkerKit · SwiftXState control room</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <script type="module">
+  // The whole interactive UI is built by Swift (Sources/App/UI.swift); this shell just
+  // boots the wasm bundle and surfaces a fatal init error if one happens.
   import { init } from "./app.bundle.js";
-  init().catch((e) => { const p = document.createElement("pre"); p.textContent = "init error: " + (e && e.stack || e); document.body.appendChild(p); });
+  init().catch((e) => {
+    document.body.innerHTML =
+      "<pre style='color:#f88;font:13px monospace;padding:1.5rem'>init error: " +
+      ((e && e.stack) || e) + "</pre>";
+  });
 </script>
+<body style="margin:0;background:#0c0f14;color:#8a97a8;font:15px -apple-system,sans-serif">
+  <div style="padding:28px 20px">booting Swift + spawning workers…</div>
+</body>
 HTML
 cat > Bundle/worker.js <<'JS'
 import('./app.bundle.js').then((m) => m.init()).catch((e) => console.error('worker init error', e));

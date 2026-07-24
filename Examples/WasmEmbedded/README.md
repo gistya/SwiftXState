@@ -73,7 +73,7 @@ Ops: `catalog`, `reset {machine}`, `send {machine, event}`, `snapshot {machine}`
 
 ```
 Sources/WasmXStateDemo/
-  Machines.swift   the 5 machines + a type-erased MachineSession registry
+  Machines.swift   the 5 machines + a type-erased EmbeddableMachine registry
   Engine.swift     JSON dispatch over the session registry (core JSONValue, no Foundation)
   Bridge.swift     alloc / dealloc / query reactor exports
   main.swift       intentionally empty (reactor: main() never runs)
