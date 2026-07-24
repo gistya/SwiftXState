@@ -264,7 +264,7 @@ public actor Actor<L: ActorLogic>: ParentActorRepresentable, ActorSystemRef, Mac
         if parent == nil {
             emitInspection(logic.inspectionRegistrationEvent(
                 settled, actor: inspectionActorRef, rootId: inspectionRootId,
-                parentSessionId: (parent as? ActorSystemRef)?.sessionId,
+                parentSessionId: parent?.sessionId,
                 includeDefinition: system.hasInspectors
             ))
         }

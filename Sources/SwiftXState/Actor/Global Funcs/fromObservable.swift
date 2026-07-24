@@ -1,7 +1,7 @@
 
 /// Returns observable actor logic from a subscribable creator.
 public func fromObservable<Context: Sendable & Equatable>(
-    _ observableCreator: @escaping @Sendable (ObservableActorScope) -> any Subscribable<Context>
+    _ observableCreator: @escaping @Sendable (ObservableActorScope) -> some Subscribable<Context>
 ) -> ActorSource {
     .observable(ObservableActorLogicBox(ObservableActorLogic { scope in
         AnySubscribable(observableCreator(scope))

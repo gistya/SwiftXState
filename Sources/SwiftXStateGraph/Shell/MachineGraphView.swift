@@ -43,9 +43,10 @@ public struct MachineGraphView<Context: Sendable>: View {
 
     public var body: some View {
         GraphRenderView(render: render)
-            .onAppear {
-                guard let actor, subscription.handle == nil else { return }
-                Task { @MainActor in
+            .onAppear { [weak render] in
+                guard let actor, let render, subscription.handle == nil else { return }
+                Task { @MainActor [weak render] in
+                    guard let render = render else { return }
                     render.setActive(stateValue: await actor.snapshot.value)
                     subscription.handle = await actor.subscribe { [weak render] snapshot in
                         Task { @MainActor in render?.setActive(stateValue: snapshot.value) }

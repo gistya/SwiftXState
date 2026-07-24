@@ -245,7 +245,7 @@ public extension StateMachine {
     /// Fold + resolve in one step — the running machine for the engine, with the declared `context`
     /// baked into the `MachineConfig` so `start()` needs no argument.
     func resolvedMachine(id: String? = nil) -> ResolvedMachine<Context> {
-        buildSchema().resolve(id: id, context: context, internalEvents: internalEvents.map(\.name))
+        buildSchema().resolve(id: id, context: context, internalEvents: internalEvents.map({ $0.name }))
     }
 }
 

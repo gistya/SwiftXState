@@ -259,7 +259,7 @@ public final class Atom<Value: Sendable>: AtomNode, ReadableAtom, @unchecked Sen
 
 public extension Atom where Value: Equatable {
     /// Creates a writable atom that treats `==`-equal values as no-ops.
-    convenience init(_ initialValue: Value) { self.init(initialValue, compare: ==) }
+    convenience init(_ initialValue: Value) { self.init(initialValue, compare: { @Sendable in $0 == $1 }) }
 }
 
 // MARK: - Computed atom
@@ -370,7 +370,7 @@ public final class ComputedAtom<Value: Sendable>: AtomNode, ReadableAtom, @unche
 
 public extension ComputedAtom where Value: Equatable {
     /// Creates a derived atom that treats `==`-equal derived values as no-ops.
-    convenience init(_ compute: @escaping @Sendable () -> Value) { self.init(compare: ==, compute) }
+    convenience init(_ compute: @escaping @Sendable () -> Value) { self.init(compare: { @Sendable in $0 == $1 } , compute) }
 }
 
 // MARK: - XState-parity factories

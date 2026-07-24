@@ -1,5 +1,3 @@
-import CompositionalInit
-
 /// A single state declaration in the DSL. Its `@StateBuilder` body mixes **transitions** out of the
 /// state and **child states** (making it compound) — XState's recursive node shape. Refined with the
 /// chainable `.initial()` / `.parallel()` / `.onEntry` / `.onExit`.
@@ -64,22 +62,28 @@ public struct XState<
         self.children = body.children
         self.initialChild = body.initialChild
     }
-
+    
     /// Mark this state the initial one among its siblings (the machine's initial at the root).
     public func initial(_ value: Bool = true) -> Self {
-        clone(mutating: \.isInitial <- value)
+        var new = self
+        new.isInitial = value
+        return new
     }
 
     /// Mark this a parallel state — XState v6's `type: 'parallel'`. Its child states become
     /// concurrently-active regions (each entering its own `.initial()` child).
     public func parallel(_ value: Bool = true) -> Self {
-        clone(mutating: \.isParallel <- value)
+        var new = self
+        new.isParallel = value
+        return new
     }
 
     /// Mark this a final state — XState v6's `type: 'final'`. Entering it completes the parent,
     /// firing the parent's `OnDone`.
     public func final(_ value: Bool = true) -> Self {
-        clone(mutating: \.isFinal <- value)
+        var new = self
+        new.isFinal = value
+        return new
     }
 
     /// Produce a typed `output` from context when this (final) state is reached — XState v6's
@@ -88,30 +92,40 @@ public struct XState<
         _ make: @escaping @Sendable (Context) -> Output
     ) -> Self {
         let resolver: @Sendable (Context) -> SendableValue? = { context in SendableValue(make(context)) }
-        return clone(mutating: \.output <- resolver)
+        var new = self
+        new.output = resolver
+        return new
     }
 
     /// Run a pure context transform when this state is entered.
     public func onEntry(_ body: @escaping Schema.Action) -> Self {
         let handler: Schema.Handler = { args, _ in body(args.context) }
-        return clone(mutating: \.entry <- handler)
+        var new = self
+        new.entry = handler
+        return new
     }
 
     /// Run an effectful entry handler — XState v6's `(args, enq) -> context`; patch context and
     /// `raise` / `sendTo` / `emit` through `enq`. (`args.event` is the event that triggered entry.)
     public func onEntry(_ handler: @escaping Schema.Handler) -> Self {
-        clone(mutating: \.entry <- handler)
+        var new = self
+        new.entry = handler
+        return new
     }
 
     /// Run a pure context transform when this state is exited.
     public func onExit(_ body: @escaping Schema.Action) -> Self {
         let handler: Schema.Handler = { args, _ in body(args.context) }
-        return clone(mutating: \.exit <- handler)
+        var new = self
+        new.exit = handler
+        return new
     }
 
     /// Run an effectful exit handler — XState v6's `(args, enq) -> context`.
     public func onExit(_ handler: @escaping Schema.Handler) -> Self {
-        clone(mutating: \.exit <- handler)
+        var new = self
+        new.exit = handler
+        return new
     }
 
     /// This declaration as a folded `StateNode` (recursively carrying its children).
