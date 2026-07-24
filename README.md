@@ -19,6 +19,10 @@
 
 <br>
 
+> **Upgrading from 1.x?** See the [Migration Guide](MIGRATING.md) — 2.0 is almost entirely source-compatible: two small type-level changes, plus an `import SwiftXStateCodable` (and one added conformance) if you persist or replay.
+
+<br>
+
 ---
 
 
@@ -37,6 +41,7 @@
     - [Text API example](#text-api-example)
     - [Type-safe API example](#type-safe-api-example)
     - [State Graph Analysis](#state-graph-analysis)
+    - [Reactive Atoms](#reactive-atoms)
 - [Included Sample Apps (iPadOS/macOS)](#sample-apps-ipadosmacos)
 - [XState.js Adoption & Parity](#xstatejs-adoption--parity)
     - [XState → SwiftXState terminology guide](#xstate--swiftxstate-terminology-guide)
@@ -50,6 +55,57 @@
 
 ---
 <br>
+
+# Embedded Swift status
+
+The core is written for Embedded Swift — no Foundation, no `Codable`, no reflection, no `weak` — but
+it does **not compile for Embedded yet on a released toolchain**. Existential values (`any Eventable`
+and friends) are rejected by Swift 6.3.x and are accepted from **Swift 6.4 / Xcode 27**, which is
+what the core needs. Until then the Embedded build reports errors that are a toolchain gap rather
+than anything to fix here.
+
+Track it with `./Scripts/embedded-check.sh`, which builds the core against the Wasm Embedded SDK and
+compares the diagnostic count against a recorded baseline. See `Scripts/embedded-baseline.txt` for
+the toolchain matrix.
+
+## Host symbols a bare-metal or libc-less target must provide
+
+Building freestanding (`-target arm64-apple-none-macho`, `wasm32-unknown-none-wasm`, and similar)
+links against no libc, so the host supplies these. Measured from a freestanding object exercising the
+same facilities the core uses:
+
+| symbol | needed for |
+|---|---|
+| `posix_memalign`, `free` | every heap allocation — `Array`, `String`, `Dictionary`, class instances |
+| `memcpy`, `memmove`, `memcmp` | emitted directly by the compiler for value copies and comparisons |
+| `arc4random_buf` | `SystemRandomNumberGenerator`, used by `randomUUIDString()` for actor and child ids |
+| `putchar` | `print`, reached from `Inspection/Log.swift` |
+| `__stack_chk_fail`, `__stack_chk_guard` | stack protector; stub them or build with `-disable-stack-protector` |
+
+Two things you do **not** implement:
+
+- **Unicode tables** — `__swift_stdlib_getComposition`, `getDecompositionEntry`, `getNormData`,
+  `nfd_decompositions` and friends come from `libswiftUnicodeDataTables.a`, shipped in the
+  toolchain's embedded slice. Link it; don't write it.
+- **A clock** — there is no default. `DefaultClock` needs Dispatch, so on a freestanding target you
+  inject your own through `ActorOptions.clock`. Without one, `after:` transitions and delayed
+  `raise` / `sendTo` never fire. Conform `Clock` (`setTimeout` / `clearTimeout` over an opaque
+  `TimeoutHandle`) to a hardware timer or the host's scheduler.
+
+If you never call `randomUUIDString()` — pass explicit actor ids everywhere — `arc4random_buf` drops
+out. Likewise `putchar` disappears if nothing logs.
+
+## Behaviour that degrades on Embedded
+
+| feature | on Embedded |
+|---|---|
+| Reactive atoms | excluded entirely (the dependency graph needs `weak`) |
+| `waitFor(timeout:)` | the wait works; the **timeout does not fire** (no clock), and asserts in debug |
+| `StateEvent.eventType`, `BasicIdentifying.name` | no reflective default — declare them, or give the id a `String` raw value |
+| Inspector context payloads | scalars only; structured contexts report empty |
+| `describeValue` (log/inspector strings) | returns a placeholder |
+| Interval pacing on a values-source | skipped; values emit back to back |
+| `ActorLogic.started` | conformers need their own implementation — the generic default cannot specialize |
 
 # Cross-Platform Setup Guides
 
@@ -67,15 +123,16 @@
 
 ## What is SwiftXState useful for?
 
-1. Own your logic and events with (state)-flow-(state) graphs. 
-2. Track it live with built-in JSON streams & 2D/3D visualizer. 
+1. Understand your app's business logic with declarative statechart syntax.
+2. Get streaming JSON for everything that happens, for free, built-in. 
 3. Rewind/replay your whole program with snapshots. 
 4. Load statecharts from JSON at runtime to tweak behavior.
-5. Offload business logic to threadsafe background executors with asynchronous Swift `actor`s, which gain deterministic behavior thanks to XState wizardry.
+5. Offload business logic to threadsafe background executors (actors).
+6. Watch your state machines operate in real time with a free SwiftUI-based visualizer module that you build right into the app -- or use our XState-API-compatible websocket server.
 
 ## Where can I run it?
 
-1. Server or client.
+1. Server or client. App or browser (WASM).
 2. Node.js: use [Stately.a's XState.js](https://github.com/statelyai/xstate).
 3. WebAssembly: *experimental* — the [browser inspector](https://github.com/gistya/swiftxstate/tree/main/Examples/WasmInspector) runs SwiftXState in wasm with a WebGPU state-graph
 4. Linux ([Linux build README](LINUX_SETUP.md), or get prebuilt NuGet)
@@ -89,13 +146,15 @@ Every effort has been made to ensure you can trust this library. For details, se
 
 ## What libraries comes in the package?
 
-1. SwiftXState - all platforms - static library, core features
-2. SwiftXStateInspect - all platforms - localhost JSON streaming in [XState.js](https://stately.ai)-format 
-3. SwiftXStateGraph - all Apple platforms - SwiftUI state graph renderer in 2D and 3D (note: does not render in 3D on visionOS yet)
-4. SwiftXStateInspectorUI - all Apple platforms - SwiftUI info displays for displaying Inspect streams
-5. SwiftXStateSwiftUI - all Apple platforms - wire your SwiftUI view states up to SwiftXState state stores
-6. SwiftXStateSwiftData - all Apple platforms - persistent data storage adapter
-7. ... plus some fun bonus items ;D
+1. SwiftXState - all platforms - static library, core features (state machines, actors, stores, and reactive **atoms**). No Foundation, no `Codable`, no JSON engine — designed for Embedded Swift ([status](#embedded-swift-status))
+2. SwiftXStateCodable - all platforms - opt-in `Codable` adapters: persistence, replay serialization, `Encodable`⇄`JSONValue`, and `Codable` guard/action params
+3. SwiftXStateInspect - all platforms - localhost JSON streaming in [XState.js](https://stately.ai)-format (Foundation-free; pluggable `LogWriteable` / `InspectLoggable` sinks)
+4. SwiftXStateInspectLog - all platforms - opt-in Foundation-backed file logger for Inspect streams (`FileLogWriter`)
+5. SwiftXStateGraph - all Apple platforms - SwiftUI state graph renderer in 2D and 3D (note: does not render in 3D on visionOS yet)
+6. SwiftXStateInspectorUI - all Apple platforms - SwiftUI info displays for displaying Inspect streams
+7. SwiftXStateSwiftUI - all Apple platforms - wire your SwiftUI view states up to SwiftXState state stores
+8. SwiftXStateSwiftData - all Apple platforms - persistent data storage adapter
+9. ... plus some fun bonus items ;D
 
 ## How far along is this project?
 
@@ -118,9 +177,10 @@ Every effort has been made to ensure you can trust this library. For details, se
 
 ## Dependencies
 
-- SwiftXState/Inspect/URLSession: Foundation
-- SwiftUI and/or SwiftData modules require Apple platforms
-- WebAssembly requires [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit) 
+- **The core has no Foundation, no `Codable`, and no JSON engine since 2.0.** `JSONValue` is written and parsed by a hand-rolled, dependency-free codec, so machine export/import has no host dependencies of its own (see [Embedded Swift status](#embedded-swift-status) for what the core still needs). Everything needing `Codable` lives in the opt-in `SwiftXStateCodable` target (which uses [FridayTheCodable](https://github.com/gistya/friday-the-thirteenth)), mirroring the FridayTheThirteenth/FridayTheCodable split. `SwiftXStateInspect` is Foundation-free too, sending output through a pluggable `LogWriteable` / `InspectLoggable` sink (default: `os.Logger` on Apple, `print` elsewhere).
+- Foundation-backed sinks are opt-in: file logging lives in the `SwiftXStateInspectLog` module, and the optional `SwiftXStateInspectURLSession` WebSocket transport uses `URLSession` (Apple platforms).
+- SwiftUI and/or SwiftData modules require Apple platforms.
+- WebAssembly requires [JavaScriptKit](https://github.com/swiftwasm/JavaScriptKit).
 - Since 1.0, we dropped `swift-syntax` as a dependency and transitioned away from macros.
 
 ## Quick start
@@ -200,14 +260,28 @@ We offer two main API paths:
     await actor.send(InputChange(searchInput: "be"))   // typed at the call site
     ```
 
-- You can also brand an actor with its state family at creation. If your state enum conforms to `StateID`, `createActor(_:as:)` hands back a `TypedActor` whose snapshots are typed — so state checks like `inState(_:)` are compile-checked and autocompleted instead of stringly-typed:
+- For a **fully-typed machine**, declare it with the result-builder DSL: a `struct` conforming to `StateMachine`, with `StateIdentifying` state and `EventIdentifying` event enums. `createActor` then hands back a `MachineActor` whose `send`, `matches`, and `start` are all typed — no state or event strings anywhere:
 
     ```swift
-    enum SearchState: String, StateID { case active, debouncing }
+    enum SearchState: String, StateIdentifying { case idle, active, debouncing; static var _blank: SearchState { .idle } }
+    enum SearchEvent: String, EventIdentifying { case focus, change; static var _blank: SearchEvent { .focus } }
 
-    let search = createActor(searchMachine, as: SearchState.self)   // TypedActor<Ctx, SearchState>
-    let snapshot = await search.start()
-    print(snapshot.inState(.debouncing))   // ← checked at the call site, no "debouncing" string
+    struct Search: StateMachine {
+        typealias Context = String
+        typealias StateID = SearchState
+        typealias EventID = SearchEvent
+        var context: String { "" }
+        var machine: some XStateMachine {
+            XState(.idle) { XTransition(on: .focus, to: .active) }.initial()
+            XState(.active) { XTransition(on: .change, to: .debouncing) }
+            XState(.debouncing) {}
+        }
+    }
+
+    let search = createActor(Search())            // MachineActor<Search>
+    await search.start()
+    await search.send(.focus)                     // ← typed event, no "focus" string
+    print(await search.matches(.debouncing))      // ← checked at the call site, no "debouncing" string
     ```
 
 - As the library matures, we plan to increase the type-safe surface area of SwiftXState.
@@ -237,6 +311,29 @@ We offer two main API paths:
 
 - (Similar features: `getAdjacencyMap`, `getShortestPaths`, `getSimplePaths`, `validate`.) 
 - You can also tune traversal with `TraversalOptions` (custom event resolver, state serialization, `maxStates`).
+
+## Reactive Atoms
+
+- Standalone reactive values — writable and computed — that live in the core module and work with or without a machine. Based on XState v6's [`@xstate/store`](https://stately.ai/docs/xstate-store) `createAtom`:
+
+    ```swift
+    let price    = createAtom(10)
+    let quantity = createAtom(2)
+    let total    = createAtom { price.value * quantity.value }   // computed, dependencies auto-tracked
+
+    let sub = total.subscribe { print("total: \($0)") }          // fires now (20), then on each change
+    quantity.value = 3                                           // → total recomputes to 30
+    sub.cancel()
+    ```
+
+- Drive a machine from an atom inside a transition with `enq.subscribeTo(atom)` — the port of XState v6's `enq.subscribeTo`:
+
+    ```swift
+    XTransition(on: .start, to: .watching).action { _, enq in
+        enq.subscribeTo(threshold) { $0 > 10 ? .exceeded : nil }   // map value → event; nil drops it
+        return 0
+    }
+    ```
 
 ---
 <br>
@@ -268,7 +365,9 @@ We offer two main API paths:
 
 # XState.js Adoption & Parity 
 
-XState.js users considering SwiftXState as a native-code solution might benefit from the following information about API terminology and feature parity with Stately.ai's wonderful library, XState.js v5.
+XState.js users considering SwiftXState as a native-code solution might benefit from the following information about API terminology and feature parity with Stately.ai's wonderful library, XState.js — compared here against **XState v6** (the current alpha, `6.0.0-alpha.20`; David Khourshid considers its external API essentially settled).
+
+SwiftXState began as a v5 port and has since adopted much of v6's model: a single generic actor engine (`Actor<L: ActorLogic>`, mirroring v6's `ActorLogic`), reactive **atoms** (`@xstate/store`), and a v6-style **enqueue** effect model in the typed DSL — `.action { ctx, enq in … }` returns the updated context and reaches side effects through `enq.raise` / `enq.sendTo` / `enq.subscribeTo`. It also **keeps XState v5's named action/guard creators** (`assign`, `raise`, `sendTo`, `and` / `or` / `not`, …) as an ergonomic option. v6 *removed* those creators in favor of inline functions, so where the two models diverge it's flagged below.
 
 ## XState → SwiftXState terminology guide:
 
@@ -282,13 +381,17 @@ XState.js users considering SwiftXState as a native-code solution might benefit 
 | `assign({ x: ({ event }) => … })` | `assign { (ctx: inout C, e: EventType) in ctx.x = … }` (Tier 2) |
 | `assertEvent(event, "…")` | not needed — the Tier-2 handler is already typed to the event |
 | `guard: 'name'` / `({ context, event }) => …` | `guard: .named("name")` / `guarded { (c, e: EventType) in … }` |
+| v6 inline action `(args, enq) => ({ context })` | DSL `.action { ctx, enq in … ; return ctx }` — return updated context, effects via `enq` |
+| v6 `enq.raise` / `enq.sendTo` / `enq.subscribeTo` | `enq.raise` / `enq.sendTo` / `enq.subscribeTo` (same names) |
+| `createAtom(v)` / `createAtom(getter)` (`@xstate/store`) | `createAtom(v)` / `createAtom { … }` → `Atom` / `ComputedAtom` |
 | `always`, `after`, `invoke`, `spawn`, `raise`, `sendTo`, tags, `meta` | same names, same model |
 
 ## Parity with XState
 
-The table below summarizes where SwiftXState stands today relative to **XState v5** and the broader Stately ecosystem. Status meanings:
+The table below summarizes where SwiftXState stands today relative to **XState v6 (alpha)** and the broader Stately ecosystem. Status meanings:
 
-- **✅ Parity** — implemented and tested
+- **✅ Parity** — implemented and tested; matches the v6 model
+- **🟡 v5-style** — implemented, but SwiftXState follows XState **v5** here and v6 changed the shape (difference noted)
 - **🔶 Partial** — works for common cases; known gaps listed
 - **➕ SwiftXState only** — not in stock XState (or not in the same form)
 - **📋 Planned** — intended; not implemented yet
@@ -298,16 +401,18 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 
 | Capability | Status | Notes |
 |------------|--------|-------|
-| `createMachine` / `setup().createMachine()` | ✅ Parity | `MachineConfig`, `StateNodeConfig` mirror XState config |
+| `createMachine` | ✅ Parity | `MachineConfig`, `StateNodeConfig` mirror XState config |
+| `setup(...)` registering actions/guards/delays/actors | 🟡 v5-style | SwiftXState's `setup(actions:guards:delays:actors:)` registers named implementations (v5). v6's `setup({ schemas?, states? })` no longer registers implementations (they're inline functions) and returns `{ createMachine, createStateConfig }` |
 | State types (atomic, compound, parallel, final, history) | ✅ Parity | Shallow and deep history |
 | Events (`Eventable`, `Event("TAP")`, string shorthand) | ✅ Parity | Custom `Eventable` types supported (see SwiftXChess) |
 | Wildcard transitions (`*`, `prefix.*`) | ✅ Parity | |
-| Guards (named, inline, `and` / `or` / `not`, `stateIn`) | ✅ Parity | |
+| Actions (`assign`, `raise`, `sendTo`, `spawn`, `stop`, `log`, `emit`, …) | 🟡 v5-style | Provided as v5 named creators **and** as the v6 enqueue model: the DSL's `.action { ctx, enq in … }` returns the updated context and uses `enq.raise` / `enq.sendTo` / `enq.emit` / …. v6 removed the standalone creators; SwiftXState keeps them for ergonomics |
+| `enqueueActions` → v6 inline `enq` | ✅ Parity | v6 folded the whole effect model into the action closure; SwiftXState's DSL `enq` (`enq.raise`, `enq.sendTo`, `enq.subscribeTo`, …) is that model |
+| Guards (named, inline, `and` / `or` / `not`, `stateIn`) | 🟡 v5-style | All supported. v6 removed the `and`/`or`/`not` combinators and `stateIn` — guards are plain functions and id-matching is `checkStateIn` |
 | Parameterized guards `{ type, params }` | ✅ Parity | `guardRef(_:params:)`, `dynamicGuard`, `setup().registerGuard` |
-| Actions (assign, raise, sendTo, spawn, stop, log, emit, …) | ✅ Parity | |
-| `enqueueActions` | ✅ Parity | |
-| `always` transitions | ✅ Parity | |
-| `after` delayed transitions | ✅ Parity | Named delays via `setup(delays:)` |
+| `always` (eventless) + v6 `choice` states | 🔶 Partial | `Always(to:).when { … }` is the first-passing-guard choice point; v6's dedicated `type: 'choice'` node / `route` transition-fn is not a separate construct |
+| `after` delayed transitions | 🔶 Partial | Numeric + named delays (`setup(delays:)`, `After(.seconds(5))`). v6 also accepts duration **strings** (`'5s'`, ISO-8601 `'PT2M'`) — planned |
+| State-level `timeout` / `onTimeout` / `onError` | 📋 Planned | New in v6 |
 | Internal transitions (actions only, no target) | ✅ Parity | |
 | `reenter` | ✅ Parity | |
 | Parallel regions + multi-target transitions | ✅ Parity | |
@@ -315,27 +420,46 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 | State `meta` on config | ✅ Parity | `StateNodeConfig.meta` + `snapshot.getMeta()` |
 | Final state `output` + `status: done` | ✅ Parity | |
 | `xstate.done.state.{id}` (nested final completion) | ✅ Parity | `StateNodeConfig.onDone` + `DoneStateEvent` |
-| Pure `transition()` / `initialTransition()` | ✅ Parity | Side effects not run in pure path |
-| `waitFor` | ✅ Parity | |
-| `SimulatedClock` | ✅ Parity | Deterministic delays in tests |
+| Pure `transition()` / `initialTransition()` | ✅ Parity | Side effects not run in pure path. v6 returns `[snapshot, effects]` tuples and deprecates `getInitialSnapshot` / `getNextSnapshot` |
+| `waitFor` | ✅ Parity | Still exported in v6 |
+| `SimulatedClock` | ✅ Parity | Deterministic delays in tests; retained in v6 |
 
 ### Actors and invoke
 
 | Capability | Status | Notes |
 |------------|--------|-------|
-| `createActor` + mailbox + `send` | ✅ Parity | See ["Actor" vs. Swift `actor`](#actor-vs-swift-actor) |
+| `createActor` + mailbox + `send` | ✅ Parity | v6 removed `interpret` / `Interpreter`; SwiftXState was already `createActor`-only. See ["Actor" vs. Swift `actor`](#actor-vs-swift-actor) |
+| Single generic `ActorLogic` engine | ✅ Parity | `Actor<L: ActorLogic>` mirrors v6's unified `ActorLogic` — write your own logic and run it on the engine (see [MIGRATING.md](MIGRATING.md)) |
 | `invoke` / `spawnChild` | ✅ Parity | |
 | `fromMachine` (child state machines) | ✅ Parity | |
-| `fromTask` (`fromPromise`) | ✅ Parity | `async throws` with structured scope |
-| `fromCallback` | ✅ Parity | Long-running listeners + cleanup |
-| `fromTransition` | ✅ Parity | |
-| `fromObservable` / `Subscribable` | ✅ Parity | |
-| `fromStore` | ✅ Parity | XState store actor logic |
+| `fromTask` (v5 `fromPromise` → v6 `createAsyncLogic`) | 🟡 v5-style | `async throws` with structured scope; v6 renamed the creator and adds resumable `enq.step` + `timeout` |
+| `fromCallback` (→ v6 `createCallbackLogic`) | 🟡 v5-style | Long-running listeners + cleanup; same model, renamed in v6 |
+| `fromObservable` / `Subscribable` (→ v6 `createObservableLogic`) | 🟡 v5-style | Same model, renamed in v6 |
+| `fromTransition` | 🟡 v5-style | Present in SwiftXState; v6 removed the standalone creator (folded into `createLogic`) |
+| `fromStore` | ✅ Parity | XState `@xstate/store` store actor logic; v6 keeps `createStore` / `fromStore` |
 | `fromTaskGroup` | ➕ SwiftXState only | Structured concurrent child work via `TaskGroup` |
 | `sendBack` in callback actors | ✅ Parity | `CallbackActorScope.sendBack` — alias for `sendToParent` |
-| `ActorSystem` (register, get, inspect) | ✅ Parity | |
+| `ActorSystem` (register, get, inspect) | 🔶 Partial | v6 adds typed registry keys via `createSystem({ registry })`; SwiftXState's registry keys are string-based |
+| Typed event sender (v6 `actor.trigger.EVENT(...)`) | 🔶 Partial | The typed DSL's `MachineActor.send(_:)` takes a typed `EventID`; there's no per-event `trigger.X` proxy |
 | `forwardTo`, `sendTo` (with delay), `sendParent` | ✅ Parity | |
 | `emit` + `actor.on("eventType")` | ✅ Parity | |
+| `createFSM` (flat finite-state machine) | 📋 Planned | New in v6 |
+
+### Reactive atoms & `@xstate/store`
+
+| Capability | Status | Notes |
+|------------|--------|-------|
+| `createAtom(value)` writable atom | ✅ Parity | `Atom<Value>` — `.value` get/set, `.update { … }` (XState's `.get()` / `.set()`) |
+| `createAtom(getter)` computed atom | ✅ Parity | `ComputedAtom` — auto-tracked dependencies, lazy + memoized, glitch-free |
+| `.subscribe(...)` (BehaviorSubject) | ✅ Parity | Fires immediately with the current value, then on each change; returns a cancellable `Subscription` |
+| Custom equality (`options.compare`) | ✅ Parity | `Atom(_, compare:)` (defaults to `==`; XState defaults to `Object.is`) |
+| `enq.subscribeTo(atom)` → machine | ✅ Parity | Relay a mapped atom value back into a transition; torn down on stop |
+| `createStore` / `fromStore` | ✅ Parity | Store actor logic (see Actors table) |
+| `createAsyncAtom` | 📋 Planned | v6 async atom (`{ status, data }` / `error`) |
+| `createReducerAtom` (`.send(event)`) | 📋 Planned | v6 reducer atom |
+| `isAtom` / `createAtomConfig` | 📋 Planned | v6 helpers |
+
+> **Note:** in v6 the atom API lives in the **`@xstate/store`** package (not core `xstate`); SwiftXState ships atoms in the core `SwiftXState` module. See the [Reactive Atoms](#reactive-atoms) examples above.
 
 ### Persistence and replay
 
@@ -353,12 +477,12 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 
 | Capability | Status | Notes |
 |------------|--------|-------|
-| Inspection protocol (`@xstate.*` events) | ✅ Parity | |
-| Stately wire format + `@statelyai/inspect` | ✅ Parity | `StatelyWireConverter`, WebSocket transport |
+| Inspection protocol (`@xstate.*` events) | 🟡 v5-style | SwiftXState emits the v5 event set (`@xstate.actor` / `.snapshot` / `.event` / `.action` / `.microstep` / `.transition`). v6 collapses this to **2** events (`@xstate.actor` + `@xstate.transition`, with `actions` / `sent` always present) — alignment planned |
+| Stately wire format + `@statelyai/inspect` | ✅ Parity | `StatelyWireConverter`, WebSocket transport; consumed by `@statelyai/inspect` |
 | `definitionJSON()` export | ✅ Parity | Stately-compatible machine graphs |
 | Machine JSON **import** | 🔶 Partial | Load any XState machine-definition JSON into the inspector (`MachineDefinitionImporter` / `InspectorStore.loadDefinition`): renders the graph and reconstructs the initial state value + `context`. A **structural simulator** (`MachineSimulator`) then lets you click through `on` / `always` / `after` / `invoke.onDone` transitions, with synthetic event + snapshot rows feeding the Events/Sequence tabs. Control-flow only — guards aren't evaluated and actions/`assign`/actors don't run (those are code, not data). See [`Examples/InspectorPasteApp`](Examples/InspectorPasteApp/). Full round-trip back to `definitionJSON()` is still planned. |
 | `meta` in exported definitions | ✅ Parity | |
-| `@xstate/graph` (paths, TestModel, validation) | ✅ Parity | **Core**, cross-platform (Linux too): `getAdjacencyMap`, `getShortestPaths`, `getSimplePaths`, `TestModel` (model-based path testing via `test(_:onState:onEvent:)`), and `validate` (dead-end + unreachable-state checks). Built on the faithful pure `transition` (guards evaluated, `assign` applied), with `TraversalOptions` for custom event resolvers / state serialization. **Note:** this is the algorithm layer — distinct from the like-named `SwiftXStateGraph` *visualizer* module (same collision exists in XState). |
+| `@xstate/graph` (paths, TestModel, validation) | ✅ Parity | **Core**, cross-platform (Linux too): `getAdjacencyMap`, `getShortestPaths`, `getSimplePaths`, `TestModel` (model-based path testing via `test(_:onState:onEvent:)`), and `validate` (dead-end + unreachable-state checks). Built on the faithful pure `transition` (guards evaluated, `assign` applied), with `TraversalOptions` for custom event resolvers / state serialization. **Note:** this is the algorithm layer — distinct from the like-named `SwiftXStateGraph` *visualizer* module (same collision exists in XState). v6 likewise folds graph utilities into core (the exact public path-finding surface in v6 is still settling). |
 | Native SwiftUI visualizer | ✅ | `SwiftXStateGraph` library: GPU-backed `Canvas` 2D renderer + SceneKit 3D mode, walks the real machine tree (nested compound/parallel regions, transitions, initial/final markers), live active-state highlighting, anchored zoom / pan / node-drag (+ mouse-wheel on macOS), themeable via `GraphStyle`. |
 | Browser `__xstate__` devtools hook | ➖ N/A | Stately inspect covers cross-platform debugging |
 
@@ -366,10 +490,10 @@ The table below summarizes where SwiftXState stands today relative to **XState v
 
 | Capability | Status | Notes |
 |------------|--------|-------|
-| `setup(actions:guards:delays:actors:)` | ✅ Parity | |
-| `setup({ types: { events, context } })` inference | ✅ Parity | Context is statically typed (`MachineConfig<Context>`). The **Tier-2 typed API** models each event as its own `StateEvent` type and keys transitions on it, so guard/action closures receive the **concrete, narrowed event** — no cast, no `assertEvent`. A hand-declared **`StateName` enum** gives compile-checked, autocompleted, rename-safe **targets** (`to: AppState.running`). Achieves XState's typing outcomes through Swift's type identity rather than TS literal inference. |
+| Typed machine authoring | ✅ Parity | Two typed styles: **(a)** config + `StateEvent` types + a `StateName` enum (guard/action closures receive the **concrete, narrowed event** — no cast, no `assertEvent`; targets like `to: AppState.running` are compile-checked), and **(b)** the fully-typed result-builder DSL (`StateMachine` → `MachineActor` with typed `send` / `matches`). Achieves XState's typing outcomes through Swift's type identity. |
+| `schemas` (v6) / `types` (v5) inference | 🟡 v5-style | v6 replaced the `types:` config key with **`schemas`** (a Standard Schema — Zod/Valibot — or `types<T>()`), adding runtime validation. SwiftXState gets the same static typing from Swift generics + `StateEvent` types; there's no runtime schema-validation layer |
 | `mapState` | ✅ Parity | Nested `StateMap` → `[MapStateEntry]`; `mapStateFirst` for view models |
-| `getNextSnapshot` alias | 📋 Planned | `transition()` already provides this |
+| `transition()` / `initialTransition()` (v6 replaces `getNextSnapshot`) | ✅ Parity | v6 deprecates `getInitialSnapshot` / `getNextSnapshot` in favor of `transition`-style calls; SwiftXState's pure `transition()` is the aligned form |
 | **SwiftUI bindings** (`useMachine`, `useSelector`, `useMapState`) | ➕ SwiftXState only | Apple platforms; parallel to `@xstate/react` |
 | **Pluggable inspect transports** (`InspectTransport`) | ➕ SwiftXState only | `ClosureInspectTransport`, file/mock transports; URLSession optional |
 | `@xstate/react` / Vue / Svelte bindings | ➖ N/A | SwiftUI is the Apple-native binding layer |

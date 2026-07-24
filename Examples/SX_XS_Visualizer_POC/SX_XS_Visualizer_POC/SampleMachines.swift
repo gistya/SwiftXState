@@ -34,7 +34,7 @@ enum SampleDemoID: String, CaseIterable, Identifiable, Sendable {
 // MARK: - Toggle (examples/toggle)
 
 enum ToggleMachineFactory {
-    static func make() -> StateMachine<EmptyContext> {
+    static func make() -> ResolvedMachine<EmptyContext> {
         createMachine(MachineConfig(
             id: "toggle",
             initial: "inactive",
@@ -54,7 +54,7 @@ struct CounterContext: Sendable, Equatable {
 }
 
 enum CounterMachineFactory {
-    static func make() -> StateMachine<CounterContext> {
+    static func make() -> ResolvedMachine<CounterContext> {
         createMachine(MachineConfig(
             id: "Counter",
             initial: "ready",
@@ -85,7 +85,7 @@ struct FeedbackUpdateEvent: Eventable, Equatable {
 }
 
 enum FeedbackMachineFactory {
-    static func make() -> StateMachine<FeedbackContext> {
+    static func make() -> ResolvedMachine<FeedbackContext> {
         setup(
             guards: [
                 "feedbackValid": { args in
@@ -135,7 +135,7 @@ enum FeedbackMachineFactory {
 // MARK: - Traffic light (nested compound states)
 
 enum TrafficLightMachineFactory {
-    static func make() -> StateMachine<EmptyContext> {
+    static func make() -> ResolvedMachine<EmptyContext> {
         let pedestrianStates = StateNodeConfig<EmptyContext>(
             initial: "walk",
             states: [
@@ -198,7 +198,7 @@ enum CheckoutValidationError: Error, Sendable, Equatable, CustomStringConvertibl
 }
 
 enum CheckoutMachineFactory {
-    static func make() -> StateMachine<CheckoutContext> {
+    static func make() -> ResolvedMachine<CheckoutContext> {
         createMachine(MachineConfig(
             id: "checkout",
             initial: "idle",

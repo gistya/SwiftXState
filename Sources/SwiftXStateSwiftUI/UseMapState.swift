@@ -20,7 +20,7 @@ public final class MapStateDriver<Context: Sendable, T: Sendable & Equatable> {
     @ObservationIgnored private var subscription: Subscription?
 
     public init(
-        actor: Actor<Context>,
+        actor: Actor<MachineLogic<Context>>,
         mapper: StateMap<Context, T>
     ) {
         self.mapper = mapper
@@ -49,7 +49,7 @@ public final class MapStateDriver<Context: Sendable, T: Sendable & Equatable> {
 
 @MainActor
 public func useMapState<Context: Sendable, T: Sendable & Equatable>(
-    _ actor: Actor<Context>,
+    _ actor: Actor<MachineLogic<Context>>,
     _ mapper: StateMap<Context, T>
 ) -> T? {
     MapStateDriver(actor: actor, mapper: mapper).value

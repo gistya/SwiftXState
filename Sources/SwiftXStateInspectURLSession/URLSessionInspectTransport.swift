@@ -27,7 +27,7 @@ public final class URLSessionInspectTransport: InspectTransport, Sendable {
 
     public func connect(to endpoint: InspectEndpoint) async throws -> any InspectSession {
         let validated = try EndpointValidator(policy: policy).validate(endpoint)
-        guard let url = validated.url else {
+        guard let url = URL(string: validated.urlString) else {
             throw InspectTransportError.invalidEndpoint(validated.host)
         }
 
@@ -77,12 +77,9 @@ actor URLSessionInspectSession: InspectSession {
 
         let text: String
         if message.type == "stately.event" {
-            guard let raw = String(data: message.payload, encoding: .utf8) else {
-                throw InspectTransportError.encodingFailed
-            }
-            text = raw
+            text = String(decoding: message.payload, as: UTF8.self)
         } else {
-            let envelope = URLSessionWireEnvelope(type: message.type, payload: message.payload)
+            let envelope = URLSessionWireEnvelope(type: message.type, payload: Data(message.payload))
             let encoder = JSONEncoder()
             let data = try encoder.encode(envelope)
             guard let encoded = String(data: data, encoding: .utf8) else {
@@ -174,7 +171,7 @@ public enum URLSessionInspect {
 
     /// Stately Inspector observer — sends raw `@xstate.*` events over WebSocket.
     public static func statelyObserver<Context: Sendable>(
-        machine: StateMachine<Context>,
+        machine: ResolvedMachine<Context>,
         policy: ConnectivityPolicy? = nil,
         endpoint: InspectEndpoint? = nil,
         runtime: InspectRuntimeContext = InspectRuntimeContext(),

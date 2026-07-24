@@ -1,5 +1,6 @@
 import ChessKit
 import Foundation
+import Synchronization
 import SwiftXState
 
 /// Read-only supervisor over the pure opening move-tree actor.
@@ -112,7 +113,7 @@ private actor OpeningInspectSink {
 /// Wires the base tree actor and watcher. The watcher never sends to the tree actor.
 public final class OpeningTreeSession: @unchecked Sendable {
     public let dataset: OpeningDataset
-    public let actor: Actor<OpeningTreeContext>
+    public let actor: Actor<MachineLogic<OpeningTreeContext>>
     public let trace: OpeningTransitionTrace
     private let watcher: OpeningWatcher
     private let inspectSink: OpeningInspectSink
@@ -200,7 +201,7 @@ public final class OpeningTreeSession: @unchecked Sendable {
 
 private final class InspectMux: @unchecked Sendable {
     private var handlers: [@Sendable (InspectionEvent) -> Void] = []
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     func add(_ handler: @escaping @Sendable (InspectionEvent) -> Void) {
         lock.lock()

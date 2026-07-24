@@ -1,0 +1,60 @@
+{
+  "configurations" : [
+    {
+      "id" : "3552C489-82F6-4641-9A94-7C5143FD85EF",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "SwiftXStateGraphTests",
+        "name" : "SwiftXStateGraphTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "SwiftXStateInspectTests",
+        "name" : "SwiftXStateInspectTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "SwiftXStateSwiftDataTests",
+        "name" : "SwiftXStateSwiftDataTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "SwiftXStateInspectorUITests",
+        "name" : "SwiftXStateInspectorUITests"
+      }
+    },
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "SwiftXStateTests",
+        "name" : "SwiftXStateTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "SwiftXStateWinBridgeTests",
+        "name" : "SwiftXStateWinBridgeTests"
+      }
+    }
+  ],
+  "version" : 1
+}

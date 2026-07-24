@@ -4,7 +4,7 @@ The actor lifecycle, reading state, observing changes, and coordinating child ac
 
 ## Overview
 
-A ``StateMachine`` is just the rules. An ``Actor`` is a *running instance* of those rules — the
+A ``ResolvedMachine`` is just the rules. An ``Actor`` is a *running instance* of those rules — the
 thing you actually interact with. This guide covers the actor's lifecycle and the ways you read
 from and react to it.
 
@@ -128,7 +128,7 @@ Invoking a child machine and reacting to its result:
 )
 ```
 
-Parents and children message each other with the `sendTo` / `sendParent` / `forwardTo` actions,
+Parents and children message each other with the `sendTo` / `sendToParent` / `forwardTo` actions,
 and a snapshot exposes child snapshots via ``MachineSnapshot/children``. See <doc:AsyncWork> for
 the async-logic side, and the **SwiftXStateInspectorUI** module to watch a whole actor tree live.
 

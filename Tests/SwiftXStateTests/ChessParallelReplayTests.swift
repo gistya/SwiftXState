@@ -10,7 +10,7 @@ struct ChessParallelReplayTests {
         var replaySession: ReplaySession?
     }
 
-    private var machine: StateMachine<Context> {
+    private var machine: ResolvedMachine<Context> {
         createMachine(
             MachineConfig(
                 id: "chess-parallel-replay-test",

@@ -108,7 +108,7 @@ let actor = createActor(machine, options: ActorOptions(useMainExecutor: true))
 @MainActor @Observable
 final class LightModel {
     private(set) var snapshot: MachineSnapshot<LightContext>
-    private let actor: Actor<LightContext>
+    private let actor: Actor<MachineLogic<LightContext>>
 
     init() {
         actor = createActor(trafficLight, options: ActorOptions(useMainExecutor: true))

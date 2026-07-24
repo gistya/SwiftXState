@@ -1,5 +1,3 @@
-import Foundation
-
 /// Where the inspect client is running.
 public enum InspectHostKind: String, Sendable, Equatable, Codable {
     case macApp
@@ -119,6 +117,8 @@ public struct InspectClientConfiguration: Sendable {
     public var enablement: InspectEnablement
     public var wireFormat: InspectWireFormat
     public var machineDefinitions: [InspectMachineRegistration]
+    /// How much of each actor's `context` reaches the wire. Defaults to ``InspectContextPublishing/full``.
+    public var contextPublishing: InspectContextPublishing
     public var eventFilter: (@Sendable (InspectionEvent) -> Bool)?
 
     public init(
@@ -128,6 +128,7 @@ public struct InspectClientConfiguration: Sendable {
         enablement: InspectEnablement? = nil,
         wireFormat: InspectWireFormat = .stately,
         machineDefinitions: [InspectMachineRegistration] = [],
+        contextPublishing: InspectContextPublishing = .full,
         eventFilter: (@Sendable (InspectionEvent) -> Bool)? = nil
     ) {
         self.runtime = runtime
@@ -136,6 +137,7 @@ public struct InspectClientConfiguration: Sendable {
         self.enablement = enablement ?? InspectDefaults.recommendedEnablement(for: runtime)
         self.wireFormat = wireFormat
         self.machineDefinitions = machineDefinitions
+        self.contextPublishing = contextPublishing
         self.eventFilter = eventFilter
     }
 

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 @testable import SwiftXState
 
 /// A thread-safe, single-resolution box used to bridge a callback (snapshot
@@ -7,7 +8,7 @@ import Foundation
 /// await a *deterministic completion signal* instead of sleeping for a fixed
 /// duration and hoping the work finished (which races under parallel load).
 final class OneShot<T: Sendable>: @unchecked Sendable {
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var continuation: CheckedContinuation<T, Never>?
     private var resolvedValue: T?
     private var isResolved = false
@@ -64,7 +65,7 @@ final class TestSignal: @unchecked Sendable {
     }
 }
 
-extension Actor {
+extension Actor where L: MachineActorLogic {
     /// Awaits the first snapshot satisfying `predicate`, subscribing to the
     /// actor's snapshot stream so it resolves the instant the transition lands —
     /// no fixed delay. Returns the matching snapshot, or `nil` on timeout.
@@ -74,9 +75,9 @@ extension Actor {
     @discardableResult
     func waitForSnapshot(
         timeout: Duration = .seconds(5),
-        where predicate: @escaping @Sendable (MachineSnapshot<Context>) -> Bool
-    ) async -> MachineSnapshot<Context>? {
-        let oneShot = OneShot<MachineSnapshot<Context>?>()
+        where predicate: @escaping @Sendable (MachineSnapshot<L.MachineContext>) -> Bool
+    ) async -> MachineSnapshot<L.MachineContext>? {
+        let oneShot = OneShot<MachineSnapshot<L.MachineContext>?>()
         let subscription = subscribe { snapshot in
             if predicate(snapshot) {
                 oneShot.resolve(snapshot)

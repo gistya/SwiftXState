@@ -12,7 +12,7 @@ struct MachineTests {
         ]
     )
 
-    var lightMachine: StateMachine<EmptyContext> {
+    var lightMachine: ResolvedMachine<EmptyContext> {
         createMachine(MachineConfig(
             initial: "green",
             context: EmptyContext(),

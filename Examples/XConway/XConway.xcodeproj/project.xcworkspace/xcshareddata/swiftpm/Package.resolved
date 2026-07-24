@@ -1,12 +1,12 @@
 {
-  "originHash" : "e00817d6e74e9ce6917977746e50e45aa2df874077a1611d952afee23f9d06cd",
+  "originHash" : "215d99e38cb6066c1d899cf3928467f1556385a4c5a1e4a7681445d468c85b72",
   "pins" : [
     {
-      "identity" : "swiftxstate",
+      "identity" : "swift-compositional-init",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gistya/SwiftXState",
+      "location" : "https://github.com/gistya/swift-compositional-init",
       "state" : {
-        "revision" : "99cdfc6e6e406d21fed5793ca0d6f58089b1939c",
+        "revision" : "2633ee5b9837df48031714e41912d8ca77183f18",
         "version" : "1.0.0"
       }
     }

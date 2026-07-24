@@ -1,0 +1,296 @@
+import Testing
+import Foundation
+@testable import SwiftXState
+
+extension Actor {
+    /// Deterministic snapshot wait (mirrors the `Actor`/`StateActor` helpers; uses `subscribe`).
+    @discardableResult
+    func waitForSnapshot(
+        timeout: Duration = .seconds(5),
+        where predicate: @escaping @Sendable (L.Snapshot) -> Bool
+    ) async -> L.Snapshot? {
+        let oneShot = OneShot<L.Snapshot?>()
+        let subscription = subscribe { snapshot in
+            if predicate(snapshot) { oneShot.resolve(snapshot) }
+        }
+        defer { subscription.cancel() }
+        let timeoutTask = Task {
+            try? await Task.sleep(for: timeout)
+            oneShot.resolve(nil)
+        }
+        defer { timeoutTask.cancel() }
+        return await oneShot.get()
+    }
+}
+
+/// A hand-written `ActorLogic` with no machine behind it — proves `Actor` is genuinely generic
+/// over the reducer, not secretly machine-coupled.
+private struct CounterLogic: ActorLogic {
+    struct State: Sendable, Equatable {
+        var count = 0
+        var finished = false
+    }
+    let target: Int
+
+    func initialState(input: SendableValue?) -> State {
+        State(count: input?.get(Int.self) ?? 0, finished: false)
+    }
+
+    func step(_ snapshot: State, on event: any Eventable) -> State {
+        var next = snapshot
+        switch event.type {
+        case "INC": next.count += 1
+        case "DEC": next.count -= 1
+        default: break
+        }
+        if next.count >= target { next.finished = true }
+        return next
+    }
+
+    func status(of snapshot: State) -> SnapshotStatus {
+        snapshot.finished ? .done : .active
+    }
+}
+
+/// A *runnable* `ActorLogic`: it has no events to fold, it drives itself from `run`, pushing a
+/// stream of snapshots and finishing. This is the shape behind callback / task / observable
+/// children — proving `Actor` spans both reducer and runnable logics with one implementation.
+private struct StreamLogic: ActorLogic {
+    struct State: Sendable, Equatable {
+        var value = 0
+        var finished = false
+    }
+    let upTo: Int
+    let done: TestSignal
+
+    func initialState(input: SendableValue?) -> State { State() }
+    func step(_ snapshot: State, on event: any Eventable) -> State { snapshot }
+    func status(of snapshot: State) -> SnapshotStatus { snapshot.finished ? .done : .active }
+
+    func run(_ scope: ActorScope<State>) async -> (@Sendable () -> Void)? {
+        for i in 1...upTo {
+            await scope.update(State(value: i, finished: false))
+        }
+        await scope.update(State(value: upTo, finished: true))
+        done.fire()
+        return nil
+    }
+}
+
+@Suite("Generic Actor")
+struct LogicActorTests {
+
+    // MARK: hand-written reducer
+
+    @Test("Actor runs a hand-written reducer")
+    func handWrittenReducer() async {
+        let actor = await Actor(CounterLogic(target: 3)).start()
+        #expect(await actor.snapshot.count == 0)
+
+        await actor.send(Event("INC"))
+        await actor.send(Event("INC"))
+        #expect(await actor.snapshot.count == 2)
+        #expect(await actor.status == .active)
+
+        await actor.send(Event("INC"))
+        #expect(await actor.snapshot.count == 3)
+        #expect(await actor.snapshot.finished)
+        #expect(await actor.status == .done)
+    }
+
+    @Test("Actor honors run-to-completion status gate (no events after done)")
+    func stopsAfterDone() async {
+        let actor = await Actor(CounterLogic(target: 1)).start()
+        await actor.send(Event("INC"))            // -> done
+        #expect(await actor.status == .done)
+        await actor.send(Event("INC"))            // ignored: not .active
+        #expect(await actor.snapshot.count == 1)
+    }
+
+    @Test("Actor seeds initial state from input")
+    func initialInput() async {
+        let actor = await Actor(CounterLogic(target: 100)).start(input: SendableValue(10))
+        #expect(await actor.snapshot.count == 10)
+    }
+
+    // MARK: runnable logic (background-driven snapshot stream)
+
+    @Test("Actor drives a runnable logic to completion")
+    func runnableLogic() async {
+        let done = TestSignal()
+        let actor = await Actor(StreamLogic(upTo: 5, done: done)).start()
+        #expect(await done.wait())
+        #expect(await actor.snapshot.value == 5)
+        #expect(await actor.snapshot.finished)
+        #expect(await actor.status == .done)
+    }
+
+    // MARK: same generic actor hosting MachineLogic (effect-free machines)
+
+    @Test("Actor<MachineLogic> matches Actor on an always/final machine")
+    func machineAlwaysParity() async {
+        let gate = createMachine(MachineConfig(
+            id: "gate", initial: "idle", context: EmptyContext(),
+            states: [
+                "idle": StateNodeConfig(on: ["GO": .to("checking")]),
+                "checking": StateNodeConfig(always: [TransitionConfig(target: "open")]),
+                "open": StateNodeConfig(type: .final),
+            ]
+        ))
+        let old = await createActor(gate).start()
+        let new = await Actor(MachineLogic(machine: gate)).start()
+        await old.send(Event("GO"))
+        await new.send(Event("GO"))
+
+        #expect(await old.snapshot.value.description == new.snapshot.value.description)
+        #expect(await new.snapshot.matches("open"))
+        #expect(await old.status == new.status)
+        #expect(await new.status == .done)
+    }
+
+    @Test("Actor<MachineLogic> matches Actor on an assign machine")
+    func machineAssignParity() async {
+        struct Ctx: Sendable, Equatable { var count = 0 }
+        let counter = createMachine(MachineConfig(
+            id: "counter", initial: "active", context: Ctx(),
+            states: [
+                "active": StateNodeConfig(on: [
+                    "INC": .single(TransitionConfig(actions: [assign { ctx, _ in ctx.count += 1 }])),
+                ]),
+            ]
+        ))
+        let old = await createActor(counter).start()
+        let new = await Actor(MachineLogic(machine: counter)).start()
+        for _ in 0..<4 {
+            await old.send(Event("INC"))
+            await new.send(Event("INC"))
+        }
+        let oldCtx = await old.snapshot.context
+        let newCtx = await new.snapshot.context
+        #expect(oldCtx == newCtx)
+        #expect(newCtx.count == 4)
+    }
+
+    // MARK: EFFECTFUL machines on the generic core — full parity with Actor
+
+    @Test("Actor<MachineLogic> matches Actor on emit")
+    func machineEmitParity() async {
+        let emitter = createMachine(MachineConfig(
+            id: "emitter", initial: "idle", context: EmptyContext(),
+            states: [
+                "idle": StateNodeConfig(on: ["GO": .single(TransitionConfig(actions: [emit("ping")]))]),
+            ]
+        ))
+        let old = await createActor(emitter).start()
+        let new = await Actor(MachineLogic(machine: emitter)).start()
+        let oldFired = TestSignal()
+        let newFired = TestSignal()
+        await old.on("ping") { _ in oldFired.fire() }
+        await new.on("ping") { _ in newFired.fire() }
+        await old.send(Event("GO"))
+        await new.send(Event("GO"))
+        #expect(await oldFired.wait())
+        #expect(await newFired.wait())
+    }
+
+    @Test("Actor<MachineLogic> matches Actor on after (SimulatedClock)")
+    func machineAfterParity() async {
+        let timed = createMachine(MachineConfig(
+            id: "timed", initial: "waiting", context: EmptyContext(),
+            states: [
+                "waiting": StateNodeConfig(after: ["20": .to("done")]),
+                "done": StateNodeConfig(type: .final),
+            ]
+        ))
+        let clockOld = SimulatedClock()
+        let clockNew = SimulatedClock()
+        let old = await createActor(timed, options: ActorOptions(clock: clockOld)).start()
+        let new = await Actor(MachineLogic(machine: timed), options: ActorOptions(clock: clockNew)).start()
+        #expect(await new.snapshot.matches("waiting"))
+        clockOld.increment(25)
+        clockNew.increment(25)
+        await old.waitForSnapshot { $0.matches("done") }
+        await new.waitForSnapshot { $0.matches("done") }
+        #expect(await old.snapshot.value.description == new.snapshot.value.description)
+        #expect(await new.status == .done)
+    }
+
+    @Test("Actor<MachineLogic> matches Actor on invoke onDone")
+    func machineInvokeParity() async {
+        struct ParentCtx: Sendable, Equatable { var userName: String? }
+        struct ChildCtx: Sendable, Equatable { var userName: String? }
+        func makeParent() -> ResolvedMachine<ParentCtx> {
+            let child = createMachine(MachineConfig(
+                initial: "done", context: ChildCtx(userName: "Ada"),
+                states: ["done": StateNodeConfig(type: .final, output: { args in SendableValue(args.context.userName ?? "") })]
+            ))
+            return createMachine(MachineConfig(
+                id: "fetcher", initial: "idle", context: ParentCtx(userName: nil),
+                states: [
+                    "idle": StateNodeConfig(on: ["GO": .to("waiting")]),
+                    "waiting": StateNodeConfig(invoke: [
+                        InvokeConfig(
+                            id: "fetch",
+                            src: .machine(MachineActorLogicBox(child) { _ in ChildCtx(userName: "Ada") }),
+                            onDone: .single(TransitionConfig(
+                                target: "received",
+                                actions: [assign { ctx, args in
+                                    if let event = args.event as? DoneActorEvent {
+                                        ctx.userName = event.output?.get(String.self)
+                                    }
+                                }]
+                            ))
+                        ),
+                    ]),
+                    "received": StateNodeConfig(type: .final),
+                ]
+            ))
+        }
+        let old = await createActor(makeParent()).start()
+        let new = await Actor(MachineLogic(machine: makeParent())).start()
+        await old.send(Event("GO"))
+        await new.send(Event("GO"))
+        await old.waitForSnapshot { $0.matches("received") }
+        await new.waitForSnapshot { $0.matches("received") }
+        #expect(await old.snapshot.value.description == new.snapshot.value.description)
+        #expect(await new.snapshot.context.userName == "Ada")
+        #expect(await new.status == .done)
+    }
+
+    @Test("Actor<MachineLogic> matches Actor on forwardTo + sendToParent")
+    func machineForwardToParity() async {
+        struct RelayCtx: Sendable, Equatable { var gotPong: Bool; var childId: String }
+        func makeRelay() -> ResolvedMachine<RelayCtx> {
+            createMachine(MachineConfig(
+                initial: "active", context: RelayCtx(gotPong: false, childId: "listener"),
+                states: [
+                    "active": StateNodeConfig(
+                        on: [
+                            "PING": .single(TransitionConfig(actions: [forwardTo("listener")])),
+                            "PONG": .single(TransitionConfig(actions: [assign { ctx, _ in ctx.gotPong = true }])),
+                        ],
+                        invoke: [
+                            InvokeConfig(
+                                id: "listener",
+                                src: fromCallback { scope in
+                                    scope.receive { event in
+                                        if event.type == "PING" { scope.sendToParent(Event("PONG")) }
+                                    }
+                                    return nil
+                                }
+                            ),
+                        ]
+                    ),
+                ]
+            ))
+        }
+        let old = await createActor(makeRelay()).start()
+        let new = await Actor(MachineLogic(machine: makeRelay())).start()
+        await old.send(Event("PING"))
+        await new.send(Event("PING"))
+        await old.waitForSnapshot { $0.context.gotPong }
+        await new.waitForSnapshot { $0.context.gotPong }
+        #expect(await old.snapshot.context.gotPong)
+        #expect(await new.snapshot.context.gotPong)
+    }
+}

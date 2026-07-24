@@ -40,9 +40,9 @@ struct BoardInspectorTests {
         let actor = await createActor(GameWatcherMachine.make()).start()
         try? await Task.sleep(for: .milliseconds(100))
 
-        await actor.send(Event("TAP.1.4"))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(30))
-        await actor.send(Event("TAP.3.4"))
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(80))
 
         guard let occupancy = await actor.childActor(id: BoardInspectorMachine.childId(.occupancy)) as? MachineChildRef<BoardInspectorContext>,

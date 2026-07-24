@@ -2,24 +2,25 @@ import Foundation
 import SwiftXState
 
 enum ChessRules {
-    static func pendingMove(from args: ActionArgs<ChessContext>) -> ChessMove? {
-        guard args.context.replaySession == nil,
-              args.context.pendingPromotion == nil,
-              let event = ChessEvent.parse(args.event),
-              case let .tap(to) = event,
-              let from = args.context.selected else {
+    /// The legal move implied by tapping `to` given the current selection — used by the castling
+    /// region's event-aware forfeit guards. (Was `pendingMove(from: ActionArgs)`, which parsed the
+    /// tap out of the event; the typed DSL hands the `Square` straight in.)
+    static func pendingMove(_ context: ChessContext, to: Square) -> ChessMove? {
+        guard context.replaySession == nil,
+              context.pendingPromotion == nil,
+              let from = context.selected else {
             return nil
         }
         return legalMove(
             from: from,
             to: to,
-            board: args.context.board,
-            turn: args.context.turn,
-            castlingRights: args.context.castlingRights
+            board: context.board,
+            turn: context.turn,
+            castlingRights: context.castlingRights
         )
     }
 
-    static func forfeitsWhiteKingside(_ move: ChessMove) -> Bool {
+    static let forfeitsWhiteKingside: @Sendable (_ move: ChessMove) -> Bool = { move in 
         if move.piece == .king, move.from == Square(row: 0, col: 4) { return true }
         if move.piece == .rook, move.from == Square(row: 0, col: 7) { return true }
         if move.capture == .rook, move.to == Square(row: 0, col: 7) { return true }
@@ -27,7 +28,7 @@ enum ChessRules {
         return false
     }
 
-    static func forfeitsWhiteQueenside(_ move: ChessMove) -> Bool {
+    static let forfeitsWhiteQueenside: @Sendable (_ move: ChessMove) -> Bool = { move in
         if move.piece == .king, move.from == Square(row: 0, col: 4) { return true }
         if move.piece == .rook, move.from == Square(row: 0, col: 0) { return true }
         if move.capture == .rook, move.to == Square(row: 0, col: 0) { return true }
@@ -35,7 +36,7 @@ enum ChessRules {
         return false
     }
 
-    static func forfeitsBlackKingside(_ move: ChessMove) -> Bool {
+    static let forfeitsBlackKingside: @Sendable (_ move: ChessMove) -> Bool = { move in
         if move.piece == .king, move.from == Square(row: 7, col: 4) { return true }
         if move.piece == .rook, move.from == Square(row: 7, col: 7) { return true }
         if move.capture == .rook, move.to == Square(row: 7, col: 7) { return true }
@@ -43,7 +44,7 @@ enum ChessRules {
         return false
     }
 
-    static func forfeitsBlackQueenside(_ move: ChessMove) -> Bool {
+    static let forfeitsBlackQueenside: @Sendable (_ move: ChessMove) -> Bool = { move in
         if move.piece == .king, move.from == Square(row: 7, col: 4) { return true }
         if move.piece == .rook, move.from == Square(row: 7, col: 0) { return true }
         if move.capture == .rook, move.to == Square(row: 7, col: 0) { return true }

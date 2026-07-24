@@ -56,7 +56,7 @@ enum ChessSampleMachine {
         Context(moves: 0)
     }
 
-    static func make() -> StateMachine<Context> {
+    static func make() -> ResolvedMachine<Context> {
         createMachine(MachineConfig(
             id: "chess-sample-test",
             initial: "playing",

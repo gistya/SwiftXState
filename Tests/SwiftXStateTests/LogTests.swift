@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import SwiftXState
 
@@ -7,7 +8,7 @@ private struct LogContext: Sendable, Equatable {
 }
 
 private final class LogOutputCollector: @unchecked Sendable {
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var outputs: [LogOutput] = []
 
     func append(_ output: LogOutput) {

@@ -1,0 +1,78 @@
+name: Embedded Swift
+
+# Guards the Embedded Swift compatibility of the core against regression.
+#
+# The core does not compile under Embedded Swift yet, so this job does NOT require zero errors.
+# `Scripts/embedded-check.sh` compares the diagnostic count against `Scripts/embedded-baseline.txt`
+# and fails only when it rises — see that script's header for the reasoning behind the ratchet.
+#
+# Why this needs its own lane: the Embedded build is selected by `#if hasFeature(Embedded)`, and
+# roughly 45 such branches now exist in the core. Every other lane compiles the `#else` side, so
+# nothing else in CI can observe an Embedded regression. A test that only exercises the non-Embedded
+# path cannot fail for an Embedded-only mistake, however well written.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    paths:
+      - 'Sources/SwiftXState/**'
+      - 'Package.swift'
+      - 'Scripts/embedded-check.sh'
+      - 'Scripts/embedded-baseline.txt'
+      - '.github/workflows/embedded.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: embedded-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  embedded:
+    runs-on: ubuntu-latest
+    # The official image already carries a matching host toolchain, which avoids installing one.
+    # The embedded stdlib itself comes from the Swift SDK below, not from the host toolchain —
+    # note that Xcode's bundled toolchain has no embedded stdlib at all, which is why this job
+    # cannot simply reuse the macOS runners the other workflows use.
+    container: swift:6.3.2
+    env:
+      # Installing the Wasm SDK provides two SDK IDs: `..._wasm` (full Swift) and
+      # `..._wasm-embedded` (the Embedded subset). The script defaults to the embedded one.
+      #
+      # The SDK version must match the container's toolchain, and both must match whatever produced
+      # `embedded-baseline.txt` — a different compiler can legitimately report a different number of
+      # diagnostics for the same code, which would make the ratchet compare apples to oranges.
+      # Bump the container tag, the URL, and the checksum together, then re-baseline.
+      WASM_SDK_URL: https://download.swift.org/swift-6.3.2-release/wasm-sdk/swift-6.3.2-RELEASE/swift-6.3.2-RELEASE_wasm.artifactbundle.tar.gz
+      WASM_SDK_SHA256: a61f0584c93283589f8b2f42db05c1f9a182b506c2957271402992655591dd7c
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Cache the Swift SDK
+        uses: actions/cache@v4
+        with:
+          path: ~/.swiftpm/swift-sdks
+          key: wasm-sdk-6.3.2
+
+      - name: Install the WebAssembly Swift SDK
+        run: |
+          if swift sdk list | grep -q 'swift-6.3.2-RELEASE_wasm-embedded'; then
+            echo "SDK already present (restored from cache)."
+          else
+            swift sdk install "$WASM_SDK_URL" --checksum "$WASM_SDK_SHA256"
+          fi
+          swift sdk list
+          # Fail loudly rather than letting the build step report a confusing missing-SDK error.
+          swift sdk list | grep -q 'swift-6.3.2-RELEASE_wasm-embedded' \
+            || { echo "::error::embedded Swift SDK not installed"; exit 1; }
+
+      - name: Cache SwiftPM build
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-embedded-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: ${{ runner.os }}-spm-embedded-
+
+      - name: Embedded compile check
+        # SWIFTXSTATE_SWIFT bypasses the script's local `swiftly run +6.3.2` path; the container's
+        # `swift` is already the right toolchain.
+        run: SWIFTXSTATE_SWIFT=swift ./Scripts/embedded-check.sh

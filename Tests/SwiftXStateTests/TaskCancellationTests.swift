@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import SwiftXState
+import SwiftXStateCodable
 
 @Suite("Task cancellation and opaque restore policy")
 struct TaskCancellationTests {
@@ -104,7 +105,7 @@ struct TaskCancellationTests {
 
     @Test("opaqueRestorePolicy skipIfActive avoids re-spawn on hydrate")
     func skipIfActiveOnRestore() async throws {
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 

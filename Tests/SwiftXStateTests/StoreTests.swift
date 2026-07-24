@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import SwiftXState
 
@@ -272,7 +273,7 @@ struct StoreTests {
             on: ["increment": storeIncrement]
         )
 
-        let parentMachine: StateMachine<EmptyContext> = createMachine(MachineConfig<EmptyContext>(
+        let parentMachine: ResolvedMachine<EmptyContext> = createMachine(MachineConfig<EmptyContext>(
             initial: "idle",
             context: EmptyContext(),
             states: [
@@ -309,7 +310,7 @@ private final class StoreFlag: @unchecked Sendable {
 }
 
 private final class StoreEmittedCapture: @unchecked Sendable {
-    private var lock = NSLock()
+    private let lock = Mutex(false)
     private(set) var values: [String] = []
 
     func append(_ value: String) {

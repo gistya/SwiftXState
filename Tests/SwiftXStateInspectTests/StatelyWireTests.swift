@@ -5,7 +5,7 @@ import Testing
 
 @Suite("Stately wire protocol")
 struct StatelyWireTests {
-    private var trafficMachine: StateMachine<EmptyContext> {
+    private var trafficMachine: ResolvedMachine<EmptyContext> {
         createMachine(MachineConfig(
             id: "trafficLight",
             initial: "green",
@@ -127,7 +127,7 @@ struct StatelyWireTests {
 
         let wire = try #require(converter.statelyEvent(for: event))
         let payload = try #require(converter.wireData(for: event))
-        let object = try JSONSerialization.jsonObject(with: payload) as? [String: Any]
+        let object = try JSONSerialization.jsonObject(with: Data(payload)) as? [String: Any]
 
         #expect(wire.type == "@xstate.microstep")
         #expect(wire.transitions != nil)
@@ -161,7 +161,7 @@ struct StatelyWireTests {
             let recorded = await transport.recordedMessages()
             let kinds = recorded.compactMap { message -> String? in
                 guard let data = message.statelyPayload else { return nil }
-                return try? JSONDecoder().decode(StatelyWireEvent.self, from: data).type
+                return try? JSONDecoder().decode(StatelyWireEvent.self, from: Data(data)).type
             }
             return kinds.contains("@xstate.actor") && kinds.contains("@xstate.snapshot")
         }
@@ -169,7 +169,7 @@ struct StatelyWireTests {
         let messages = await transport.recordedMessages()
         let types = try messages.compactMap { message -> String? in
             guard let data = message.statelyPayload else { return nil }
-            return try JSONDecoder().decode(StatelyWireEvent.self, from: data).type
+            return try JSONDecoder().decode(StatelyWireEvent.self, from: Data(data)).type
         }
 
         let actorIndex = try #require(types.firstIndex(of: "@xstate.actor"))
@@ -218,7 +218,7 @@ struct StatelyWireTests {
             let recorded = await transport.recordedMessages()
             let kinds = Set(recorded.compactMap { message -> String? in
                 guard let data = message.statelyPayload else { return nil }
-                return try? JSONDecoder().decode(StatelyWireEvent.self, from: data).type
+                return try? JSONDecoder().decode(StatelyWireEvent.self, from: Data(data)).type
             })
             return kinds.contains("@xstate.actor")
                 && (kinds.contains("@xstate.transition") || kinds.contains("@xstate.microstep"))
@@ -230,7 +230,7 @@ struct StatelyWireTests {
         #expect(messages.allSatisfy { $0.type == "stately.event" })
 
         let payloads = try messages.compactMap(\.statelyPayload).map {
-            try JSONDecoder().decode(StatelyWireEvent.self, from: $0)
+            try JSONDecoder().decode(StatelyWireEvent.self, from: Data($0))
         }
         let types = Set(payloads.map(\.type))
         #expect(types.contains("@xstate.actor"))
@@ -261,7 +261,7 @@ struct StatelyWireTests {
 
         let wire = try #require(converter.statelyEvent(for: event))
         let payload = try #require(converter.wireData(for: event))
-        let object = try JSONSerialization.jsonObject(with: payload) as? [String: Any]
+        let object = try JSONSerialization.jsonObject(with: Data(payload)) as? [String: Any]
         let snapshotObject = object?["snapshot"] as? [String: Any]
         let value = snapshotObject?["value"] as? [String: Any]
 
@@ -295,7 +295,7 @@ struct StatelyWireTests {
         )
 
         let payload = try #require(converter.wireData(for: event))
-        let object = try JSONSerialization.jsonObject(with: payload) as? [String: Any]
+        let object = try JSONSerialization.jsonObject(with: Data(payload)) as? [String: Any]
         let snapshotObject = try #require(object?["snapshot"] as? [String: Any])
 
         #expect(snapshotObject["status"] as? String == "active")

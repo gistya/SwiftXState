@@ -14,12 +14,6 @@
       location = "group:Examples/XConway/XConway.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:Examples/WasmDemo">
-   </FileRef>
-   <FileRef
-      location = "group:Examples/WasmGPUDemo">
-   </FileRef>
-   <FileRef
       location = "group:Examples/WasmInspector">
    </FileRef>
 </Workspace>

@@ -33,7 +33,7 @@ struct CheckoutPipelineTests {
 }
 
 private enum CheckoutMachineFactory {
-    static func make() -> StateMachine<CheckoutContext> {
+    static func make() -> ResolvedMachine<CheckoutContext> {
         createMachine(MachineConfig(
             id: "checkout",
             initial: "idle",

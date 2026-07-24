@@ -38,7 +38,7 @@ final class AppBootstrap {
     enum Phase {
         case loading
         case ready(SessionModel)
-        case failed(Error)
+        case failed(any Error)
     }
 
     func start() async {

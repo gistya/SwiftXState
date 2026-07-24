@@ -1,127 +1,111 @@
 # Getting Started (Type-Safe)
 
-Build your first machine with compile-time guarantees — typed events and checked state names.
+Build and run your first machine the **🔵 Advanced** way — typed events and compiler-checked state
+targets.
 
 ## Overview
 
-This is the **🔵 Advanced** on-ramp. It builds the same toggle as the
-<doc:GettingStarted> (Basic) guide, but with two Swift features layered on so the compiler catches
-mistakes that the string API would only surface at runtime:
+This is the same journey as <doc:GettingStarted>, with compile-time guarantees layered on. You'll
+build the same toggle machine, but events become Swift **types** and transition targets come from a
+checked **state namespace** — so a typo or a renamed state is a build error, not a runtime surprise.
 
-- **Events are types** — you `send` a `Toggle()` value, not an `Event("TOGGLE")` string. Typos
-  become compile errors, and (as you'll see in <doc:TypeSafeCoreConcepts>) guards and actions
-  receive the *concrete* event with its payload already narrowed.
-- **State names are a checked enum** — declare a `StateName` enum with one case per state, so
-  transition targets like `State.active` are autocompleted and rename-safe.
+Everything here lowers to the same ``MachineConfig`` / ``ResolvedMachine`` / ``Actor`` as the Basic
+path, so `definitionJSON()`, the inspector, and the runtime behave identically.
 
-It still produces an ordinary ``StateMachine`` — same engine, same `definitionJSON()`, same
-inspector behavior as a string-built machine.
+> Tip: Prefer the string-based path first? See <doc:GettingStarted>. Both build the same machine.
 
-## Add the package
+## Model events as types
 
-Identical to the Basic guide — see <doc:GettingStarted> for the SwiftPM snippet. Then
-`import SwiftXState`.
-
-## Your first machine
-
-Two pieces make it type-safe: an event type, and a `StateName` enum for the config's states.
+Instead of `Event("TOGGLE")`, declare each event as a type conforming to ``StateEvent``. The only
+requirement is a discriminator string, which defaults to the type name:
 
 ```swift
 import SwiftXState
 
-enum ToggleMachine {
-    // 1. Each event is a type. `Toggle()` is what you send — compile-checked.
-    struct Toggle: StateEvent {}
+struct Toggle: StateEvent {}
+```
 
-    // 2. A state enum mirrors the `states:` keys below (`State.inactive`, `State.active`).
-    //    `StateName` makes targets checked & autocompleted; `StateID` does the same for snapshot
-    //    checks (`inState(.active)`).
-    enum State: String, StateName, StateID {
-        case inactive
-        case active
-    }
+Events can also carry payload (`struct Loaded: StateEvent { let value: String }`) — see
+<doc:TypeSafeCoreConcepts>.
 
-    static let config = MachineConfig(
-        id: "toggle",
-        initial: "inactive",
-        context: EmptyContext(),
-        states: [
-            "inactive": StateNodeConfig(on: transitions(
-                on(Toggle.self, to: State.active)
-            )),
-            "active": StateNodeConfig(on: transitions(
-                on(Toggle.self, to: State.inactive)
-            )),
-        ]
-    )
+## A checked state namespace
+
+Declare a `String`-backed enum conforming to ``StateName``, one case per state. Its raw values are
+the state names your config uses:
+
+```swift
+enum State: String, StateName {
+    case inactive
+    case active
 }
 ```
 
-Reading the new pieces:
+## Your first typed machine
 
-- `struct Toggle: StateEvent {}` — an event modeled as a type. ``StateEvent`` only requires a
-  discriminator string, which defaults to the type name (`"Toggle"`); override `static var
-  eventType` for an XState-style dotted name like `"toggle.flip"`.
-- `enum State: String, StateName, StateID { case inactive; case active }` — one case per state, raw
-  values matching the literal `states:` keys (nested states use a compound case name with a dotted
-  raw value, e.g. `case activeFast = "active.fast"`). ``StateName`` brands transition *targets*
-  (`to: State.active`); ``StateID`` brands *snapshots* (`inState(.active)`) — a state enum can be
-  both.
-- `transitions(on(Toggle.self, to: State.active))` — `on(_:to:)` declares a transition keyed by the
-  `Toggle` event type, targeting the checked `State.active`; `transitions(_:)` assembles those into
-  the dictionary `StateNodeConfig(on:)` expects.
+Build the config exactly as in the Basic path, but target states with `on(_:to:)` — the event is a
+**type** and the target is a **compile-checked** `State`:
+
+```swift
+let toggle = createMachine(MachineConfig(
+    id: "toggle",
+    initial: "inactive",
+    context: EmptyContext(),
+    states: [
+        "inactive": StateNodeConfig(on: transitions(on(Toggle.self, to: State.active))),
+        "active":   StateNodeConfig(on: transitions(on(Toggle.self, to: State.inactive))),
+    ]
+))
+```
+
+- `on(Toggle.self, to: State.active)` — *when a `Toggle` event arrives, transition to `active`*. The
+  target is checked: `State.activ` doesn't compile, and renaming a case updates every reference.
+- `transitions(_:)` collects these typed entries into the `[String: TransitionInput]` dictionary
+  ``StateNodeConfig`` expects.
 
 ## Run it
 
-Exactly like the Basic path — create an ``Actor``, `start()` it, then `send` typed events. The
-actor is a Swift `actor`, so `start` / `send` / `snapshot` are `async`:
+Create an ``Actor`` and drive it — but now you `send` event **values**, not strings:
 
 ```swift
-let actor = await createActor(createMachine(ToggleMachine.config)).start()
+let actor = createActor(toggle).start()
 
-await actor.snapshot.matches(ToggleMachine.State.inactive)   // true — typed, no string
+actor.snapshot.matches("inactive")   // true — the initial state
 
-await actor.send(ToggleMachine.Toggle())                     // a typed event — no string
-await actor.snapshot.matches(ToggleMachine.State.active)     // true
-
-await actor.send(ToggleMachine.Toggle())
-await actor.snapshot.matches("inactive")                     // string form still works
+actor.send(Toggle())                 // a typed value — no "TOGGLE" string to mistype
+actor.snapshot.matches("active")     // true
 ```
 
-Because `State` conforms to ``StateID``, `matches(_:)` takes the enum directly — the declared enum
-is the single source of truth for those names, so reading state stays in sync with the declarations
-too.
+The payoff grows with the machine: typed events flow into guards and actions as the **concrete**
+event (no casts, no `assertEvent`), and every target is checked. See <doc:TypeSafeCoreConcepts>.
 
-### Brand the actor for typed snapshots
+> Tip: For a machine that's typed *end to end* — including `send` and `matches` — declare it with the
+> result-builder DSL (a `struct` conforming to `StateMachine`), and `createActor` hands back a
+> `MachineActor` whose `send(_:)` / `matches(_:)` take your event and state enums directly. See the
+> type-safe example in the project README.
 
-Pass the state enum to `createActor(_:as:)` and it tags the actor up front, returning a
-``TypedActor`` whose snapshots read as typed `inState(_:)` checks:
+## Observe changes
+
+Subscriptions work exactly as in the Basic path — the handler fires immediately, then on every
+transition:
 
 ```swift
-let toggle = createActor(createMachine(ToggleMachine.config), as: ToggleMachine.State.self)
-
-let snapshot = await toggle.start()
-snapshot.inState(.active)                 // typed membership — no string
-
-await toggle.send(ToggleMachine.Toggle())
-await toggle.snapshot.inState(.inactive)
+let subscription = actor.subscribe { snapshot in
+    print("now in:", snapshot.value)
+}
+// later: subscription.unsubscribe()
 ```
 
-If you already hold a plain actor, `actor.typed(as:)` brands it after the fact.
+## What you just learned
 
-## What this buys you
-
-- **Misspelled events don't compile.** `actor.send(ToggleMachine.Toggle())` is checked; there's no
-  `"TOGGEL"` waiting to silently no-op at runtime.
-- **Targets can't drift.** Rename a state and the generated `State` enum changes with it — every
-  `to: State.…` reference updates or fails to compile.
-- **Payloads arrive narrowed.** In <doc:TypeSafeCoreConcepts> you'll see guards and actions receive
-  the concrete event type with no `as?` cast.
+| Piece | Basic | Type-Safe |
+|---|---|---|
+| Events | `Event("TOGGLE")` | a ``StateEvent`` type (`Toggle`) |
+| Targets | `.to("active")` (string) | `on(Toggle.self, to: State.active)` (checked) |
+| State names | string literals | a ``StateName`` enum |
 
 ## Next steps
 
-- <doc:TypeSafeCoreConcepts> — context, narrowed guards/actions, and branching in the typed API.
-- <doc:RunningActors> — actor lifecycle, subscriptions, `waitFor`, and child actors (same for both
-  paths).
-- <doc:AsyncWork> — invoke async work and transition on the result.
-- Prefer the string form for a quick sketch? See <doc:GettingStarted>.
+- <doc:TypeSafeCoreConcepts> — context, guards, and actions with narrowed events.
+- <doc:CoreConcepts> — the same ideas on the string-based path.
+- <doc:RunningActors> — the full actor lifecycle, subscriptions, `waitFor`, and child actors.
+- <doc:AsyncWork> — call an API and transition on the result.

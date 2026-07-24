@@ -31,9 +31,9 @@ struct InspectorEventsTab: View {
         .overlay {
             if entries.isEmpty {
                 ContentUnavailableView_Compat(
-                    title: "No events yet",
+                    title: Text("No events yet", bundle: .module),
                     systemImage: "list.bullet.rectangle",
-                    message: "Drive the machine to populate the event feed."
+                    message: Text("Drive the machine to populate the event feed.", bundle: .module)
                 )
             }
         }
@@ -45,7 +45,7 @@ struct InspectorEventsTab: View {
             HStack(alignment: .firstTextBaseline) {
                 EventKindBadge(kind: entry.kind)
                 Spacer()
-                Text(InspectorTime.string(entry.timestamp))
+                Text(InspectorTime.nanoString(entry.timestampNanos))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(style.secondaryText)
             }
@@ -92,7 +92,7 @@ struct InspectorEventsTab: View {
             HStack(spacing: 8) {
                 Text(name).font(.system(size: 14, weight: .semibold)).foregroundStyle(style.primaryText)
                 if let status = entry.snapshot?.status {
-                    Text(status.displayName)
+                    Text(LocalizedStringKey(status.displayName), bundle: .module)
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(style.secondaryText)
                         .padding(.horizontal, 5).padding(.vertical, 1)
@@ -122,7 +122,8 @@ struct InspectorEventsTab: View {
             HStack(spacing: 4) {
                 Image(systemName: open ? "chevron.down" : "chevron.right")
                     .font(.system(size: 9, weight: .semibold))
-                Text("Inspection event")
+                    .accessibilityLabel(Text(open ? "Collapse" : "Expand", bundle: .module))
+                Text("Inspection event", bundle: .module)
                     .font(.system(size: 11))
             }
             .foregroundStyle(style.secondaryText)

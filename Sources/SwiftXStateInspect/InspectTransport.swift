@@ -1,22 +1,22 @@
-import Foundation
+import FridayTheCodable
 import SwiftXState
 
-/// A single outbound inspect message on the wire.
+/// A single outbound inspect message on the wire. `payload` is raw UTF-8 JSON bytes (no Foundation).
 public struct InspectWireMessage: Sendable, Equatable, Codable {
     public var type: String
-    public var payload: Data
+    public var payload: [UInt8]
 
-    public init(type: String, payload: Data) {
+    public init(type: String, payload: [UInt8]) {
         self.type = type
         self.payload = payload
     }
 
     public static func inspectionEvent(_ event: InspectWireEvent) throws -> InspectWireMessage {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        return InspectWireMessage(
+        InspectWireMessage(
             type: "inspection.event",
-            payload: try encoder.encode(event)
+            payload: try FridayJSONEncoder(
+                outputFormatting: JSONSerializeOptions(sortedKeys: true, writeWholeFloatsAsIntegers: true)
+            ).encode(event)
         )
     }
 }
@@ -31,7 +31,7 @@ public struct InspectWireEvent: Sendable, Equatable, Codable {
     public var snapshot: InspectWireSnapshot?
     public var actionType: String?
     public var transitions: [InspectWireTransition]?
-    public var timestamp: TimeInterval
+    public var timestamp: Double
 
     public init(from inspectionEvent: InspectionEvent) {
         kind = inspectionEvent.kind.rawValue
@@ -89,6 +89,11 @@ public struct InspectWireSnapshot: Sendable, Equatable, Codable {
     public var stateValue: String
     public var tags: [String]
     public var childCount: Int
+    /// The actor's context, subject to ``InspectContextPublishing``.
+    public var context: JSONValue
+    /// Set when publishing in Diff Mode — the change since the last snapshot (``ContextDelta``'s
+    /// wire form). When non-`nil`, ``context`` is empty.
+    public var contextDelta: JSONValue?
 
     public init(from snapshot: InspectionSnapshot) {
         sessionId = snapshot.actor.sessionId
@@ -99,6 +104,8 @@ public struct InspectWireSnapshot: Sendable, Equatable, Codable {
         stateValue = snapshot.stateValue.description
         tags = snapshot.tags.sorted()
         childCount = snapshot.childCount
+        context = snapshot.context
+        contextDelta = snapshot.contextDelta
     }
 }
 

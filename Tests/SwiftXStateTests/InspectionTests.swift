@@ -25,7 +25,7 @@ struct InspectionTests {
         #expect(kinds.contains(.transition))
         #expect(kinds.contains(.snapshot))
         #expect(kinds.contains(.action))
-        #expect(await actor.actorSystem.rootSessionId == actor.id)
+        #expect(actor.actorSystem.rootSessionId == actor.id)
     }
 
     @Test("root actor registration carries the machine definition JSON")
@@ -44,7 +44,7 @@ struct InspectionTests {
         ))
 
         let actor = await createActor(machine, options: ActorOptions(inspect: collector.observe())).start()
-        let id = await actor.id
+        let id = actor.id
         let registration = collector.recordedEvents().first {
             $0.kind == .actor && $0.actor.sessionId == id
         }
@@ -275,7 +275,7 @@ struct InspectionTests {
         ).start()
 
         let events = collector.recordedEvents()
-        let id = await actor.id
+        let id = actor.id
         let actorIndex = events.firstIndex { $0.kind == .actor && $0.actor.sessionId == id }
         let spawnActionIndices = events.enumerated().compactMap { index, event in
             event.kind == .action && event.actionType == "xstate.spawnChild" ? index : nil
@@ -350,6 +350,48 @@ struct InspectionTests {
         await actor.send(Event("PING"))
 
         #expect(collector.recordedEvents().contains { $0.kind == .event && $0.event?.type == "PING" })
+    }
+
+    @Test("cancelling one system.inspect subscription removes only that observer")
+    func cancelRemovesOnlyInspectObserver() async {
+        // Regression: `ActorSystem.inspect(...)` captured a fixed array index and `remove(at: index)`
+        // on cancel. After an earlier observer was removed the array shifted, so a later cancel deleted
+        // the wrong observer. Cancelling *A* (index 0) alone works under the old code, so the test also
+        // cancels *B* afterwards — the stale-index path — and checks each observer's own count grows.
+        let a = InspectionCollector()
+        let b = InspectionCollector()
+        let c = InspectionCollector()
+
+        let machine = createMachine(MachineConfig(
+            initial: "idle",
+            context: EmptyContext(),
+            states: [
+                "idle": StateNodeConfig(on: ["PING": .single(TransitionConfig())]),
+            ]
+        ))
+
+        let actor = await createActor(machine).start()
+        let subA = actor.actorSystem.inspect(a.observe())
+        let subB = actor.actorSystem.inspect(b.observe())
+        _ = actor.actorSystem.inspect(c.observe())
+
+        subA.cancel()
+        await actor.send(Event("PING"))
+
+        // A is gone; B and C both saw the send's inspection events.
+        #expect(a.recordedEvents().isEmpty)
+        #expect(!b.recordedEvents().isEmpty)
+        #expect(!c.recordedEvents().isEmpty)
+        let bAfterFirst = b.recordedEvents().count
+        let cAfterFirst = c.recordedEvents().count
+
+        // Now cancel B. Under the index bug this removes C instead, leaving B live.
+        subB.cancel()
+        await actor.send(Event("PING"))
+
+        #expect(a.recordedEvents().isEmpty)                       // still gone
+        #expect(b.recordedEvents().count == bAfterFirst)          // cancelled — no new events
+        #expect(c.recordedEvents().count > cAfterFirst)           // still live — saw the second send
     }
 
     @Test("ConsoleInspector formats events")

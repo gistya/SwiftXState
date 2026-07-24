@@ -16,16 +16,25 @@ let appleWebSocketPlatforms: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .visio
 // `platforms` only carries Apple deployment targets.
 let package = Package(
     name: "SwiftXState",
+    defaultLocalization: "en",
     platforms: [
-        .macOS(.v14),
-        .iOS(.v17),
-        .watchOS(.v10),
-        .tvOS(.v17),
+        .iOS(.v18),
+        .macCatalyst(.v18),
+        .macOS(.v15),
+        .tvOS(.v18),
+        .visionOS(.v2),
+        .watchOS(.v11),
     ],
     products: [
         .library(
             name: "SwiftXState",
             targets: ["SwiftXState"],
+        ),
+        // `Codable` adapters for the core (persistence, replay, params, Encodable⇄JSONValue).
+        // The core itself is Codable-free so it can target Embedded Swift.
+        .library(
+            name: "SwiftXStateCodable",
+            targets: ["SwiftXStateCodable"]
         ),
         .library(
             name: "SwiftXStateSwiftUI",
@@ -50,6 +59,10 @@ let package = Package(
             targets: ["SwiftXStateInspect"]
         ),
         .library(
+            name: "SwiftXStateInspectLog",
+            targets: ["SwiftXStateInspectLog"]
+        ),
+        .library(
             name: "SwiftXStateInspectURLSession",
             targets: ["SwiftXStateInspectURLSession"]
         ),
@@ -65,11 +78,32 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0"),
+        .package(url: "https://github.com/gistya/swift-compositional-init", from: "1.2.0"),
+        .package(url: "https://github.com/gistya/friday-the-thirteenth", from: "2.0.0"),
     ],
     targets: [
+        // The Embedded-capable core: no `Codable` machinery, no reflection-based JSON, no Foundation.
+        // `JSONValue` is written/parsed by the hand-rolled codec in `JSONValueCodec.swift`.
         .target(
             name: "SwiftXState",
+            dependencies: [
+                .product(name: "CompositionalInit", package: "swift-compositional-init"),
+            ],
             path: "Sources/SwiftXState",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency"),
+            ]
+        ),
+        // The `Codable` adapter layer — mirrors how FridayTheCodable sits beside FridayTheThirteenth.
+        // Import it to give a `Codable` context ``ContextPersistable`` for free, and to get the
+        // Codable-constrained persistence / replay / params APIs.
+        .target(
+            name: "SwiftXStateCodable",
+            dependencies: [
+                "SwiftXState",
+                .product(name: "FridayTheCodable", package: "friday-the-thirteenth"),
+            ],
+            path: "Sources/SwiftXStateCodable",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
             ]
@@ -86,6 +120,9 @@ let package = Package(
             name: "SwiftXStateGraph",
             dependencies: ["SwiftXState"],
             path: "Sources/SwiftXStateGraph",
+            resources: [
+                .process("Resources/Localizable.xcstrings"),
+            ],
             swiftSettings: [
                 .define("SWIFTXSTATE_GRAPH_UI", .when(platforms: appleUIPlatforms)),
             ]
@@ -99,13 +136,16 @@ let package = Package(
             name: "SwiftXStateInspectorUI",
             dependencies: ["SwiftXState", "SwiftXStateGraph", "SwiftXStateInspectorCore"],
             path: "Sources/SwiftXStateInspectorUI",
+            resources: [
+                .process("Resources/Localizable.xcstrings"),
+            ],
             swiftSettings: [
                 .define("SWIFTXSTATE_INSPECTOR_UI", .when(platforms: appleUIPlatforms)),
             ]
         ),
         .target(
             name: "SwiftXStateSwiftData",
-            dependencies: ["SwiftXState"],
+            dependencies: ["SwiftXState", "SwiftXStateCodable"],
             path: "Sources/SwiftXStateSwiftData",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
@@ -114,8 +154,19 @@ let package = Package(
         ),
         .target(
             name: "SwiftXStateInspect",
-            dependencies: ["SwiftXState"],
+            dependencies: [
+                "SwiftXState",
+                .product(name: "FridayTheCodable", package: "friday-the-thirteenth"),
+            ],
             path: "Sources/SwiftXStateInspect",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency"),
+            ]
+        ),
+        .target(
+            name: "SwiftXStateInspectLog",
+            dependencies: ["SwiftXStateInspect"],
+            path: "Sources/SwiftXStateInspectLog",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),
             ]
@@ -137,7 +188,7 @@ let package = Package(
         ),
         .testTarget(
             name: "SwiftXStateTests",
-            dependencies: ["SwiftXState"],
+            dependencies: ["SwiftXState", "SwiftXStateCodable"],
             path: "Tests/SwiftXStateTests",
         ),
         .testTarget(
@@ -162,6 +213,14 @@ let package = Package(
             ]
         ),
         .testTarget(
+            name: "SwiftXStateSwiftUITests",
+            dependencies: ["SwiftXState", "SwiftXStateSwiftUI"],
+            path: "Tests/SwiftXStateSwiftUITests",
+            swiftSettings: [
+                .define("SWIFTXSTATE_APPLE_UI", .when(platforms: appleUIPlatforms)),
+            ]
+        ),
+        .testTarget(
             name: "SwiftXStateInspectTests",
             dependencies: [
                 "SwiftXState",
@@ -177,6 +236,7 @@ let package = Package(
             name: "SwiftXStateSwiftDataTests",
             dependencies: [
                 "SwiftXState",
+                "SwiftXStateCodable",
                 "SwiftXStateSwiftData",
             ],
             path: "Tests/SwiftXStateSwiftDataTests",

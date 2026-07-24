@@ -1,4 +1,4 @@
-import Foundation
+import FridayTheCodable
 import SwiftXState
 
 /// Encodes `InspectionEvent` values for custom transports (Linux WebSocket clients, gRPC, etc.).
@@ -21,7 +21,7 @@ public struct InspectWireEncoder: Sendable {
         machineDefinitions.append(registration)
     }
 
-    public mutating func registerMachine<Context: Sendable>(_ machine: StateMachine<Context>) throws {
+    public mutating func registerMachine<Context: Sendable>(_ machine: ResolvedMachine<Context>) throws {
         try registerMachine(InspectMachineRegistration(machine))
     }
 
@@ -68,10 +68,10 @@ public struct ClosureInspectSession: InspectSession {
 /// import SwiftXStateInspect
 ///
 /// let transport = ClosureInspectTransport(policy: .localhostOnly()) { endpoint in
-///     let socket = try await MyWebSocket.connect(endpoint.url!)
+///     let socket = try await MyWebSocket.connect(endpoint.urlString)
 ///     return ClosureInspectSession(
 ///         publish: { message in
-///             let text = String(data: message.payload, encoding: .utf8)!
+///             let text = String(decoding: message.payload, as: UTF8.self)
 ///             try await socket.send(text: text)
 ///         },
 ///         close: { await socket.close() }
@@ -118,20 +118,11 @@ public struct TextPublishInspectSession: InspectSession, Sendable {
     public func publish(_ message: InspectWireMessage) async throws {
         let text: String
         if message.type == "stately.event" {
-            guard let raw = String(data: message.payload, encoding: .utf8) else {
-                throw InspectTransportError.encodingFailed
-            }
-            text = raw
+            text = String(decoding: message.payload, as: UTF8.self)
         } else {
-            let envelope: [String: String] = [
-                "type": message.type,
-                "payload": String(data: message.payload, encoding: .utf8) ?? "",
-            ]
-            let data = try JSONSerialization.data(withJSONObject: envelope)
-            guard let encoded = String(data: data, encoding: .utf8) else {
-                throw InspectTransportError.encodingFailed
-            }
-            text = encoded
+            struct Envelope: Encodable { let type: String; let payload: String }
+            let envelope = Envelope(type: message.type, payload: String(decoding: message.payload, as: UTF8.self))
+            text = try FridayJSONEncoder(outputFormatting: JSONSerializeOptions(sortedKeys: true)).encodeString(envelope)
         }
         try await publishText(text)
     }

@@ -18,10 +18,11 @@ struct InspectorActorBar: View {
             HStack(spacing: 6) {
                 Image(systemName: expanded ? "chevron.down" : "chevron.up")
                     .font(.system(size: 9, weight: .bold))
-                Text("ACTORS")
+                    .accessibilityLabel(Text(expanded ? "Collapse" : "Expand", bundle: .module))
+                Text("Actors Header", bundle: .module)
                     .font(.system(size: 10, weight: .bold))
                     .tracking(0.6)
-                Text("\(store.actors.count)")
+                Text(verbatim: "\(store.actors.count)")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(style.secondaryText)
                 Spacer()

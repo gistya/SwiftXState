@@ -80,28 +80,28 @@ public struct MachineInspectorView: View {
 
     private func topBar(total: CGFloat) -> some View {
         HStack(spacing: 8) {
-            Toggle(isOn: $showSidebar) { Label("Inspector", systemImage: "sidebar.leading") }
+            Toggle(isOn: $showSidebar) { Label { Text("Inspector", bundle: .module) } icon: { Image(systemName: "sidebar.leading") } }
                 .toggleStyle(.button)
 
             Button {
                 showSidebar = true
                 withAnimation(.easeInOut(duration: 0.2)) { sidebarWidth = max(minSidebarWidth, total - 4) }
-            } label: { Label("Maximize", systemImage: "arrow.up.left.and.arrow.down.right") }
-                .help("Maximize sidebar")
+            } label: { Label { Text("Maximize", bundle: .module) } icon: { Image(systemName: "arrow.up.left.and.arrow.down.right") } }
+                .help(Text("Maximize sidebar", bundle: .module))
 
             Button {
                 showSidebar = true
                 withAnimation(.easeInOut(duration: 0.2)) { sidebarWidth = minSidebarWidth }
-            } label: { Label("Minimize", systemImage: "arrow.down.right.and.arrow.up.left") }
-                .help("Minimize sidebar")
+            } label: { Label { Text("Minimize", bundle: .module) } icon: { Image(systemName: "arrow.down.right.and.arrow.up.left") } }
+                .help(Text("Minimize sidebar", bundle: .module))
 
-            Toggle(isOn: $actorsExpanded) { Label("Actors", systemImage: "rectangle.bottomthird.inset.filled") }
+            Toggle(isOn: $actorsExpanded) { Label { Text("Actors", bundle: .module) } icon: { Image(systemName: "rectangle.bottomthird.inset.filled") } }
                 .toggleStyle(.button)
-                .help("Show/hide the actors drawer")
+                .help(Text("Show/hide the actors drawer", bundle: .module))
 
             Spacer()
 
-            Text("\(store.actors.count) actors · \(store.feed.count) events")
+            Text("\(store.actors.count) actors · \(store.feed.count) events", bundle: .module)
                 .font(.caption)
                 .foregroundStyle(style.secondaryText)
         }

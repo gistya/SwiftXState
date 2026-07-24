@@ -4,7 +4,7 @@ import SwiftXState
 
 /// A SwiftUI driver that hides actor latency with **optimistic, client-side prediction**.
 ///
-/// `Actor<Context>` is a Swift `actor`, so every `send` is a round trip off the main actor and back
+/// `Actor<MachineLogic<Context>>` is a Swift `actor`, so every `send` is a round trip off the main actor and back
 /// before SwiftUI can see the new snapshot. For latency-sensitive, high-frequency input (dragging to
 /// draw, typing, dragging a slider) that round trip is visible as lag. This driver removes it for the
 /// events you opt in to: it predicts their result *synchronously on the main actor* and publishes it
@@ -46,13 +46,13 @@ public final class OptimisticMachineDriver<Context: Sendable> {
     public private(set) var confirmed: MachineSnapshot<Context>
 
     /// The underlying actor — the authority for state, side effects, children, and persistence.
-    public let actor: Actor<Context>
+    public let actor: Actor<MachineLogic<Context>>
 
     /// Called on the main actor after each event's authoritative snapshot has been applied, in send
     /// order. A hook for host-side bookkeeping (history, derived state) that must observe every event.
     @ObservationIgnored public var onTransition: (@MainActor (any Eventable) -> Void)?
 
-    @ObservationIgnored private let machine: StateMachine<Context>
+    @ObservationIgnored private let machine: ResolvedMachine<Context>
     @ObservationIgnored private let predict: @Sendable (any Eventable) -> Bool
     // Predicted events sent but not yet confirmed, in send order. The actor confirms in the same order
     // (sends are serialized on `chain`), so confirming a predicted event always drops the head.
@@ -64,8 +64,8 @@ public final class OptimisticMachineDriver<Context: Sendable> {
     /// create or restore the actor yourself (e.g. hydrating from persistence) and just want the
     /// optimistic SwiftUI layer on top.
     public init(
-        _ machine: StateMachine<Context>,
-        actor: Actor<Context>,
+        _ machine: ResolvedMachine<Context>,
+        actor: Actor<MachineLogic<Context>>,
         snapshot: MachineSnapshot<Context>,
         predict: @escaping @Sendable (any Eventable) -> Bool = { _ in false }
     ) {
@@ -80,7 +80,7 @@ public final class OptimisticMachineDriver<Context: Sendable> {
     /// snapshot is seeded synchronously from the machine's initial transition and replaced by the
     /// actor's post-start snapshot once it has started.
     public convenience init(
-        _ machine: StateMachine<Context>,
+        _ machine: ResolvedMachine<Context>,
         input: SendableValue? = nil,
         context: Context? = nil,
         predict: @escaping @Sendable (any Eventable) -> Bool = { _ in false }

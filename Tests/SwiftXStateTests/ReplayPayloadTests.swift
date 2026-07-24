@@ -1,5 +1,6 @@
 import Testing
 @testable import SwiftXState
+import SwiftXStateCodable
 
 private struct TapPayload: Codable, Sendable, Equatable {
     let row: Int
@@ -25,7 +26,7 @@ private struct TapContext: Sendable, Equatable {
 
 @Suite("Replay typed event payloads")
 struct ReplayPayloadTests {
-    private var tapMachine: StateMachine<TapContext> {
+    private var tapMachine: ResolvedMachine<TapContext> {
         createMachine(MachineConfig(
             id: "tap-machine",
             initial: "idle",

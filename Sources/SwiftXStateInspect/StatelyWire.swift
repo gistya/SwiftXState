@@ -1,4 +1,4 @@
-import Foundation
+import FridayTheCodable
 import SwiftXState
 
 /// Wire format understood by Stately Inspector (`@statelyai/inspect`).
@@ -26,7 +26,7 @@ public struct InspectMachineRegistration: Sendable, Equatable {
         self.wireStateValue = wireStateValue
     }
 
-    public init<Context: Sendable>(_ machine: StateMachine<Context>) throws {
+    public init<Context: Sendable>(_ machine: ResolvedMachine<Context>) throws {
         machineId = machine.id
         definitionJSON = try machine.definitionJSON()
         wireStateValue = nil
@@ -64,11 +64,11 @@ public struct StatelyWireConverter: Sendable {
         self.wireStateValues = stateValues
     }
 
-    public func wireData(for event: InspectionEvent) -> Data? {
+    public func wireData(for event: InspectionEvent) -> [UInt8]? {
         guard let payload = statelyEvent(for: event) else { return nil }
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        return try? encoder.encode(payload)
+        return try? FridayJSONEncoder(
+            outputFormatting: JSONSerializeOptions(sortedKeys: true, writeWholeFloatsAsIntegers: true)
+        ).encode(payload)
     }
 
     public func statelyEvent(for event: InspectionEvent) -> StatelyWireEvent? {
@@ -164,7 +164,7 @@ public struct StatelyWireConverter: Sendable {
         return wire
     }
 
-    private func createdAtMillis(_ timestamp: TimeInterval) -> String {
+    private func createdAtMillis(_ timestamp: Double) -> String {
         String(Int64(timestamp * 1000))
     }
 
@@ -192,6 +192,11 @@ public struct StatelyWireConverter: Sendable {
         ]
         object["output"] = snapshot.output ?? .null
         object["error"] = snapshot.error ?? .null
+        // Diff Mode: `context` is empty and the change rides alongside it. Stock
+        // `@statelyai/inspect` ignores this extra key; our own inspectors reassemble from it.
+        if let contextDelta = snapshot.contextDelta {
+            object["contextDelta"] = contextDelta
+        }
         return .object(object)
     }
 
@@ -250,11 +255,11 @@ public struct StatelyWireEvent: Sendable, Equatable, Codable {
 }
 
 extension InspectWireMessage {
-    public static func statelyEvent(_ data: Data) -> InspectWireMessage {
+    public static func statelyEvent(_ data: [UInt8]) -> InspectWireMessage {
         InspectWireMessage(type: "stately.event", payload: data)
     }
 
-    public var statelyPayload: Data? {
+    public var statelyPayload: [UInt8]? {
         guard type == "stately.event" else { return nil }
         return payload
     }

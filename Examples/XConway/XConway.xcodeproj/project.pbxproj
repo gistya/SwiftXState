@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		732F17262FE743920096CCBC /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 732F17252FE743920096CCBC /* SwiftXState */; };
-		732F17282FE743920096CCBC /* SwiftXStateInspect in Frameworks */ = {isa = PBXBuildFile; productRef = 732F17272FE743920096CCBC /* SwiftXStateInspect */; };
-		732F172A2FE743920096CCBC /* SwiftXStateSwiftData in Frameworks */ = {isa = PBXBuildFile; productRef = 732F17292FE743920096CCBC /* SwiftXStateSwiftData */; };
-		732F172C2FE743920096CCBC /* SwiftXStateSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 732F172B2FE743920096CCBC /* SwiftXStateSwiftUI */; };
+		7309409F2FF2146E001BCBFC /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 7309409E2FF2146E001BCBFC /* SwiftXState */; };
+		730940A12FF2146E001BCBFC /* SwiftXStateInspectorCore in Frameworks */ = {isa = PBXBuildFile; productRef = 730940A02FF2146E001BCBFC /* SwiftXStateInspectorCore */; };
+		730940A32FF2146E001BCBFC /* SwiftXStateInspectorUI in Frameworks */ = {isa = PBXBuildFile; productRef = 730940A22FF2146E001BCBFC /* SwiftXStateInspectorUI */; };
+		730940A52FF2146E001BCBFC /* SwiftXStateSwiftData in Frameworks */ = {isa = PBXBuildFile; productRef = 730940A42FF2146E001BCBFC /* SwiftXStateSwiftData */; };
+		730940A72FF2146E001BCBFC /* SwiftXStateSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 730940A62FF2146E001BCBFC /* SwiftXStateSwiftUI */; };
+		730940AA2FF21487001BCBFC /* CompositionalInit in Frameworks */ = {isa = PBXBuildFile; productRef = 730940A92FF21487001BCBFC /* CompositionalInit */; };
 		733D43EB2FDBCFB100DD6932 /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 733D43EA2FDBCFB100DD6932 /* SwiftXState */; };
 		733D43EF2FDBCFB100DD6932 /* SwiftXStateInspect in Frameworks */ = {isa = PBXBuildFile; productRef = 733D43EE2FDBCFB100DD6932 /* SwiftXStateInspect */; };
 		733D43F32FDBCFB100DD6932 /* SwiftXStateSwiftData in Frameworks */ = {isa = PBXBuildFile; productRef = 733D43F22FDBCFB100DD6932 /* SwiftXStateSwiftData */; };
@@ -81,21 +83,23 @@
 				7364E3852FE5D145001DC52B /* SwiftXStateGraph in Frameworks */,
 				733D43EF2FDBCFB100DD6932 /* SwiftXStateInspect in Frameworks */,
 				7364E3912FE5D145001DC52B /* SwiftXStateSwiftUI in Frameworks */,
-				732F17282FE743920096CCBC /* SwiftXStateInspect in Frameworks */,
 				733D43EB2FDBCFB100DD6932 /* SwiftXState in Frameworks */,
-				732F17262FE743920096CCBC /* SwiftXState in Frameworks */,
-				732F172C2FE743920096CCBC /* SwiftXStateSwiftUI in Frameworks */,
+				7309409F2FF2146E001BCBFC /* SwiftXState in Frameworks */,
 				7364E3872FE5D145001DC52B /* SwiftXStateInspect in Frameworks */,
 				733D44462FDCC9B200DD6932 /* SwiftXState in Frameworks */,
+				730940A72FF2146E001BCBFC /* SwiftXStateSwiftUI in Frameworks */,
 				733D43F32FDBCFB100DD6932 /* SwiftXStateSwiftData in Frameworks */,
+				730940AA2FF21487001BCBFC /* CompositionalInit in Frameworks */,
+				730940A52FF2146E001BCBFC /* SwiftXStateSwiftData in Frameworks */,
 				733D444A2FDCC9B200DD6932 /* SwiftXStateSwiftData in Frameworks */,
+				730940A12FF2146E001BCBFC /* SwiftXStateInspectorCore in Frameworks */,
 				733D444C2FDCC9B200DD6932 /* SwiftXStateSwiftUI in Frameworks */,
 				7364E38F2FE5D145001DC52B /* SwiftXStateSwiftData in Frameworks */,
 				733D44482FDCC9B200DD6932 /* SwiftXStateInspect in Frameworks */,
 				7364E3832FE5D145001DC52B /* SwiftXState in Frameworks */,
 				733D43F52FDBCFB100DD6932 /* SwiftXStateSwiftUI in Frameworks */,
+				730940A32FF2146E001BCBFC /* SwiftXStateInspectorUI in Frameworks */,
 				7364E3892FE5D145001DC52B /* SwiftXStateInspectURLSession in Frameworks */,
-				732F172A2FE743920096CCBC /* SwiftXStateSwiftData in Frameworks */,
 				7364E38D2FE5D145001DC52B /* SwiftXStateInspectorUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -183,10 +187,12 @@
 				7364E38C2FE5D145001DC52B /* SwiftXStateInspectorUI */,
 				7364E38E2FE5D145001DC52B /* SwiftXStateSwiftData */,
 				7364E3902FE5D145001DC52B /* SwiftXStateSwiftUI */,
-				732F17252FE743920096CCBC /* SwiftXState */,
-				732F17272FE743920096CCBC /* SwiftXStateInspect */,
-				732F17292FE743920096CCBC /* SwiftXStateSwiftData */,
-				732F172B2FE743920096CCBC /* SwiftXStateSwiftUI */,
+				7309409E2FF2146E001BCBFC /* SwiftXState */,
+				730940A02FF2146E001BCBFC /* SwiftXStateInspectorCore */,
+				730940A22FF2146E001BCBFC /* SwiftXStateInspectorUI */,
+				730940A42FF2146E001BCBFC /* SwiftXStateSwiftData */,
+				730940A62FF2146E001BCBFC /* SwiftXStateSwiftUI */,
+				730940A92FF21487001BCBFC /* CompositionalInit */,
 			);
 			productName = XConway;
 			productReference = 733D43B12FDBCF3900DD6932 /* XConway.app */;
@@ -271,7 +277,7 @@
 			mainGroup = 733D43A82FDBCF3900DD6932;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				732F17242FE743920096CCBC /* XCRemoteSwiftPackageReference "SwiftXState" */,
+				73EF399C300FF412001DA470 /* XCRemoteSwiftPackageReference "SwiftXState" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 733D43B22FDBCF3900DD6932 /* Products */;
@@ -403,6 +409,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				SWIFTXDEV = 1;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -457,6 +464,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				SWIFTXDEV = 1;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -685,36 +693,41 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		732F17242FE743920096CCBC /* XCRemoteSwiftPackageReference "SwiftXState" */ = {
+		73EF399C300FF412001DA470 /* XCRemoteSwiftPackageReference "SwiftXState" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/gistya/SwiftXState";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				kind = versionRange;
+				maximumVersion = 3.0.0;
+				minimumVersion = "2.0.0-alpha.11";
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		732F17252FE743920096CCBC /* SwiftXState */ = {
+		7309409E2FF2146E001BCBFC /* SwiftXState */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 732F17242FE743920096CCBC /* XCRemoteSwiftPackageReference "SwiftXState" */;
 			productName = SwiftXState;
 		};
-		732F17272FE743920096CCBC /* SwiftXStateInspect */ = {
+		730940A02FF2146E001BCBFC /* SwiftXStateInspectorCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 732F17242FE743920096CCBC /* XCRemoteSwiftPackageReference "SwiftXState" */;
-			productName = SwiftXStateInspect;
+			productName = SwiftXStateInspectorCore;
 		};
-		732F17292FE743920096CCBC /* SwiftXStateSwiftData */ = {
+		730940A22FF2146E001BCBFC /* SwiftXStateInspectorUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 732F17242FE743920096CCBC /* XCRemoteSwiftPackageReference "SwiftXState" */;
+			productName = SwiftXStateInspectorUI;
+		};
+		730940A42FF2146E001BCBFC /* SwiftXStateSwiftData */ = {
+			isa = XCSwiftPackageProductDependency;
 			productName = SwiftXStateSwiftData;
 		};
-		732F172B2FE743920096CCBC /* SwiftXStateSwiftUI */ = {
+		730940A62FF2146E001BCBFC /* SwiftXStateSwiftUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 732F17242FE743920096CCBC /* XCRemoteSwiftPackageReference "SwiftXState" */;
 			productName = SwiftXStateSwiftUI;
+		};
+		730940A92FF21487001BCBFC /* CompositionalInit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CompositionalInit;
 		};
 		733D43EA2FDBCFB100DD6932 /* SwiftXState */ = {
 			isa = XCSwiftPackageProductDependency;

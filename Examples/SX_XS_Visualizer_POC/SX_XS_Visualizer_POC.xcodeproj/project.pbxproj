@@ -7,10 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		73128E342FE483DF00401386 /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 73128E332FE483DF00401386 /* SwiftXState */; };
-		73128E362FE483DF00401386 /* SwiftXStateInspect in Frameworks */ = {isa = PBXBuildFile; productRef = 73128E352FE483DF00401386 /* SwiftXStateInspect */; };
-		73128E382FE483DF00401386 /* SwiftXStateInspectURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 73128E372FE483DF00401386 /* SwiftXStateInspectURLSession */; };
-		73128E3A2FE483DF00401386 /* SwiftXStateSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 73128E392FE483DF00401386 /* SwiftXStateSwiftUI */; };
+		73EB492B2FF2B40F00A7456C /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 73EB492A2FF2B40F00A7456C /* SwiftXState */; };
+		73EB492D2FF2B40F00A7456C /* SwiftXStateInspect in Frameworks */ = {isa = PBXBuildFile; productRef = 73EB492C2FF2B40F00A7456C /* SwiftXStateInspect */; };
+		73EB492F2FF2B40F00A7456C /* SwiftXStateInspectURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 73EB492E2FF2B40F00A7456C /* SwiftXStateInspectURLSession */; };
 		73F791FB2FD85631008E710F /* SwiftXState in Frameworks */ = {isa = PBXBuildFile; productRef = 73F791FA2FD85631008E710F /* SwiftXState */; };
 		73F791FD2FD85631008E710F /* SwiftXStateInspect in Frameworks */ = {isa = PBXBuildFile; productRef = 73F791FC2FD85631008E710F /* SwiftXStateInspect */; };
 		73F791FF2FD85631008E710F /* SwiftXStateInspectURLSession in Frameworks */ = {isa = PBXBuildFile; productRef = 73F791FE2FD85631008E710F /* SwiftXStateInspectURLSession */; };
@@ -72,10 +71,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				73FE75272FD490C4002805A4 /* SwiftXStateInspect in Frameworks */,
-				73128E342FE483DF00401386 /* SwiftXState in Frameworks */,
-				73128E3A2FE483DF00401386 /* SwiftXStateSwiftUI in Frameworks */,
-				73128E362FE483DF00401386 /* SwiftXStateInspect in Frameworks */,
-				73128E382FE483DF00401386 /* SwiftXStateInspectURLSession in Frameworks */,
+				73EB492B2FF2B40F00A7456C /* SwiftXState in Frameworks */,
+				73EB492D2FF2B40F00A7456C /* SwiftXStateInspect in Frameworks */,
+				73EB492F2FF2B40F00A7456C /* SwiftXStateInspectURLSession in Frameworks */,
 				73F792022FD85686008E710F /* SwiftXState in Frameworks */,
 				73FE75252FD490C4002805A4 /* SwiftXState in Frameworks */,
 				73FE75292FD490C4002805A4 /* SwiftXStateInspectURLSession in Frameworks */,
@@ -158,10 +156,9 @@
 				73F792032FD85686008E710F /* SwiftXStateInspect */,
 				73F792052FD85686008E710F /* SwiftXStateInspectURLSession */,
 				73F792072FD85686008E710F /* SwiftXStateSwiftUI */,
-				73128E332FE483DF00401386 /* SwiftXState */,
-				73128E352FE483DF00401386 /* SwiftXStateInspect */,
-				73128E372FE483DF00401386 /* SwiftXStateInspectURLSession */,
-				73128E392FE483DF00401386 /* SwiftXStateSwiftUI */,
+				73EB492A2FF2B40F00A7456C /* SwiftXState */,
+				73EB492C2FF2B40F00A7456C /* SwiftXStateInspect */,
+				73EB492E2FF2B40F00A7456C /* SwiftXStateInspectURLSession */,
 			);
 			productName = SX_XS_Visualizer_POC;
 			productReference = 73FE74DB2FD48B6E002805A4 /* SX_XS_Visualizer_POC.app */;
@@ -221,7 +218,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 1620;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					73FE74DA2FD48B6E002805A4 = {
 						CreatedOnToolsVersion = 16.2;
@@ -247,7 +244,7 @@
 			mainGroup = 73FE74D22FD48B6E002805A4;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */,
+				73EF399B300FF3F3001DA470 /* XCRemoteSwiftPackageReference "SwiftXState" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 73FE74DC2FD48B6E002805A4 /* Products */;
@@ -357,6 +354,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -379,6 +377,8 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFTXDEV = 1;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -418,6 +418,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -433,6 +434,8 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFTXDEV = 1;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -446,10 +449,15 @@
 				CODE_SIGN_ENTITLEMENTS = SX_XS_Visualizer_POC/SX_XS_Visualizer_POC.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"SX_XS_Visualizer_POC/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "SwiftXState POC";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -465,7 +473,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.2;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.SwiftXState.SX-XS-Visualizer-POC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -488,10 +496,15 @@
 				CODE_SIGN_ENTITLEMENTS = SX_XS_Visualizer_POC/SX_XS_Visualizer_POC.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"SX_XS_Visualizer_POC/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "SwiftXState POC";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -507,7 +520,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.2;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.SwiftXState.SX-XS-Visualizer-POC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -526,6 +539,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
@@ -549,6 +563,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
@@ -571,6 +586,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
@@ -593,6 +609,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
@@ -652,36 +669,29 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */ = {
+		73EF399B300FF3F3001DA470 /* XCRemoteSwiftPackageReference "SwiftXState" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/gistya/SwiftXState";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				kind = versionRange;
+				maximumVersion = 3.0.0;
+				minimumVersion = "2.0.0-alpha.12";
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		73128E332FE483DF00401386 /* SwiftXState */ = {
+		73EB492A2FF2B40F00A7456C /* SwiftXState */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */;
 			productName = SwiftXState;
 		};
-		73128E352FE483DF00401386 /* SwiftXStateInspect */ = {
+		73EB492C2FF2B40F00A7456C /* SwiftXStateInspect */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */;
 			productName = SwiftXStateInspect;
 		};
-		73128E372FE483DF00401386 /* SwiftXStateInspectURLSession */ = {
+		73EB492E2FF2B40F00A7456C /* SwiftXStateInspectURLSession */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */;
 			productName = SwiftXStateInspectURLSession;
-		};
-		73128E392FE483DF00401386 /* SwiftXStateSwiftUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 73128E322FE483DF00401386 /* XCRemoteSwiftPackageReference "SwiftXState" */;
-			productName = SwiftXStateSwiftUI;
 		};
 		73F791FA2FD85631008E710F /* SwiftXState */ = {
 			isa = XCSwiftPackageProductDependency;

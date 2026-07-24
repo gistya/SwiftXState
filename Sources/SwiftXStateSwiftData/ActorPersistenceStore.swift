@@ -2,6 +2,7 @@
 import Foundation
 import SwiftData
 import SwiftXState
+import SwiftXStateCodable
 
 /// Persists and restores actor snapshots using SwiftData.
 public struct ActorPersistenceStore {
@@ -12,8 +13,8 @@ public struct ActorPersistenceStore {
     }
 
     /// Saves the actor's current snapshot under a stable key (upserts).
-    public func save<Context: Codable & Sendable>(
-        _ actor: Actor<Context>,
+    public func save<Context: ContextPersistable & Sendable>(
+        _ actor: Actor<MachineLogic<Context>>,
         key: String
     ) async throws {
         let persisted = try await actor.getPersistedSnapshot()
@@ -67,8 +68,8 @@ public struct ActorPersistenceStore {
 
     /// Restores an actor from a persisted snapshot stored under `key`.
     @discardableResult
-    public func restore<Context: Codable & Sendable>(
-        _ actor: Actor<Context>,
+    public func restore<Context: ContextPersistable & Sendable>(
+        _ actor: Actor<MachineLogic<Context>>,
         key: String,
         context: Context? = nil
     ) async throws -> Bool {
@@ -80,13 +81,13 @@ public struct ActorPersistenceStore {
     }
 
     /// Creates and hydrates an actor from a persisted snapshot stored under `key`.
-    public func createActor<Context: Codable & Sendable>(
-        _ machine: StateMachine<Context>,
+    public func createActor<Context: ContextPersistable & Sendable>(
+        _ machine: ResolvedMachine<Context>,
         key: String,
         id: String? = nil,
         options: ActorOptions = ActorOptions(),
         context: Context? = nil
-    ) async throws -> Actor<Context>? {
+    ) async throws -> Actor<MachineLogic<Context>>? {
         guard let persisted = try load(key: key) else {
             return nil
         }

@@ -1,5 +1,3 @@
-import Foundation
-
 /// Validates endpoints against a `ConnectivityPolicy` before any transport I/O.
 public struct EndpointValidator: Sendable {
     public let policy: ConnectivityPolicy
@@ -44,13 +42,6 @@ public struct EndpointValidator: Sendable {
         }
 
         return endpoint
-    }
-
-    public func validate(url: URL) throws -> InspectEndpoint {
-        guard let endpoint = InspectEndpoint(url: url) else {
-            throw InspectTransportError.invalidEndpoint(url.absoluteString)
-        }
-        return try validate(endpoint)
     }
 
     private var portPolicy: PortPolicy {

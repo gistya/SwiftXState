@@ -1,11 +1,12 @@
 import Foundation
+import Synchronization
 import SwiftXState
 
 /// Suppresses inspection recording during replay scrubbing so scrub events
 /// are not appended to the live session (which would inflate the slider range).
 final class ReplayRecordingGate: @unchecked Sendable {
     private var enabled = true
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     func setEnabled(_ enabled: Bool) {
         lock.lock()
@@ -98,7 +99,7 @@ enum ChessReplayRestore {
             context.castlingRights = restored.castlingRights
             context.pendingPromotion = restored.pendingPromotion
         } else if let traveled = timeTravel(
-            ChessMachineFactory.machine,
+            ChessGameMachine.resolved,
             context: ChessContext.initial(),
             session: session,
             toStep: stepIndex

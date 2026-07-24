@@ -44,12 +44,12 @@ public struct InspectorPasteView: View {
         HStack(spacing: 8) {
             Image(systemName: "doc.on.clipboard")
                 .foregroundStyle(style.accent)
-            Text("Machine Definition (XState JSON)")
+            Text("Machine Definition (XState JSON)", bundle: .module)
                 .font(.headline)
                 .foregroundStyle(style.primaryText)
             Spacer()
             if let loadedID {
-                Text("Loaded: \(loadedID)")
+                Text("Loaded: \(loadedID)", bundle: .module)
                     .font(.caption.monospaced())
                     .foregroundStyle(style.statusActive)
             }
@@ -67,9 +67,10 @@ public struct InspectorPasteView: View {
             .scrollContentBackground(.hidden)
             .background(style.panelBackground)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityLabel(Text("Machine Definition (XState JSON)", bundle: .module))
             .overlay(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text("Paste an XState machine definition here…")
+                    Text("Paste an XState machine definition here…", bundle: .module)
                         .font(style.monoFont)
                         .foregroundStyle(style.secondaryText)
                         .padding(.horizontal, 6)
@@ -84,14 +85,16 @@ public struct InspectorPasteView: View {
             Button {
                 load()
             } label: {
-                Label("Load into Inspector", systemImage: "arrow.right.circle.fill")
+                Label { Text("Load into Inspector", bundle: .module) } icon: { Image(systemName: "arrow.right.circle.fill") }
             }
             .buttonStyle(.borderedProminent)
             .keyboardShortcut(.return, modifiers: .command)
 
-            Button("Clear") {
+            Button {
                 text = ""
                 errorMessage = nil
+            } label: {
+                Text("Clear", bundle: .module)
             }
             .buttonStyle(.bordered)
 

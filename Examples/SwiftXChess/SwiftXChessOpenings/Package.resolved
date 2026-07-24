@@ -1,5 +1,5 @@
 {
-  "originHash" : "bcc0b8cf48ecb1c99b3fd41d9565692264a3312b66c2145788e64bb03a8a4c07",
+  "originHash" : "ed93d167d35183c1bee25e1b898d3eac2001470bca2c692be3cdf40127912469",
   "pins" : [
     {
       "identity" : "chesskit-swift",
@@ -11,21 +11,30 @@
       }
     },
     {
-      "identity" : "swift-syntax",
+      "identity" : "friday-the-thirteenth",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "location" : "https://github.com/gistya/friday-the-thirteenth",
       "state" : {
-        "revision" : "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
-        "version" : "603.0.2"
+        "revision" : "be87de47919c3e6591e3f681812a411f30f870da",
+        "version" : "2.0.0"
+      }
+    },
+    {
+      "identity" : "swift-compositional-init",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gistya/swift-compositional-init",
+      "state" : {
+        "revision" : "af4835e941fe00409ea076e4f49c9fe7e800a9e8",
+        "version" : "1.2.0"
       }
     },
     {
       "identity" : "swiftxstate",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gistya/SwiftXState.git",
+      "location" : "https://github.com/gistya/SwiftXState",
       "state" : {
-        "branch" : "swift-actor",
-        "revision" : "dd60eeae65636396b5f433708751f89c0a02a6dd"
+        "revision" : "b7d9a4600a0a01f25ef100b76284fd9e74626c83",
+        "version" : "2.0.0-alpha.11"
       }
     }
   ],

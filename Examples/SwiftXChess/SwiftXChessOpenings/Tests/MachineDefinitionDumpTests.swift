@@ -21,7 +21,7 @@ struct MachineDefinitionDumpTests {
             try InspectMachineRegistration(
                 machineId: OpeningMoveTreeMachine.id,
                 definitionJSON: OpeningMoveTreeMachine.inspectorSummaryMachine().definitionJSON(),
-                wireStateValue: OpeningMoveTreeMachine.inspectorWireState
+                wireStateValue: String.inspectorWireState
             ),
         ])
         let snapshot = InspectionSnapshot(
@@ -41,9 +41,9 @@ struct MachineDefinitionDumpTests {
             snapshot: snapshot
         )
         let payload = try #require(converter.wireData(for: event))
-        let object = try JSONSerialization.jsonObject(with: payload) as? [String: Any]
+        let object = try JSONSerialization.jsonObject(with: Data(payload)) as? [String: Any]
         let snapshotObject = object?["snapshot"] as? [String: Any]
-        #expect(snapshotObject?["value"] as? String == OpeningMoveTreeMachine.inspectorWireState)
+        #expect(snapshotObject?["value"] as? String == String.inspectorWireState)
         #expect((snapshotObject?["context"] as? [String: Any])?["nodeId"] as? String == "s999")
     }
 
@@ -53,7 +53,7 @@ struct MachineDefinitionDumpTests {
             try InspectMachineRegistration(
                 machineId: OpeningMoveTreeMachine.id,
                 definitionJSON: OpeningMoveTreeMachine.inspectorSummaryMachine().definitionJSON(),
-                wireStateValue: OpeningMoveTreeMachine.inspectorWireState
+                wireStateValue: String.inspectorWireState
             ),
         ])
         let snapshot = InspectionSnapshot(
@@ -80,7 +80,7 @@ struct MachineDefinitionDumpTests {
             ]
         )
         let payload = try #require(converter.wireData(for: event))
-        let object = try JSONSerialization.jsonObject(with: payload) as? [String: Any]
+        let object = try JSONSerialization.jsonObject(with: Data(payload)) as? [String: Any]
         #expect(object?["_transitions"] == nil)
         #expect((object?["snapshot"] as? [String: Any])?["value"] as? String == "tracking")
     }

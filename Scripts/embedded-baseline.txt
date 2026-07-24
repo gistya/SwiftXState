@@ -1,0 +1,23 @@
+# Embedded Swift diagnostic count. See Scripts/embedded-check.sh for the ratchet.
+#
+# TOOLCHAIN MATTERS MORE THAN THIS NUMBER. Measured 2026-07-21:
+#
+#   Xcode.app (Swift 6.2.4)      no embedded stdlib at all — cannot enter Embedded mode
+#   swiftly 6.3.2                Embedded works; value existentials, `as?` and metatypes REJECTED
+#   main-snapshot-2026-07-05     value existentials, `as?` and metatypes ACCEPTED
+#
+# Existential support lands in Swift 6.4 / Xcode 27. Apple's own documented example
+# (docs.swift.org/embedded — "Forming existentials") fails on 6.3.2 and compiles on the
+# snapshot, so a diagnostic from 6.3.2 is NOT evidence about the language.
+#
+# Consequence: most of the count below is `any Eventable`, other value existentials, and
+# dynamic casts — all of which 6.4 removes. Do NOT redesign the event model to work around
+# them. That was investigated at length (branch `event-generic`, ~126 substitution sites) and
+# shelved once the cause turned out to be the toolchain version rather than the language.
+#
+# What 6.4 does NOT fix, and what the work on main therefore addresses: `weak`, `Codable`,
+# `Mirror`, key paths. Those are rejected on both toolchains and are the durable constraints.
+#
+# When 6.4 ships with a matching Embedded SDK: re-run with SWIFTXSTATE_TOOLCHAIN/SDK pointed at
+# it and expect a large drop. Re-baseline then rather than chasing this number now.
+72

@@ -15,7 +15,7 @@ private struct SearchCtx: Sendable, Equatable {
 @Suite("Tier 2: typed events with per-event narrowing")
 struct TypedEventsTests {
 
-    private func machine() -> StateMachine<SearchCtx> {
+    private func machine() -> ResolvedMachine<SearchCtx> {
         createMachine(MachineConfig(
             id: "search", initial: "inactive", context: SearchCtx(),
             states: [

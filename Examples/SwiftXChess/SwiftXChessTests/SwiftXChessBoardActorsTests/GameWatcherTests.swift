@@ -37,9 +37,9 @@ struct GameWatcherTests {
 
         collector.reset()
 
-        await watcher.send(Event("TAP.1.4"))
+        await watcher.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(30))
-        await watcher.send(Event("TAP.3.4"))
+        await watcher.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(50))
 
         let san = await watcher.snapshot.context.lastSAN
@@ -56,7 +56,7 @@ struct GameWatcherTests {
             #expect(!sessionId.hasPrefix("piece."))
 
             guard let wireData = converter.wireData(for: event),
-                  let object = try JSONSerialization.jsonObject(with: wireData) as? [String: Any] else {
+                  let object = try JSONSerialization.jsonObject(with: Data(wireData)) as? [String: Any] else {
                 continue
             }
 
@@ -103,9 +103,9 @@ struct GameWatcherTests {
         ).start()
         try? await Task.sleep(for: .milliseconds(150))
 
-        await actor.send(Event("TAP.1.3"))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 3)).event)
         try? await Task.sleep(for: .milliseconds(30))
-        await actor.send(Event("TAP.3.3"))
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 3)).event)
         try? await Task.sleep(for: .milliseconds(80))
 
         let boardEvents = collector.recordedEvents().filter { event in
@@ -137,13 +137,13 @@ struct GameWatcherTests {
         let actor = await createActor(GameWatcherMachine.make()).start()
         try? await Task.sleep(for: .milliseconds(100))
 
-        await actor.send(Event("TAP.1.4"))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(30))
         var snapshot = await actor.snapshot
         #expect(snapshot.context.selected == Square(row: 1, col: 4))
         #expect(snapshot.matches("game.active.turn.selecting"))
 
-        await actor.send(Event("TAP.3.4"))
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(50))
 
         snapshot = await actor.snapshot
@@ -171,9 +171,9 @@ struct GameWatcherTests {
         ).start()
         try? await Task.sleep(for: .milliseconds(100))
 
-        await actor.send(Event("TAP.1.4"))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(30))
-        await actor.send(Event("TAP.3.4"))
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(80))
 
         let watcherSnapshots = collector.recordedEvents().filter {
@@ -206,9 +206,9 @@ struct GameWatcherTests {
         ).start()
         try? await Task.sleep(for: .milliseconds(100))
 
-        await actor.send(Event("TAP.1.4"))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(30))
-        await actor.send(Event("TAP.3.4"))
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(100))
 
         #expect(recorder.recordedSteps().count > 1)
@@ -237,9 +237,9 @@ struct GameWatcherTests {
         ).start()
         try? await Task.sleep(for: .milliseconds(100))
 
-        await actor.send(Event("TAP.1.4"))
+        await actor.send(ChessEvent.tap(Square(row: 1, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(30))
-        await actor.send(Event("TAP.3.4"))
+        await actor.send(ChessEvent.tap(Square(row: 3, col: 4)).event)
         try? await Task.sleep(for: .milliseconds(150))
 
         guard let session = recorder.session(), session.steps.count > 1 else {
@@ -248,7 +248,7 @@ struct GameWatcherTests {
         }
 
         ChessReplayBridge.setPendingSession(session)
-        await actor.send(ChessEvent.enterReplay)
+        await actor.send(ChessEvent.enterReplay.event)
         try? await Task.sleep(for: .milliseconds(20))
 
         let lastStep = max(session.steps.count - 1, 0)
@@ -258,7 +258,7 @@ struct GameWatcherTests {
         #expect(snapshot.context.board[Square(row: 3, col: 4)]?.color == .white)
         #expect(snapshot.context.lastSAN == "e4")
 
-        await actor.send(ChessEvent.replayScrub(0))
+        await actor.send(ChessEvent.replayScrub(0).event)
         try? await Task.sleep(for: .milliseconds(20))
         snapshot = await actor.snapshot
         #expect(snapshot.context.replayStep == 0)
@@ -284,26 +284,26 @@ struct GameWatcherTests {
         #expect(snapshot.context.plyCount == 3)
     }
 
-    private func tap(_ actor: Actor<GameWatcherContext>, row: Int, col: Int) async {
-        await actor.send(Event("TAP.\(row).\(col)"))
+    private func tap(_ actor: Actor<MachineLogic<GameWatcherContext>>, row: Int, col: Int) async {
+        await actor.send(ChessEvent.tap(Square(row: row, col: col)).event)
         try? await Task.sleep(for: .milliseconds(30))
     }
 
-    private func squareContext(_ actor: Actor<GameWatcherContext>, coord: String) async -> SquareContext? {
+    private func squareContext(_ actor: Actor<MachineLogic<GameWatcherContext>>, coord: String) async -> SquareContext? {
         guard let child = await actor.childActor(id: BoardActorIds.square(coord)) as? MachineChildRef<SquareContext> else {
             return nil
         }
         return await child.actor.snapshot.context
     }
 
-    private func pieceContext(_ actor: Actor<GameWatcherContext>, id: String) async -> PieceContext? {
+    private func pieceContext(_ actor: Actor<MachineLogic<GameWatcherContext>>, id: String) async -> PieceContext? {
         guard let child = await actor.childActor(id: BoardActorIds.piece(id: id)) as? MachineChildRef<PieceContext> else {
             return nil
         }
         return await child.actor.snapshot.context
     }
 
-    private func squareState(_ actor: Actor<GameWatcherContext>, coord: String) async -> String? {
+    private func squareState(_ actor: Actor<MachineLogic<GameWatcherContext>>, coord: String) async -> String? {
         guard let child = await actor.childActor(id: BoardActorIds.square(coord)) as? MachineChildRef<SquareContext> else {
             return nil
         }

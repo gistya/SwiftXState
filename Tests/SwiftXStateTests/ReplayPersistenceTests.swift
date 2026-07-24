@@ -1,5 +1,6 @@
 import Testing
 @testable import SwiftXState
+import SwiftXStateCodable
 
 private struct ReplayPersistContext: Sendable, Equatable, Codable {
     var count: Int
@@ -7,7 +8,7 @@ private struct ReplayPersistContext: Sendable, Equatable, Codable {
 
 @Suite("Replay session persistence")
 struct ReplayPersistenceTests {
-    private var counterMachine: StateMachine<ReplayPersistContext> {
+    private var counterMachine: ResolvedMachine<ReplayPersistContext> {
         createMachine(MachineConfig(
             id: "counter",
             initial: "idle",

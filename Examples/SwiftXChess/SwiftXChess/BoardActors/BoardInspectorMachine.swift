@@ -121,7 +121,18 @@ public enum BoardMode: String, Sendable, CaseIterable {
     case pieces
 }
 
-enum BoardInspectorMachine {
+/// The live board, as a **data-driven** parallel-root `StateMachine` (`StateID == EventID == String`):
+/// 64 independent square regions built with a result-builder `for`-loop over `layout.squares`, each a
+/// compound `{ empty | occupied }` (occupancy) or `{ empty + 12 piece types }` hub-and-spoke (pieces).
+/// Was a dictionary of `StateNodeConfig` assembled in `make`. The square inner-state names (`empty`,
+/// `occupied`, the piece types) are shared across all 64 squares, so their transition targets stay
+/// *relative* (sibling resolution); the wildcard event strings (`SQUARE.OCCUPY.<coord>.<type>.*`,
+/// `SQUARE.CLEAR.<coord>`) are this inspector's own vocabulary, not the typed board-child events.
+struct BoardInspectorMachine: StateMachine {
+    typealias Context = BoardInspectorContext
+    typealias StateID = String
+    typealias EventID = String
+
     /// The 12 piece types, white then black, in P N B R Q K order.
     static let pieceTypes = ["wP", "wN", "wB", "wR", "wQ", "wK", "bP", "bN", "bB", "bR", "bQ", "bK"]
 
@@ -130,52 +141,61 @@ enum BoardInspectorMachine {
     static func id(_ mode: BoardMode) -> String { mode == .occupancy ? occupancyId : piecesId }
     static func childId(_ mode: BoardMode) -> String { id(mode) }
 
-    static func make(mode: BoardMode = .occupancy, layout: BoardLayoutSeed = .standard()) -> StateMachine<BoardInspectorContext> {
-        let context = BoardInspectorContext.initial(layout: layout)
+    let mode: BoardMode
+    let layout: BoardLayoutSeed
 
-        var squares: [String: StateNodeConfig<BoardInspectorContext>] = [:]
+    init(mode: BoardMode = .occupancy, layout: BoardLayoutSeed = .standard()) {
+        self.mode = mode
+        self.layout = layout
+    }
+
+    var isParallel: Bool { true }
+    // The 8×8 board carries meaningful fixed geometry (a chess grid via GraphStyle.nodeLayoutOverride),
+    // so opt out of the inspector's layered auto-layout — it would reflow the grid into a flow chart.
+    var useAutoLayoutForInspection: Bool { false }
+    var context: BoardInspectorContext { .initial(layout: layout) }
+
+    var machine: some XStateMachine {
+        let mode = self.mode
         for square in layout.squares {
-            let coord = square.coord
-            squares[coord] = mode == .occupancy
-                ? occupancySquare(coord: coord, occupied: context.occupants[coord] != nil)
-                : piecesSquare(coord: coord, pieceId: context.occupants[coord])
+            squareRegion(coord: square.coord, occupantId: square.occupantId, mode: mode)
         }
-
-        return createMachine(
-            MachineConfig(
-                id: id(mode),
-                context: context,
-                states: squares,
-                type: .parallel,
-                description: mode == .occupancy
-                    ? "Live 8×8 board — 64 parallel { empty | occupied } squares"
-                    : "Live 8×8 board — 64 squares enumerating their piece (hub-and-spoke through empty)"
-            )
-        )
     }
 
-    private static func occupancySquare(coord: String, occupied: Bool) -> StateNodeConfig<BoardInspectorContext> {
-        StateNodeConfig(
-            initial: occupied ? "occupied" : "empty",
-            states: [
-                "empty": StateNodeConfig(on: ["SQUARE.OCCUPY.\(coord).*": .to("occupied")]),
-                "occupied": StateNodeConfig(on: ["SQUARE.CLEAR.\(coord)": .to("empty")]),
-            ]
-        )
+    /// One square: a compound region named by `coord`, seeded to the right initial child.
+    private func squareRegion(coord: String, occupantId: String?, mode: BoardMode) -> State {
+        if mode == .occupancy {
+            return State(coord) {
+                initialIf(occupantId == nil, State("empty") {
+                    Transition(on: "SQUARE.OCCUPY.\(coord).*", to: "occupied")
+                })
+                initialIf(occupantId != nil, State("occupied") {
+                    Transition(on: "SQUARE.CLEAR.\(coord)", to: "empty")
+                })
+            }
+        }
+        // pieces: from `empty`, occupy → the matching piece type; from any piece, clear → `empty`.
+        let initialType = occupantId.map { String($0.prefix(2)) }.flatMap { Self.pieceTypes.contains($0) ? $0 : nil }
+        return State(coord) {
+            initialIf(initialType == nil, State("empty") {
+                for type in Self.pieceTypes {
+                    Transition(on: "SQUARE.OCCUPY.\(coord).\(type).*", to: type)
+                }
+            })
+            for type in Self.pieceTypes {
+                initialIf(initialType == type, State(type) {
+                    Transition(on: "SQUARE.CLEAR.\(coord)", to: "empty")
+                })
+            }
+        }
     }
 
-    private static func piecesSquare(coord: String, pieceId: String?) -> StateNodeConfig<BoardInspectorContext> {
-        // From `empty`, occupy → the matching piece type; from any piece, clear → `empty`.
-        var emptyOn: [String: TransitionInput<BoardInspectorContext>] = [:]
-        for type in pieceTypes {
-            emptyOn["SQUARE.OCCUPY.\(coord).\(type).*"] = .to(type)
-        }
-        var states: [String: StateNodeConfig<BoardInspectorContext>] = ["empty": StateNodeConfig(on: emptyOn)]
-        for type in pieceTypes {
-            states[type] = StateNodeConfig(on: ["SQUARE.CLEAR.\(coord)": .to("empty")])
-        }
-        let initial = pieceId.map { String($0.prefix(2)) }.flatMap { pieceTypes.contains($0) ? $0 : nil } ?? "empty"
-        return StateNodeConfig(initial: initial, states: states)
+    private func initialIf(_ flag: Bool, _ state: State) -> State {
+        flag ? state.initial() : state
+    }
+
+    static func make(mode: BoardMode = .occupancy, layout: BoardLayoutSeed = .standard()) -> ResolvedMachine<BoardInspectorContext> {
+        BoardInspectorMachine(mode: mode, layout: layout).resolvedMachine(id: id(mode))
     }
 
     /// Drop into `GraphStyle.nodeLayoutOverride`. Lays the board-inspector machines (both modes)

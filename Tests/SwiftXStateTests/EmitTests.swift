@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import SwiftXState
 
@@ -7,7 +8,7 @@ private struct EmitContext: Sendable, Equatable {
 }
 
 private final class EmittedEventCollector: @unchecked Sendable {
-    private let lock = NSLock()
+    private let lock = Mutex(false)
     private var events: [EmittedEvent] = []
 
     func append(_ event: EmittedEvent) {
@@ -145,8 +146,52 @@ struct EmitTests {
         #expect(collector.recorded().count == 1)
     }
 
+    @Test("cancelling one on() subscription removes only that listener")
+    func cancelRemovesOnlyTarget() async {
+        // Regression: `on(...)` used to capture a fixed array index at subscribe time and later
+        // `remove(at: index)`. Once an earlier listener was removed the array shifted, so a later
+        // cancel deleted the wrong listener. Cancelling *A* (index 0) alone happens to work under the
+        // old code, so the test must also cancel *B* afterwards — that is where the stale index bites.
+        let machine = createMachine(MachineConfig(
+            initial: "idle",
+            context: EmitContext(message: ""),
+            states: [
+                "idle": StateNodeConfig(on: [
+                    "GO": .single(TransitionConfig(actions: [emit("ping")])),
+                ]),
+            ]
+        ))
+
+        let a = EmittedEventCollector()
+        let b = EmittedEventCollector()
+        let c = EmittedEventCollector()
+        let actor = await createActor(machine).start()
+        let subA = await actor.on("ping") { a.append($0) }
+        let subB = await actor.on("ping") { b.append($0) }
+        _ = await actor.on("ping") { c.append($0) }
+
+        subA.cancel()
+        await actor.send(Event("GO"))
+
+        // A is gone; B and C still receive.
+        #expect(a.recorded().isEmpty)
+        #expect(b.recorded().count == 1)
+        #expect(c.recorded().count == 1)
+
+        // Now cancel B. Under the index bug this removes C instead, leaving B live.
+        subB.cancel()
+        await actor.send(Event("GO"))
+
+        #expect(a.recorded().isEmpty)          // still gone
+        #expect(b.recorded().count == 1)        // cancelled — did not receive the second emit
+        #expect(c.recorded().count == 2)        // still live — received both emits
+    }
+
     @Test("fromTask scope emit delivers to child on()")
     func taskScopeEmit() async {
+        // Deterministic: the worker waits for `canEmit` (fired only after the listener is attached),
+        // so the emit can never race ahead of `on("progress")` under parallel load. No sleeps.
+        let canEmit = TestSignal()
         let parentMachine = createMachine(MachineConfig(
             initial: "running",
             context: EmitContext(message: ""),
@@ -156,7 +201,7 @@ struct EmitTests {
                         InvokeConfig(
                             id: "worker",
                             src: fromTask { scope in
-                                try await Task.sleep(for: .milliseconds(30))
+                                await canEmit.wait()
                                 scope.emit(
                                     EmittedEvent("progress", property: "step", value: SendableValue(1))
                                 )
@@ -175,6 +220,7 @@ struct EmitTests {
             collector.append($0)
             received.fire()
         }
+        canEmit.fire()
 
         await received.wait()
 
@@ -221,6 +267,8 @@ struct EmitTests {
 
     @Test("fromTaskGroup scope emit delivers to child on()")
     func taskGroupScopeEmit() async {
+        // Same deterministic gate as fromTask above: emit only after the listener is attached.
+        let canEmit = TestSignal()
         let parentMachine = createMachine(MachineConfig(
             initial: "running",
             context: EmitContext(message: ""),
@@ -230,7 +278,7 @@ struct EmitTests {
                         InvokeConfig(
                             id: "group",
                             src: fromTaskGroup { scope -> [Int] in
-                                try await Task.sleep(for: .milliseconds(30))
+                                await canEmit.wait()
                                 scope.emit(
                                     EmittedEvent("progress", property: "count", value: SendableValue(2))
                                 )
@@ -252,6 +300,7 @@ struct EmitTests {
             collector.append($0)
             received.fire()
         }
+        canEmit.fire()
 
         await received.wait()
 

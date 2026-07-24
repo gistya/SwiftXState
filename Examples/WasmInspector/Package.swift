@@ -17,22 +17,31 @@ import Foundation
 
 /// For local development, set the environment variable SWIFTXDEV=1 in Xcode or Terminal.
 /// In this project, SWIFTXDEV=1 is only set in the .xcproj User-Defined settings for DEBUG config.
-let useLocal = ProcessInfo.processInfo.environment["SWIFTXDEV"] != nil
-let repo = "https://github.com/gistya/SwiftXState.git"
-let swiftXMinVersion: Version = "1.0.0"
+struct Resolver {
+    let repo = "https://github.com/gistya/SwiftXState"
+    let swiftXMinVersion: Version = "2.0.0-alpha.11"
+
+    var swiftXState: Package.Dependency {
+        ProcessInfo.processInfo.environment["SWIFTXDEV"] == "1"
+        ? .package(name: "SwiftXState", path: "../..")
+        : .package(url: repo, from: swiftXMinVersion)
+    }
+}
 
 let package = Package(
     name: "WasmInspector",
+    platforms: [
+        .macOS(.v15),
+        .iOS(.v18),
+        .watchOS(.v11),
+        .tvOS(.v18),
+        .macCatalyst(.v18),
+    ],
     products: [
         .library(name: "WebInspector", targets: ["WebInspector"]),
     ],
     dependencies: [
-        useLocal
-            ? .package(
-                name: "SwiftXState",
-                path: "../.."
-            )
-            : .package(url: repo, from: swiftXMinVersion),
+        Resolver().swiftXState,
         .package(url: "https://github.com/1amageek/swift-webgpu", branch: "main"),
         .package(url: "https://github.com/swiftwasm/JavaScriptKit", .upToNextMinor(from: "0.53.0")),
     ],

@@ -1,5 +1,3 @@
-import Foundation
-
 /// Records inspect traffic for tests and host-app monitoring.
 public final class MockInspectTransport: InspectTransport, Sendable {
     public let policy: ConnectivityPolicy

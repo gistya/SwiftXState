@@ -1,4 +1,3 @@
-import Foundation
 
 // MARK: - Traversal options
 
@@ -46,7 +45,7 @@ public struct TraversalOptions<Context: Sendable>: Sendable {
         serializeEvent?(event) ?? event.type
     }
 
-    func candidates(_ machine: StateMachine<Context>, _ snapshot: MachineSnapshot<Context>) -> [any Eventable] {
+    func candidates(_ machine: ResolvedMachine<Context>, _ snapshot: MachineSnapshot<Context>) -> [any Eventable] {
         if let eventResolver { return eventResolver(snapshot) }
         if let events { return events }
         return machine.events.map { Event($0) }
@@ -75,7 +74,7 @@ public struct AdjacencyEntry<Context: Sendable>: Sendable {
 ///
 /// Mirrors `@xstate/graph`'s `getAdjacencyMap`.
 public func getAdjacencyMap<Context: Sendable>(
-    _ machine: StateMachine<Context>,
+    _ machine: ResolvedMachine<Context>,
     options: TraversalOptions<Context> = .init()
 ) -> [String: AdjacencyEntry<Context>] {
     let initial = initialTransition(machine).snapshot

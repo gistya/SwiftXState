@@ -1,116 +1,94 @@
 import Foundation
 import SwiftXState
 
-struct SquareContext: Sendable, Equatable, Codable {
+struct SquareContext: Sendable, Equatable, Hashable, Codable {
     var coord: String
     var occupantId: String?
 
     var isOccupied: Bool { occupantId != nil }
 }
 
-enum SquareEvent: Eventable, Equatable, Sendable {
+enum SquareState: String, StateIdentifying {
+    case boot, empty, occupied
+    static var _blank: SquareState { .boot }
+}
+
+/// Typed payload events — the old `OCCUPY.<id>` / `SYNC.<id>` / `SYNC.empty` type-string encoding and
+/// the hand-written `parse(_:)` are gone; handlers read the payload off `args.event`.
+enum SquareEvent: EventIdentifying {
     case occupy(pieceId: String)
     case clear
     case sync(occupantId: String?)
 
-    var type: String {
-        switch self {
-        case let .occupy(pieceId): return "OCCUPY.\(pieceId)"
-        case .clear: return "CLEAR"
-        case let .sync(occupantId):
-            if let occupantId { return "SYNC.\(occupantId)" }
-            return "SYNC.empty"
-        }
-    }
+    static var _blank: SquareEvent { .clear }
+}
 
-    static func parse(_ event: any Eventable) -> SquareEvent? {
-        let type = event.type
-        if type == "CLEAR" { return .clear }
-        if type.hasPrefix("OCCUPY.") {
-            return .occupy(pieceId: String(type.dropFirst(7)))
+/// A board square as a typed `StateMachine`: `boot` resolves to `empty`/`occupied` from its seeded
+/// context, then tracks occupancy via events. Spawned per square by the GameWatcher (each seeded with
+/// its own `coord`/`occupantId`).
+struct SquareActorMachine: StateMachine {
+    typealias Context = SquareContext
+    typealias StateID = SquareState
+    typealias EventID = SquareEvent
+
+    static let id = "square"
+
+    var context: SquareContext { SquareContext(coord: "a1", occupantId: nil) }
+
+    var machine: some XStateMachine {
+        State(.boot) {
+            Always(to: .occupied).when { $0.isOccupied }
+            Always(to: .empty)
         }
-        if type == "SYNC.empty" { return .sync(occupantId: nil) }
-        if type.hasPrefix("SYNC.") {
-            return .sync(occupantId: String(type.dropFirst(5)))
+        .initial()
+
+        State(.empty) {
+            Transition(on: .occupy, to: .occupied).action { args, _ in
+                var ctx = args.context
+                if case let .occupy(pieceId)? = args.event { ctx.occupantId = pieceId }
+                return ctx
+            }
+            
+            Transition(on: .sync, to: .empty).action { args, _ in
+                var ctx = args.context
+                if case let .sync(occupantId)? = args.event { ctx.occupantId = occupantId }
+                return ctx
+            }
+            
+            Always(to: .occupied).when { $0.isOccupied }
         }
-        return nil
+
+        State(.occupied) {
+            Transition(on: .clear, to: .empty).action { ctx in
+                var c = ctx; c.occupantId = nil; return c
+            }
+            
+            Transition(on: .occupy, to: .occupied).action { args, _ in
+                var ctx = args.context
+                if case let .occupy(pieceId)? = args.event { ctx.occupantId = pieceId }
+                return ctx
+            }
+            
+            Transition(on: .sync, to: .occupied).action { args, _ in
+                var ctx = args.context
+                if case let .sync(occupantId)? = args.event { ctx.occupantId = occupantId }
+                return ctx
+            }
+            
+            Always(to: .empty).when { !$0.isOccupied }
+        }
     }
 }
 
-enum SquareActorMachine {
-    static let id = "square"
+// MARK: Sugar extensions
 
-    static let machine: StateMachine<SquareContext> = createMachine(
-        MachineConfig(
-            id: id,
-            initial: "boot",
-            context: SquareContext(coord: "a1", occupantId: nil),
-            states: [
-                "boot": StateNodeConfig(
-                    always: [
-                        TransitionConfig(target: "occupied", guard: .named("hasOccupant")),
-                        TransitionConfig(target: "empty"),
-                    ]
-                ),
-                "empty": StateNodeConfig(
-                    on: [
-                        "OCCUPY.*": .single(
-                            TransitionConfig(
-                                target: "occupied",
-                                actions: [assign { ctx, args in
-                                    if case let .occupy(pieceId) = SquareEvent.parse(args.event) {
-                                        ctx.occupantId = pieceId
-                                    }
-                                }]
-                            )
-                        ),
-                        "SYNC.*": .single(TransitionConfig(actions: [assign { ctx, args in
-                            applySync(&ctx, args: args)
-                        }])),
-                        "SYNC.empty": .single(TransitionConfig(actions: [assign { ctx, args in
-                            applySync(&ctx, args: args)
-                        }])),
-                    ],
-                    always: [
-                        TransitionConfig(target: "occupied", guard: .named("hasOccupant")),
-                    ]
-                ),
-                "occupied": StateNodeConfig(
-                    on: [
-                        "CLEAR": .single(
-                            TransitionConfig(
-                                target: "empty",
-                                actions: [assign { ctx, _ in ctx.occupantId = nil }]
-                            )
-                        ),
-                        "OCCUPY.*": .single(TransitionConfig(actions: [assign { ctx, args in
-                            if case let .occupy(pieceId) = SquareEvent.parse(args.event) {
-                                ctx.occupantId = pieceId
-                            }
-                        }])),
-                        "SYNC.*": .single(TransitionConfig(actions: [assign { ctx, args in
-                            applySync(&ctx, args: args)
-                        }])),
-                        "SYNC.empty": .single(TransitionConfig(actions: [assign { ctx, args in
-                            applySync(&ctx, args: args)
-                        }])),
-                    ],
-                    always: [
-                        TransitionConfig(target: "empty", guard: .named("isVacant")),
-                    ]
-                ),
-            ]
-        ),
-        implementations: MachineImplementations.legacy(
-            guards: [
-                "hasOccupant": { args in args.context.occupantId != nil },
-                "isVacant": { args in args.context.occupantId == nil },
-            ]
-        )
-    )
+// These allow implicit member expressions for PieceEvent cases
+// with associated values.
 
-    private static func applySync(_ context: inout SquareContext, args: ActionArgs<SquareContext>) {
-        guard case let .sync(occupantId) = SquareEvent.parse(args.event) else { return }
-        context.occupantId = occupantId
-    }
+extension Map where In == String?, Out == SquareEvent {
+    static var sync: Map<In, Out> { .init(transform: Out.sync) }
+}
+
+extension Map where In == String, Out == SquareEvent {
+    static var occupy: Map<In, Out> { .init(transform: Out.occupy) }
 }

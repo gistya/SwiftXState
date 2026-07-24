@@ -8,7 +8,7 @@ private struct DelayContext: Sendable, Equatable {
 
 @Suite("Delayed transitions")
 struct AfterTests {
-    private var lightMachine: StateMachine<EmptyContext> {
+    private var lightMachine: ResolvedMachine<EmptyContext> {
         createMachine(MachineConfig(
             id: "light",
             initial: "green",

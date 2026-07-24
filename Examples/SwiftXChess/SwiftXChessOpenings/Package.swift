@@ -6,17 +6,24 @@ import PackageDescription
 
 /// For local development, set the environment variable SWIFTXDEV=1 in Xcode or Terminal.
 /// In this project, SWIFTXDEV=1 is only set in the .xcproj User-Defined settings for DEBUG config.
-let useLocal = ProcessInfo.processInfo.environment["SWIFTXDEV"] != nil
-let repo = "https://github.com/gistya/SwiftXState.git"
-let swiftXMinVersion: Version = "1.0.0"
+struct Resolver {
+    let repo = "https://github.com/gistya/SwiftXState"
+    let swiftXMinVersion: Version = "2.0.0-alpha.11"
+
+    var swiftXState: Package.Dependency {
+        ProcessInfo.processInfo.environment["SWIFTXDEV"] == "1"
+        ? .package(name: "SwiftXState", path: "../..")
+        : .package(url: repo, from: swiftXMinVersion)
+    }
+}
 
 let package = Package(
     name: "SwiftXChessOpenings",
     platforms: [
-        .macOS(.v14),
-        .iOS(.v17),
-        .watchOS(.v10),
-        .tvOS(.v17),
+        .macOS(.v15),
+        .iOS(.v18),
+        .watchOS(.v11),
+        .tvOS(.v18),
     ],
     products: [
         .library(
@@ -26,12 +33,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/chesskit-app/chesskit-swift", from: "0.17.0"),
-        useLocal
-            ? .package(
-                name: "SwiftXState",
-                path: "../../.."
-            )
-        : .package(url: repo, from: swiftXMinVersion),
+        Resolver().swiftXState,
     ],
     targets: [
         .target(

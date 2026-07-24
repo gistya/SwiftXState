@@ -1,14 +1,15 @@
-import Foundation
+import FridayTheCodable
 import Testing
 @testable import SwiftXState
+import SwiftXStateCodable
 
-private struct PersistCounterContext: Sendable, Equatable, Codable {
+private struct PersistCounterContext: Sendable, Equatable, Codable, ContextPersistable {
     var count: Int
 }
 
 @Suite("Actor persistence")
 struct PersistenceTests {
-    private var counterMachine: StateMachine<PersistCounterContext> {
+    private var counterMachine: ResolvedMachine<PersistCounterContext> {
         createMachine(MachineConfig(
             id: "counter",
             initial: "idle",
@@ -112,11 +113,11 @@ struct PersistenceTests {
 
     @Test("persisted snapshot includes invoked child machine state")
     func childMachinePersistence() async throws {
-        struct WorkerContext: Sendable, Equatable, Codable {
+        struct WorkerContext: Sendable, Equatable, Codable, ContextPersistable {
             var count: Int
         }
 
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
@@ -158,7 +159,7 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         #expect(persisted.children["worker"] != nil)
         if case let .machine(childPersisted) = persisted.children["worker"] {
-            let childContext = try JSONDecoder().decode(
+            let childContext = try FridayJSONDecoder().decode(
                 WorkerContext.self,
                 from: childPersisted.context
             )
@@ -168,7 +169,7 @@ struct PersistenceTests {
         }
 
         let restored = await createActor(parentMachine).start(from: persisted)
-        guard let child = await restored.childActor(id: "worker") as? MachineChildRef<WorkerContext> else {
+        guard let child = await restored.childActor(id: "worker") as? ChildActorBox<MachineLogic<WorkerContext>> else {
             Issue.record("Expected restored machine child")
             return
         }
@@ -183,9 +184,12 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         let data = try persisted.encodeJSON()
 
-        var object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        object?.removeValue(forKey: "children")
-        let legacyData = try JSONSerialization.data(withJSONObject: object!)
+        var json = try JSON.parse(utf8: data)
+        if case .object(var object) = json {
+            object.removeValue(forKey: "children")
+            json = .object(object)
+        }
+        let legacyData = JSON.serialize(json)
 
         let decoded = try PersistedSnapshot.decodeJSON(legacyData)
         let restored = try restoreSnapshot(machine: counterMachine, persisted: decoded)
@@ -195,15 +199,15 @@ struct PersistenceTests {
 
     @Test("persisted snapshot includes nested grandchild machine state")
     func nestedGrandchildPersistence() async throws {
-        struct LeafContext: Sendable, Equatable, Codable {
+        struct LeafContext: Sendable, Equatable, Codable, ContextPersistable {
             var count: Int
         }
 
-        struct MidContext: Sendable, Equatable, Codable {
+        struct MidContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
-        struct RootContext: Sendable, Equatable, Codable {
+        struct RootContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
@@ -256,7 +260,7 @@ struct PersistenceTests {
 
         let actor = await createActor(rootMachine).start()
         await actor.send(Event("GO"))
-        guard let midChild = await actor.childActor(id: "mid") as? MachineChildRef<MidContext> else {
+        guard let midChild = await actor.childActor(id: "mid") as? ChildActorBox<MachineLogic<MidContext>> else {
             Issue.record("Expected mid child actor")
             return
         }
@@ -268,7 +272,7 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         if case let .machine(midPersisted) = persisted.children["mid"],
            case let .machine(leafPersisted) = midPersisted.children["leaf"] {
-            let leafContext = try JSONDecoder().decode(
+            let leafContext = try FridayJSONDecoder().decode(
                 LeafContext.self,
                 from: leafPersisted.context
             )
@@ -278,8 +282,8 @@ struct PersistenceTests {
         }
 
         let restored = await createActor(rootMachine).start(from: persisted)
-        guard let mid = await restored.childActor(id: "mid") as? MachineChildRef<MidContext>,
-              let leaf = await mid.actor.childActor(id: "leaf") as? MachineChildRef<LeafContext> else {
+        guard let mid = await restored.childActor(id: "mid") as? ChildActorBox<MachineLogic<MidContext>>,
+              let leaf = await mid.actor.childActor(id: "leaf") as? ChildActorBox<MachineLogic<LeafContext>> else {
             Issue.record("Expected restored nested machine children")
             return
         }
@@ -291,11 +295,11 @@ struct PersistenceTests {
 
     @Test("persisted snapshot restores multiple parallel invoked children")
     func parallelInvokePersistence() async throws {
-        struct WorkerContext: Sendable, Equatable, Codable {
+        struct WorkerContext: Sendable, Equatable, Codable, ContextPersistable {
             var count: Int
         }
 
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
@@ -358,8 +362,8 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         let restored = await createActor(parentMachine).start(from: persisted)
 
-        guard let workerA = await restored.childActor(id: "workerA") as? MachineChildRef<WorkerContext>,
-              let workerB = await restored.childActor(id: "workerB") as? MachineChildRef<WorkerContext> else {
+        guard let workerA = await restored.childActor(id: "workerA") as? ChildActorBox<MachineLogic<WorkerContext>>,
+              let workerB = await restored.childActor(id: "workerB") as? ChildActorBox<MachineLogic<WorkerContext>> else {
             Issue.record("Expected restored parallel machine children")
             return
         }
@@ -370,11 +374,11 @@ struct PersistenceTests {
 
     @Test("spawned machine child state survives persist and restore")
     func spawnedMachineChildPersistence() async throws {
-        struct ChildContext: Sendable, Equatable, Codable {
+        struct ChildContext: Sendable, Equatable, Codable, ContextPersistable {
             var count: Int
         }
 
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 
@@ -414,7 +418,7 @@ struct PersistenceTests {
         let persisted = try await actor.getPersistedSnapshot()
         let restored = await createActor(parentMachine).start(from: persisted)
 
-        guard let child = await restored.childActor(id: "spawnedWorker") as? MachineChildRef<ChildContext> else {
+        guard let child = await restored.childActor(id: "spawnedWorker") as? ChildActorBox<MachineLogic<ChildContext>> else {
             Issue.record("Expected restored spawned machine child")
             return
         }
@@ -424,11 +428,11 @@ struct PersistenceTests {
 
     @Test("restoring done child does not re-emit DoneActorEvent")
     func restoredDoneChildDoesNotReemit() async throws {
-        struct ChildContext: Sendable, Equatable, Codable {
+        struct ChildContext: Sendable, Equatable, Codable, ContextPersistable {
             var value: String
         }
 
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var doneCount: Int
         }
 
@@ -477,7 +481,7 @@ struct PersistenceTests {
 
     @Test("persisted snapshot records opaque task child status")
     func opaqueTaskChildPersistence() async throws {
-        struct ParentContext: Sendable, Equatable, Codable {
+        struct ParentContext: Sendable, Equatable, Codable, ContextPersistable {
             var label: String
         }
 

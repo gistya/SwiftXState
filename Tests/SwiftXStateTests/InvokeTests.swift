@@ -164,7 +164,7 @@ struct InvokeTests {
             states: [
                 "idle": StateNodeConfig(on: [
                     "FORWARD": .single(TransitionConfig(
-                        actions: [.sendParent(Event("DEC"))]
+                        actions: [.sendToParent(Event("DEC"))]
                     )),
                 ]),
             ]

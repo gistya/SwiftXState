@@ -20,7 +20,7 @@ public final class SelectorDriver<Context: Sendable, T: Sendable & Equatable> {
     @ObservationIgnored private var subscription: Subscription?
 
     public init(
-        actor: Actor<Context>,
+        actor: Actor<MachineLogic<Context>>,
         selector: @escaping @Sendable (MachineSnapshot<Context>) -> T
     ) {
         self.selector = selector
@@ -49,7 +49,7 @@ public final class SelectorDriver<Context: Sendable, T: Sendable & Equatable> {
 
 @MainActor
 public func useSelector<Context: Sendable, T: Sendable & Equatable>(
-    _ actor: Actor<Context>,
+    _ actor: Actor<MachineLogic<Context>>,
     _ selector: @escaping @Sendable (MachineSnapshot<Context>) -> T
 ) -> T? {
     SelectorDriver(actor: actor, selector: selector).value

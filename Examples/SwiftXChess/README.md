@@ -221,7 +221,7 @@ Promotion follows the same path with `PROMOTE.{kind}` → `handlePromotion` → 
 2. **Define `MyEvent: Eventable`** — enum with `var type: String` matching machine `on` keys.
 3. **Build `MyMachineFactory.machine`** with `createMachine`.
 4. **Create `MySession`** (`@MainActor @Observable`):
-   - `let actor: Actor<MyContext>`
+   - `let actor: Actor<MachineLogic<MyContext>>`
    - `private(set) var snapshot: MachineSnapshot<MyContext>`
    - `var context: MyContext { snapshot.context }`
    - `func send(_ event: MyEvent) { actor.send(event); snapshot = actor.snapshot }`

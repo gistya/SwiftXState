@@ -1,16 +1,17 @@
 #if SWIFTXSTATE_APPLE_SWIFTDATA
 import SwiftData
+import SwiftXStateCodable
 import Testing
 @testable import SwiftXState
 @testable import SwiftXStateSwiftData
 
-private struct CartContext: Sendable, Equatable, Codable {
+private struct CartContext: Sendable, Equatable, Codable, ContextPersistable {
     var items: Int
 }
 
 @Suite("SwiftData actor persistence")
 struct SwiftDataPersistenceTests {
-    private var cartMachine: StateMachine<CartContext> {
+    private var cartMachine: ResolvedMachine<CartContext> {
         createMachine(MachineConfig(
             id: "cart",
             initial: "browsing",

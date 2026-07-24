@@ -2,7 +2,7 @@
 
 ## Overview
 
-An `Actor` is a running instance of a ``StateMachine``. Create one with `createActor(_:)`,
+An `Actor` is a running instance of a ``ResolvedMachine``. Create one with `createActor(_:)`,
 boot it with ``start(input:context:)``, drive it with ``send(_:)``, and read its current
 ``MachineSnapshot`` from ``snapshot``. See <doc:RunningActors> for a full walkthrough.
 

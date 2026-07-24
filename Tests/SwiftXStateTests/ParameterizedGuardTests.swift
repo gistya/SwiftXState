@@ -1,5 +1,6 @@
 import Testing
 @testable import SwiftXState
+import SwiftXStateCodable
 
 private struct ThresholdContext: Sendable, Equatable {
     var value: Int

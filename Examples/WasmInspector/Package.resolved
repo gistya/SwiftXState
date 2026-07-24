@@ -1,6 +1,15 @@
 {
-  "originHash" : "308b1f1af0759b4dbb4523222bd34ba1c915d0d8631c8887dab26fdb66cc181f",
+  "originHash" : "7c6696af08cecc49baafebb8ad7311f5df8d51f39a4dda42b77df0b5cb7f251d",
   "pins" : [
+    {
+      "identity" : "friday-the-thirteenth",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gistya/friday-the-thirteenth",
+      "state" : {
+        "revision" : "be87de47919c3e6591e3f681812a411f30f870da",
+        "version" : "2.0.0"
+      }
+    },
     {
       "identity" : "javascriptkit",
       "kind" : "remoteSourceControl",
@@ -11,9 +20,18 @@
       }
     },
     {
+      "identity" : "swift-compositional-init",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gistya/swift-compositional-init",
+      "state" : {
+        "revision" : "af4835e941fe00409ea076e4f49c9fe7e800a9e8",
+        "version" : "1.2.0"
+      }
+    },
+    {
       "identity" : "swift-syntax",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "location" : "https://github.com/swiftlang/swift-syntax",
       "state" : {
         "revision" : "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
         "version" : "603.0.2"
@@ -25,16 +43,16 @@
       "location" : "https://github.com/1amageek/swift-webgpu",
       "state" : {
         "branch" : "main",
-        "revision" : "df2bc6ad734c96bfe8ea03f313776233bb1c97b0"
+        "revision" : "4eb48363b9e305db7e8f8fb4b84e49d87dcc7140"
       }
     },
     {
       "identity" : "swiftxstate",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gistya/SwiftXState.git",
+      "location" : "https://github.com/gistya/SwiftXState",
       "state" : {
-        "revision" : "99cdfc6e6e406d21fed5793ca0d6f58089b1939c",
-        "version" : "1.0.0"
+        "revision" : "b50c96404373781b4008a0445bd010fc99ca81d2",
+        "version" : "2.0.0-alpha.13"
       }
     }
   ],

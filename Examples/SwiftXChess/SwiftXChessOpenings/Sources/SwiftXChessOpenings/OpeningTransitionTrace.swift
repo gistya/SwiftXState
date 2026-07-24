@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import SwiftXState
 
 /// Records `(fromState, move, toState)` from XState-compatible inspection events.
@@ -7,7 +8,7 @@ public final class OpeningTransitionTrace: @unchecked Sendable {
     private var steps: [OpeningTraceStep] = []
     private let machineId: String
     private let rootId: String
-    private let lock = NSLock()
+    private let lock = Mutex(false)
 
     public init(machineId: String = OpeningMoveTreeMachine.id, rootId: String = OpeningDataset.bundled.rootId) {
         self.machineId = machineId
